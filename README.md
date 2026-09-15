@@ -1,6 +1,6 @@
 # 鹰国法官：开发骨架
 
-项目提供正式的纯 TypeScript Game Core，以及仍可替换的内容、存储、Application 与 UI 接口和开发替身。产品需求和业务规则以 [架构设计](Desktop_Case_Game_Architecture_v1.0.md) 为依据。
+项目提供纯 TypeScript Game Core、内容校验、Application 与 UI，以及本地 SQLite 存储实现。产品需求和业务规则以 [架构设计](Desktop_Case_Game_Architecture_v1.0.md) 为依据；Storage / Tauri 当前进展、验证结果及未包含事项见 [存储实施记录](Desktop_Case_Game_Storage_Tauri_Implementation.md)。
 
 ## 启动与检查
 
@@ -9,7 +9,7 @@
 ```powershell
 npm ci
 npm run dev           # 浏览器开发，内存样本
-npm run tauri:dev     # 桌面开发，另含真实 SQLite 插件探针
+npm run tauri:dev     # 桌面开发，使用本地 SQLite
 npm run check         # 类型、Vitest、依赖方向与格式
 npm run build         # 前端生产构建
 npm run tauri:build   # 桌面可执行文件；目前关闭安装器打包
@@ -41,7 +41,7 @@ node --version
 
 - **规则线**已在 `src/game` 实现正式 `Transition`，只接受状态、命令、已加载内容和注入时间，返回 `TransitionResult`。它不修改输入，也不自行保存或触发表现。
 - **内容线**以 `ContentCatalogSchema` 为结构源，交付精确 `packageId + version` 的内容包。已发布版本保持不可变；后续完整引用、无环图和资源存在性校验在这条线完成。
-- **存储线**实现 `SaveRepository`，保留 `saveId + profileId` 归属校验及 `expectedRevision` 条件提交。内存契约测试可以复用于 SQLite 实现；正式 SQLite 实现还须增加真实数据库测试。
+- **存储线**实现 `SaveRepository`，保留 `saveId + profileId` 归属校验及 `expectedRevision` 条件提交。固定 fixture 和真实 SQLite 测试不依赖 Game Core 计算；具体接口与检查结果见存储实施记录。
 - **Application 线**通过构造参数接收仓储和规则，统一协调加载、提交、恢复与状态发布。
 - **UI 线**订阅会话快照、发送 `GameCommand`。内容通过会话提供，历史结果读取存档快照，业务后果由规则决定。
 
@@ -63,11 +63,11 @@ node --version
 
 未知写入异常与 revision 冲突进入 `needsReload`，必须显式 `load` 后才能继续；不会自动重放命令。订阅与反馈回调应为同步通知，异常与保存事实分开处理。当前没有正式新游戏入口；开发页直接为内存仓储提供一份明确的样本封套。
 
-## 开发页验证方法
+## 最初开发骨架验证记录（历史）
 
 启动后应看到内容版本 `1.0.0`、两案件、revision `0` 和首案 `pending`。点击“验证开始案件”后显示 revision `1`、`active`，再次开始按钮禁用。点击“重新读取样本”仍保持 `1 / active`；刷新页面恢复 `0 / pending`。
 
-浏览器与桌面的**演示 Profile 和样本会话仍使用内存替身**，但其 `transition` 已接入正式 Game Core。桌面另外执行一次 SQLite 参数化写入与读回，并核对标记和时间；页面显示“SQLite 已连接”才表示这个真实插件探针成功。该探针不等于正式游戏存档已经接入 SQLite。SQL 插件注册、迁移与显式写权限采用 [Tauri 官方接入方式](https://v2.tauri.app/plugin/sql/)。
+最初骨架的浏览器与桌面均使用内存替身，并另设 SQLite 参数化探针。以下表格保留该阶段的验证记录，不代表当前 Storage / Tauri 完成情况。SQL 插件注册、迁移与显式写权限采用 [Tauri 官方接入方式](https://v2.tauri.app/plugin/sql/)。
 
 ## 阶段检查记录
 
@@ -100,4 +100,4 @@ node --version
 
 第一案结算应同时解锁 `case_002` 并排入 `story_after_case_001`；确认该剧情完成前不得处理第二案。`confirm_violation` 是用于中途恢复测试的中间选项，不应改变属性。
 
-当前阶段仍不实现正式账号、完整内容 Validator、正式 SQLite 存档仓储、视频播放器、存档迁移或安装包验收。它们可以分别依赖现有正式 Game Core 与公共契约继续开发。
+各分线已在骨架之后继续实施，最新范围以对应 `Desktop_Case_Game_*_Implementation.md` 为准。Storage / Tauri 不包含联网账号、远程内容下载或实际安装包人工验收。

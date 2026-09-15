@@ -5,9 +5,7 @@ export interface LocalProfileSummary {
   readonly displayName: string;
 }
 
-/** One canonical normalization rule shared by every Profile implementation and form. */
-export const normalizeProfileDisplayName = (value: string): string =>
-  value.trim().replace(/\s+/g, " ");
+export { normalizeProfileDisplayName } from "../shared/profileName";
 
 export interface ProfileEntryError {
   readonly code: "BUSY" | "INVALID_NAME" | "PROFILE_EXISTS" | "PROFILE_NOT_FOUND" | "LOAD_FAILED";

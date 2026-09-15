@@ -92,3 +92,7 @@ export const parseStoredSaveEnvelope = (value: unknown): SaveEnvelope => {
     throw new SaveRepositoryError("INVALID_SAVE", "The stored save cannot be migrated.", error);
   }
 };
+
+// Keep the contract module as the discoverable public entry point while the
+// implementation stays in its own file.
+export { SqliteSaveRepository } from "./sqliteSaveRepository";

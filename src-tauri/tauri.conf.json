@@ -23,15 +23,17 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: https://asset.localhost data:; media-src 'self' asset: https://asset.localhost blob:; style-src 'self' 'unsafe-inline'"
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$RESOURCE/content/**/*"]
+      },
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
-    "active": false
-  },
-  "plugins": {
-    "sql": {
-      "preload": ["sqlite:judge.db"]
+    "active": true,
+    "resources": {
+      "../content/": "content/"
     }
   }
 }
