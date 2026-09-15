@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Condition, ContentCatalog, Predicate } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import type { Condition, GameContentCatalog, Predicate } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import type { GameState } from "../../src/game/model";
 import {
   countResolvedCases,
@@ -13,17 +13,14 @@ import {
   type ProgressionResult,
 } from "../../src/game/progression";
 
-const catalogCopy = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const catalogCopy = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
 const resolvedProgress = (resolutionId: string, resolvedOrder: number) => ({
   status: "resolved" as const,
   history: [{ nodeId: "assessment", choiceId: "insufficient_evidence" }],
   resolutionId,
+  finalChoiceId: "insufficient_evidence",
   snapshot: {
-    caseTitle: "Case",
-    finalChoiceText: "Choice",
-    verdict: [{ type: "paragraph" as const, text: "Verdict" }],
-    result: [{ type: "paragraph" as const, text: "Result" }],
     attributeChanges: [],
     resolvedAt: "2026-09-15T00:00:00.000Z",
     resolvedOrder,
@@ -78,7 +75,7 @@ describe("progression predicates", () => {
     [{ type: "flagEquals", flagId: "first_case_closed", value: true }, true],
     [{ type: "flagEquals", flagId: "second_case_reviewed", value: true }, false],
   ])("evaluates $type predicates", (predicate, expected) => {
-    expect(valueOf(evaluatePredicate(progressedState(), predicate, MINIMAL_CATALOG))).toBe(
+    expect(valueOf(evaluatePredicate(progressedState(), predicate, MINIMAL_GAME_CONTENT))).toBe(
       expected,
     );
   });
@@ -94,8 +91,12 @@ describe("progression predicates", () => {
       all: [...matching.all, { type: "flagEquals", flagId: "second_case_reviewed", value: true }],
     };
 
-    expect(valueOf(evaluateCondition(progressedState(), matching, MINIMAL_CATALOG))).toBe(true);
-    expect(valueOf(evaluateCondition(progressedState(), notMatching, MINIMAL_CATALOG))).toBe(false);
+    expect(valueOf(evaluateCondition(progressedState(), matching, MINIMAL_GAME_CONTENT))).toBe(
+      true,
+    );
+    expect(valueOf(evaluateCondition(progressedState(), notMatching, MINIMAL_GAME_CONTENT))).toBe(
+      false,
+    );
   });
 
   it("reports unknown case, resolution, attribute, and flag references", () => {
@@ -109,7 +110,7 @@ describe("progression predicates", () => {
 
     expect(
       predicates.map(
-        (predicate) => issuesOf(evaluatePredicate(state, predicate, MINIMAL_CATALOG))[0].code,
+        (predicate) => issuesOf(evaluatePredicate(state, predicate, MINIMAL_GAME_CONTENT))[0].code,
       ),
     ).toEqual([
       "CASE_REFERENCE_INVALID",
@@ -128,7 +129,7 @@ describe("progression predicates", () => {
     };
 
     expect(
-      issuesOf(evaluateCondition(progressedState(), condition, MINIMAL_CATALOG)),
+      issuesOf(evaluateCondition(progressedState(), condition, MINIMAL_GAME_CONTENT)),
     ).toMatchObject([{ code: "ATTRIBUTE_REFERENCE_INVALID", path: ["all", 1, "attributeId"] }]);
   });
 });
@@ -203,20 +204,20 @@ describe("progression rule selection", () => {
   it("selects the highest-priority matching ending and returns null when none match", () => {
     const state = progressedState();
     state.cases.case_002 = resolvedProgress("review_required", 2);
-    expect(valueOf(selectEnding(state, MINIMAL_CATALOG))).toEqual({
+    expect(valueOf(selectEnding(state, MINIMAL_GAME_CONTENT))).toEqual({
       endingId: "balanced",
       storyId: "ending_balanced",
     });
 
-    expect(valueOf(selectEnding(progressedState(), MINIMAL_CATALOG))).toBeNull();
+    expect(valueOf(selectEnding(progressedState(), MINIMAL_GAME_CONTENT))).toBeNull();
   });
 
   it("uses ending ID only as a deterministic tie-break for duplicate priorities", () => {
     const catalog = catalogCopy();
     const always = { all: [{ type: "resolvedCountAtLeast" as const, count: 1 }] };
     catalog.endings = {
-      zeta: { title: "Zeta", priority: 50, when: always, storyId: "ending_fallback" },
-      alpha: { title: "Alpha", priority: 50, when: always, storyId: "ending_balanced" },
+      zeta: { priority: 50, when: always, storyId: "ending_fallback" },
+      alpha: { priority: 50, when: always, storyId: "ending_balanced" },
     };
 
     expect(valueOf(selectEnding(progressedState(), catalog))).toEqual({
@@ -235,9 +236,9 @@ describe("progression rule selection", () => {
     const state = progressedState();
     state.cases.case_002 = resolvedProgress("review_required", 2);
     state.completedStoryIds = ["ending_balanced"];
-    expect(issuesOf(selectEnding(state, MINIMAL_CATALOG)).map((entry) => entry.code)).toContain(
-      "ENDING_STORY_ALREADY_SEEN",
-    );
+    expect(
+      issuesOf(selectEnding(state, MINIMAL_GAME_CONTENT)).map((entry) => entry.code),
+    ).toContain("ENDING_STORY_ALREADY_SEEN");
   });
 
   it("does not mutate state, content, rule arrays, or returned values", () => {

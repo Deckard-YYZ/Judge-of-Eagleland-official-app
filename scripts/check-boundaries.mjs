@@ -7,12 +7,13 @@ const sourceRoot = fileURLToPath(new URL("../src/", import.meta.url));
 
 // main.tsx / app 是装配入口；业务层只允许按表向下依赖。
 const allowedLayers = {
-  game: new Set(["game", "content"]),
-  content: new Set(["content", "platform"]),
-  storage: new Set(["storage", "game", "content"]),
-  application: new Set(["application", "game", "content", "storage"]),
-  ui: new Set(["ui", "application", "content"]),
+  game: new Set(["game", "content", "shared"]),
+  content: new Set(["content", "platform", "shared"]),
+  storage: new Set(["storage", "game", "content", "shared"]),
+  application: new Set(["application", "game", "content", "storage", "shared"]),
+  ui: new Set(["ui", "application", "content", "shared"]),
   platform: new Set(["platform"]),
+  shared: new Set(["shared"]),
 };
 
 const allowedPackages = {
@@ -22,6 +23,7 @@ const allowedPackages = {
   application: new Set(["zod", "zustand"]),
   ui: new Set(["react", "react-dom"]),
   platform: new Set(["@tauri-apps/api"]),
+  shared: new Set(),
 };
 
 async function sourceFiles(directory) {

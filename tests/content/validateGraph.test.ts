@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
-import type { ContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
 import {
-  validateContentCatalog,
+  validateGameContentCatalog,
   type ContentValidationIssue,
   type ContentValidationIssueCode,
 } from "../../src/content/validate";
 
-const cloneCatalog = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const cloneCatalog = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
-const invalidIssues = (catalog: ContentCatalog): readonly ContentValidationIssue[] => {
-  const result = validateContentCatalog(catalog);
+const invalidIssues = (catalog: GameContentCatalog): readonly ContentValidationIssue[] => {
+  const result = validateGameContentCatalog(catalog);
   expect(result.ok).toBe(false);
   if (result.ok) {
     throw new Error("Expected graph validation to fail.");
@@ -23,7 +23,7 @@ const summarize = (issues: readonly ContentValidationIssue[]) =>
   issues.map(({ code, objectId, path }) => ({ code, objectId, path }));
 
 const expectIssueSummary = (
-  catalog: ContentCatalog,
+  catalog: GameContentCatalog,
   expected: readonly {
     readonly code: ContentValidationIssueCode;
     readonly objectId: string;
@@ -44,7 +44,7 @@ describe("case graph validation", () => {
       path: "media/images/unused.png",
     };
 
-    expect(validateContentCatalog(catalog)).toMatchObject({ ok: true, issues: [] });
+    expect(validateGameContentCatalog(catalog)).toMatchObject({ ok: true, issues: [] });
   });
 
   it("allows diamond branches to converge on a previously visited node", () => {
@@ -56,12 +56,12 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "choose_left",
-            text: "Left",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "left" },
           },
           {
             id: "choose_right",
-            text: "Right",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "right" },
           },
         ],
@@ -70,7 +70,7 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "left_to_merge",
-            text: "Merge",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "merge" },
           },
         ],
@@ -79,7 +79,7 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "right_to_merge",
-            text: "Merge",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "merge" },
           },
         ],
@@ -88,14 +88,14 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "finish_after_merge",
-            text: "Finish",
+            hasAnnotation: false,
             target: { type: "resolution", resolutionId: "close_with_note" },
           },
         ],
       },
     };
 
-    expect(validateContentCatalog(catalog)).toMatchObject({ ok: true, issues: [] });
+    expect(validateGameContentCatalog(catalog)).toMatchObject({ ok: true, issues: [] });
   });
 
   it("detects a reachable self-cycle and explains the non-terminating path", () => {
@@ -106,12 +106,12 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "loop_here",
-            text: "Loop",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "assessment" },
           },
           {
             id: "exit_loop",
-            text: "Finish",
+            hasAnnotation: false,
             target: { type: "resolution", resolutionId: "close_with_note" },
           },
         ],
@@ -143,7 +143,7 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "start_cycle",
-            text: "Continue",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "alpha" },
           },
         ],
@@ -152,7 +152,7 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "alpha_beta",
-            text: "Continue",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "beta" },
           },
         ],
@@ -161,12 +161,12 @@ describe("case graph validation", () => {
         choices: [
           {
             id: "beta_alpha",
-            text: "Repeat",
+            hasAnnotation: false,
             target: { type: "node", nodeId: "alpha" },
           },
           {
             id: "beta_exit",
-            text: "Finish",
+            hasAnnotation: false,
             target: { type: "resolution", resolutionId: "warning" },
           },
         ],
@@ -193,7 +193,7 @@ describe("case graph validation", () => {
       choices: [
         {
           id: "orphan_finish",
-          text: "Finish",
+          hasAnnotation: false,
           target: { type: "resolution", resolutionId: "warning" },
         },
       ],
@@ -214,7 +214,7 @@ describe("case graph validation", () => {
       choices: [
         {
           id: "orphan_a_to_b",
-          text: "Continue",
+          hasAnnotation: false,
           target: { type: "node", nodeId: "orphan_b" },
         },
       ],
@@ -223,7 +223,7 @@ describe("case graph validation", () => {
       choices: [
         {
           id: "orphan_b_to_a",
-          text: "Continue",
+          hasAnnotation: false,
           target: { type: "node", nodeId: "orphan_a" },
         },
       ],

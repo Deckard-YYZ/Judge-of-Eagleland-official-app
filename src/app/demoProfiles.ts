@@ -8,8 +8,8 @@ import type {
   ProfileEntrySnapshot,
 } from "../application/profileEntry";
 import { normalizeProfileDisplayName } from "../application/profileEntry";
-import { MINIMAL_CATALOG } from "../content/fixtures/minimalCatalog";
-import { FakeContentRepository } from "../content/repository";
+import { MINIMAL_GAME_CONTENT, MINIMAL_LOCALIZATIONS } from "../content/fixtures/minimalCatalog";
+import { FakeSplitContentRepository } from "../content/repository";
 import { InMemorySaveRepository } from "../storage/inMemorySaveRepository";
 import { createDemoSave } from "./demoSession";
 import { demoTransition } from "./demoTransition";
@@ -20,7 +20,7 @@ interface DemoProfile extends LocalProfileSummary {
 
 /** In-memory Profile entry for frontend work. Refreshing the app resets all profiles. */
 export const createDemoProfileEntry = (): ProfileEntry => {
-  const content = MINIMAL_CATALOG;
+  const content = MINIMAL_GAME_CONTENT;
   const clock = () => new Date().toISOString();
   const initialProfile: DemoProfile = {
     profileId: "demo-profile",
@@ -31,7 +31,9 @@ export const createDemoProfileEntry = (): ProfileEntry => {
   const saveRepository = new InMemorySaveRepository([
     createDemoSave(initialProfile.profileId, initialProfile.saveId, content, clock()),
   ]);
-  const contentRepository = new FakeContentRepository([content]);
+  const contentRepository = new FakeSplitContentRepository([
+    { gameContent: content, localizations: MINIMAL_LOCALIZATIONS },
+  ]);
   const listeners = new Set<() => void>();
   let nextProfileNumber = 1;
   let busy = false;
@@ -78,7 +80,7 @@ export const createDemoProfileEntry = (): ProfileEntry => {
       transition: demoTransition,
       clock,
     });
-    const sessionView = createGameSessionView(session);
+    const sessionView = createGameSessionView(session, contentRepository);
     const loaded = await session.load(profile.saveId, profile.profileId);
     if (!loaded.ok) {
       return failure({ code: "LOAD_FAILED", message: loaded.message });

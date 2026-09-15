@@ -1,35 +1,100 @@
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import type { GameSessionView } from "../../application/gameSessionView";
 import type { LocalProfileSummary, ProfileEntry } from "../../application/profileEntry";
 import { normalizeProfileDisplayName } from "../../application/profileEntry";
+import { LocaleSwitch } from "../LocaleSwitch";
 import { ThemeSwitch } from "../ThemeSwitch";
+import { translateProfileError, useI18n, type MessageKey } from "../i18n";
 import type { UiThemeMode } from "../theme";
+import {
+  profileInitial,
+  validateProfileAvatar,
+  type ProfileAvatarValidationError,
+} from "./profileAvatar";
+
+const avatarErrorKeys = {
+  invalidType: "profile.avatarInvalidType",
+  tooLarge: "profile.avatarTooLarge",
+} as const satisfies Record<ProfileAvatarValidationError, MessageKey>;
 
 export interface ProfilePageProps {
   entry: ProfileEntry;
   themeMode: UiThemeMode;
+  profileAvatarUrls: Readonly<Record<string, string>>;
   onThemeChange(mode: UiThemeMode): void;
-  onAuthenticated(profile: Readonly<LocalProfileSummary>, session: GameSessionView): void;
+  onAuthenticated(
+    profile: Readonly<LocalProfileSummary>,
+    session: GameSessionView,
+    avatarFile?: File,
+  ): void;
 }
 
 export function ProfilePage({
   entry,
   themeMode,
+  profileAvatarUrls,
   onThemeChange,
   onAuthenticated,
 }: ProfilePageProps) {
+  const { t } = useI18n();
   const snapshot = useSyncExternalStore(entry.subscribe, entry.getSnapshot);
-  const [selectedProfileId, setSelectedProfileId] = useState(
-    () => snapshot.profiles[0]?.profileId ?? "",
-  );
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [selectedProfileId, setSelectedProfileId] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<ProfileAvatarValidationError | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const captureInputRef = useRef<HTMLInputElement>(null);
   const working = snapshot.status === "working";
   const normalizedName = normalizeProfileDisplayName(displayName);
 
-  const finish = (result: Awaited<ReturnType<ProfileEntry["enter"]>>): void => {
-    if (result.ok) {
-      onAuthenticated(result.profile, result.session);
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl(null);
+      return;
     }
+
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(objectUrl);
+    return () => {
+      // Preview URLs are UI-only resources. Revoke on replacement or unmount so
+      // local image blobs do not outlive the registration surface that owns them.
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [avatarFile]);
+
+  const finish = (
+    result: Awaited<ReturnType<ProfileEntry["enter"]>>,
+    registeredAvatar?: File,
+  ): void => {
+    if (result.ok) {
+      onAuthenticated(result.profile, result.session, registeredAvatar);
+    }
+  };
+
+  const handleAvatarFile = (input: HTMLInputElement): void => {
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) {
+      return;
+    }
+
+    const error = validateProfileAvatar(file);
+    if (error) {
+      setAvatarError(error);
+      return;
+    }
+
+    setAvatarError(null);
+    setAvatarFile(file);
+  };
+
+  const returnToLogin = (): void => {
+    setMode("login");
+    setDisplayName("");
+    setAvatarFile(null);
+    setAvatarError(null);
   };
 
   async function enterProfile(event: FormEvent<HTMLFormElement>) {
@@ -45,7 +110,7 @@ export function ProfilePage({
     if (!normalizedName || working) {
       return;
     }
-    finish(await entry.register(displayName));
+    finish(await entry.register(displayName), avatarFile ?? undefined);
   }
 
   return (
@@ -54,100 +119,222 @@ export function ProfilePage({
         <div className="profile-intro__topbar">
           <div className="wordmark">
             <span className="wordmark__seal" aria-hidden="true">
-              衡
+              {t("brand.seal")}
             </span>
             <span>
-              <strong>鹰国法官</strong>
-              <small>司法档案处</small>
+              <strong>{t("brand.name")}</strong>
+              <small>{t("brand.office")}</small>
             </span>
           </div>
-          <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
+          <div className="ui-preferences">
+            <LocaleSwitch />
+            <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
+          </div>
         </div>
 
         <div className="profile-intro__copy">
-          <p className="kicker">Office of judicial records · 01</p>
-          <h1 id="product-title">每一项裁定，都将留下记录。</h1>
-          <p>查阅案卷、核对证词，并在有限的事实中作出选择。你的判断将改变后续案件与最终结局。</p>
+          <p className="kicker">{t("profile.introKicker")}</p>
+          <h1 id="product-title">{t("profile.introTitle")}</h1>
+          <p>{t("profile.introDescription")}</p>
         </div>
 
         <p className="profile-intro__folio" aria-hidden="true">
-          JUDICIAL ARCHIVE / LOCAL ACCESS
+          {t("profile.folio")}
         </p>
       </section>
 
       <section className="profile-access" aria-labelledby="access-title">
-        <div className="profile-access__header">
-          <p className="kicker">Local profile</p>
-          <h2 id="access-title">进入本地档案</h2>
-          <p>当前为纯前端演示。档案只保存在本次应用内存中，刷新或关闭页面后将重置。</p>
-        </div>
+        <div className="profile-access__content">
+          <div className="profile-access__header">
+            <p className="kicker">{t("profile.accessKicker")}</p>
+            <h2 id="access-title">
+              {t(mode === "login" ? "profile.entryTitle" : "profile.createTitle")}
+            </h2>
+            <p>{t("profile.memoryNotice")}</p>
+          </div>
 
-        <form className="profile-form" onSubmit={enterProfile}>
-          <fieldset disabled={working || snapshot.profiles.length === 0}>
-            <legend>选择已有档案</legend>
-            <label htmlFor="local-profile">本地档案员</label>
-            <div className="field-row">
-              <select
-                id="local-profile"
-                value={selectedProfileId}
-                onChange={(event) => setSelectedProfileId(event.currentTarget.value)}
-              >
-                {snapshot.profiles.map((profile) => (
-                  <option key={profile.profileId} value={profile.profileId}>
-                    {profile.displayName}
-                  </option>
-                ))}
-              </select>
-              <button className="button button--primary" type="submit">
-                打开档案
-              </button>
-            </div>
-          </fieldset>
-        </form>
+          <div className="profile-access__stage" key={mode}>
+            {mode === "login" ? (
+              <form className="profile-form profile-form--login" onSubmit={enterProfile}>
+                <fieldset disabled={working || snapshot.profiles.length === 0}>
+                  <legend>{t("profile.existingLegend")}</legend>
+                  <ul className="profile-picker" aria-label={t("profile.listLabel")}>
+                    {snapshot.profiles.map((profile) => {
+                      const selected = selectedProfileId === profile.profileId;
+                      const avatarUrl = profileAvatarUrls[profile.profileId];
+                      return (
+                        <li key={profile.profileId}>
+                          <button
+                            className="profile-choice"
+                            type="button"
+                            aria-pressed={selected}
+                            aria-label={t("profile.selectAria", {
+                              displayName: profile.displayName,
+                            })}
+                            onClick={() => setSelectedProfileId(profile.profileId)}
+                          >
+                            <span className="profile-avatar" aria-hidden="true">
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt="" />
+                              ) : (
+                                profileInitial(
+                                  profile.displayName,
+                                  t("profile.avatarFallbackInitial"),
+                                )
+                              )}
+                            </span>
+                            <span className="profile-choice__name">{profile.displayName}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </fieldset>
 
-        <div className="section-divider" role="separator">
-          <span>或建立新档案</span>
-        </div>
+                <div className="profile-actions">
+                  <button
+                    className="button button--primary"
+                    type="submit"
+                    disabled={!selectedProfileId || working}
+                  >
+                    {t("profile.login")}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={working}
+                    onClick={() => setMode("register")}
+                  >
+                    {t("profile.register")}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form className="profile-form profile-form--register" onSubmit={registerProfile}>
+                <fieldset disabled={working}>
+                  <legend>{t("profile.newLegend")}</legend>
 
-        <form className="profile-form" onSubmit={registerProfile}>
-          <fieldset disabled={working}>
-            <legend>注册新的本地档案</legend>
-            <label htmlFor="display-name">显示名称</label>
-            <div className="field-row">
-              <input
-                id="display-name"
-                name="displayName"
-                type="text"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.currentTarget.value)}
-                autoComplete="nickname"
-                maxLength={48}
-                placeholder="例如：第七审理员"
-                aria-describedby="display-name-hint"
-                required
-              />
-              <button className="button button--secondary" type="submit" disabled={!normalizedName}>
-                建立并进入
-              </button>
-            </div>
-            <p className="field-hint" id="display-name-hint">
-              仅作为本机演示中的称呼；不创建联网账户。
-            </p>
-          </fieldset>
-        </form>
+                  <div className="avatar-editor">
+                    <div className="avatar-preview" aria-live="polite">
+                      {avatarPreviewUrl ? (
+                        <img src={avatarPreviewUrl} alt={t("profile.avatarPreviewAlt")} />
+                      ) : (
+                        <span aria-label={t("profile.avatarFallbackAria")}>
+                          {profileInitial(normalizedName, t("profile.avatarFallbackInitial"))}
+                        </span>
+                      )}
+                    </div>
+                    <div className="avatar-editor__controls">
+                      <p>{t("profile.avatarOptional")}</p>
+                      <div className="avatar-editor__actions">
+                        <button
+                          className="avatar-action"
+                          type="button"
+                          onClick={() => captureInputRef.current?.click()}
+                        >
+                          {t("profile.capture")}
+                        </button>
+                        <button
+                          className="avatar-action"
+                          type="button"
+                          onClick={() => uploadInputRef.current?.click()}
+                        >
+                          {t("profile.upload")}
+                        </button>
+                        {avatarFile ? (
+                          <button
+                            className="avatar-action"
+                            type="button"
+                            onClick={() => {
+                              setAvatarFile(null);
+                              setAvatarError(null);
+                            }}
+                          >
+                            {t("profile.removeAvatar")}
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="field-hint">{t("profile.avatarHint")}</p>
+                      {avatarError ? (
+                        <p className="avatar-editor__error" role="alert">
+                          {t(avatarErrorKeys[avatarError])}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
 
-        <div className="profile-status" aria-live="polite" aria-atomic="true">
-          {working ? (
-            <p className="notice" role="status">
-              正在准备本地档案…
-            </p>
-          ) : snapshot.error ? (
-            <p className="notice notice--error" role="alert">
-              {snapshot.error.message}
-            </p>
-          ) : (
-            <p className="notice">无需网络连接，演示数据不会离开当前应用。</p>
-          )}
+                  <input
+                    ref={captureInputRef}
+                    className="sr-only"
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    onChange={(event) => handleAvatarFile(event.currentTarget)}
+                  />
+                  <input
+                    ref={uploadInputRef}
+                    className="sr-only"
+                    type="file"
+                    accept="image/*"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    onChange={(event) => handleAvatarFile(event.currentTarget)}
+                  />
+
+                  <label htmlFor="display-name">{t("profile.displayNameLabel")}</label>
+                  <input
+                    id="display-name"
+                    name="displayName"
+                    type="text"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.currentTarget.value)}
+                    autoComplete="nickname"
+                    maxLength={48}
+                    placeholder={t("profile.displayNamePlaceholder")}
+                    aria-describedby="display-name-hint"
+                    required
+                  />
+                  <p className="field-hint" id="display-name-hint">
+                    {t("profile.displayNameHint")}
+                  </p>
+                </fieldset>
+
+                <div className="profile-actions">
+                  <button
+                    className="button button--primary"
+                    type="submit"
+                    disabled={!normalizedName || working}
+                  >
+                    {t("profile.confirm")}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={working}
+                    onClick={returnToLogin}
+                  >
+                    {t("profile.back")}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="profile-status" aria-live="polite" aria-atomic="true">
+            {working ? (
+              <p className="notice" role="status">
+                {t("profile.working")}
+              </p>
+            ) : snapshot.error ? (
+              <p className="notice notice--error" role="alert">
+                {translateProfileError(t, snapshot.error.code)}
+              </p>
+            ) : (
+              <p className="notice">{t("profile.offlineNotice")}</p>
+            )}
+          </div>
         </div>
       </section>
     </main>

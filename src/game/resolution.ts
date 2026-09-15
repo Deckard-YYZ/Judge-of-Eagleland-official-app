@@ -1,4 +1,4 @@
-import type { ContentCatalog } from "../content/schema";
+import type { GameContentCatalog } from "../content/schema";
 import type { TransitionContext } from "./commands";
 import type { AttributeChangeSnapshot, GameState } from "./model";
 import {
@@ -47,7 +47,7 @@ const progressionFailure = (issues: readonly ProgressionIssue[]): ResolutionResu
 export const resolveFinalChoice = (
   state: Readonly<GameState>,
   input: ResolutionChoiceInput,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   context: TransitionContext,
 ): ResolutionResult => {
   const definition = content.cases[input.caseId];
@@ -148,7 +148,6 @@ export const resolveFinalChoice = (
     attributes[attributeId] = after;
     return {
       attributeId,
-      label: attribute.label,
       before,
       after,
       actualDelta: after - before,
@@ -172,11 +171,8 @@ export const resolveFinalChoice = (
         status: "resolved",
         history: [...progress.history, { nodeId: input.nodeId, choiceId: input.choiceId }],
         resolutionId,
+        finalChoiceId: input.choiceId,
         snapshot: {
-          caseTitle: definition.title,
-          finalChoiceText: choice.text,
-          verdict: resolution.verdict.map((block) => ({ ...block })),
-          result: resolution.result.map((block) => ({ ...block })),
           attributeChanges: changes.map((change) => ({ ...change })),
           resolvedAt: context.nowIso,
           resolvedOrder: countResolvedCases(state) + 1,

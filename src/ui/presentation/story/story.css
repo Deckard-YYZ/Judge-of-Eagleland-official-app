@@ -11,11 +11,19 @@
   place-items: center;
   background: var(--ui-overlay);
   overscroll-behavior: contain;
+  animation: story-overlay-enter var(--motion-standard) var(--motion-ease) both;
 }
 
 .story-overlay__frame {
   width: min(100%, 58rem);
   outline: none;
+  animation: story-frame-enter var(--motion-emphasized) var(--motion-ease) both;
+}
+
+.story-overlay__toolbar {
+  display: flex;
+  margin-bottom: 0.75rem;
+  justify-content: flex-end;
 }
 
 .story-player,
@@ -92,6 +100,7 @@
   min-height: 20rem;
   padding: clamp(1.5rem, 5vh, 3rem) 0;
   align-items: center;
+  animation: story-step-enter var(--motion-standard) var(--motion-ease) both;
 }
 
 .story-blocks {
@@ -306,6 +315,7 @@
   border: 1px solid var(--ui-line);
   color: var(--ui-ink);
   font-size: 1.8rem;
+  animation: ending-seal-enter var(--motion-emphasized) var(--motion-ease) both;
 }
 
 .ending-view h1 {
@@ -351,6 +361,52 @@
   }
   to {
     opacity: 0.88;
+  }
+}
+
+@keyframes story-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes story-frame-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes story-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ending-seal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ContentCatalog } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import { createInitialGameState } from "../../src/game/initialization";
 
-const catalogCopy = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const catalogCopy = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
 describe("createInitialGameState", () => {
   it("creates a playing state from the catalog initial definition", () => {

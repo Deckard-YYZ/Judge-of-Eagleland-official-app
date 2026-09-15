@@ -16,6 +16,7 @@
   border-bottom: 1px solid color-mix(in srgb, var(--ui-inverse) 24%, transparent);
   color: var(--ui-inverse);
   background: var(--ui-emphasis);
+  transition: background-color var(--motion-standard) var(--motion-ease);
 }
 
 .app-shell__account {
@@ -91,7 +92,7 @@
   flex: 0 0 auto;
   color: var(--ui-ink);
   background: var(--ui-quiet);
-  transition: width 160ms ease;
+  transition: width var(--motion-standard) var(--motion-ease);
 }
 
 .case-sidebar--collapsed {
@@ -124,6 +125,17 @@
   background: var(--ui-emphasis);
 }
 
+.case-sidebar__collapse span,
+.case-sidebar__chevron {
+  transition:
+    transform var(--motion-standard) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease);
+}
+
+.case-sidebar--collapsed .case-sidebar__collapse span {
+  transform: rotate(180deg);
+}
+
 .case-sidebar__panels {
   min-width: 0;
   padding-bottom: 2rem;
@@ -133,6 +145,10 @@
 
 .case-sidebar__section {
   border-bottom: 1px solid var(--ui-line);
+}
+
+.case-sidebar__section-content:not([hidden]) {
+  animation: sidebar-section-enter var(--motion-standard) var(--motion-ease) both;
 }
 
 .case-sidebar__section-heading {
@@ -161,6 +177,10 @@
 
 .case-sidebar__section-toggle:hover {
   background: var(--ui-surface-raised);
+}
+
+.case-sidebar__section-toggle[aria-expanded="true"] .case-sidebar__chevron {
+  transform: rotate(180deg);
 }
 
 .case-sidebar__section-count {
@@ -257,6 +277,25 @@
   color: var(--ui-ink);
   background: var(--ui-surface);
   box-shadow: inset 0 -2px 0 var(--ui-emphasis);
+}
+
+.case-sidebar__case {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-standard) var(--motion-ease);
+}
+
+@keyframes sidebar-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .case-sidebar__case-title {

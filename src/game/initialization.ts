@@ -1,4 +1,4 @@
-import type { ContentCatalog } from "../content/schema";
+import type { GameContentCatalog } from "../content/schema";
 import type { GameState } from "./model";
 import { checkGameStateInvariants, type GameStateInvariantIssue } from "./invariants";
 
@@ -59,7 +59,7 @@ const collectInitialReferenceIssues = (
  * catalog and of other new-game sessions.
  */
 export const createInitialGameState = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): CreateInitialGameStateResult => {
   const referenceIssues = [
     ...collectInitialReferenceIssues(

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
+import { translateSessionError, useI18n } from "../i18n";
 import { DecisionPanel } from "./DecisionPanel";
 import { ResolutionPanel } from "./ResolutionPanel";
 import { CaseBody, CaseSummary, CharacterSection } from "./TextBlocks";
@@ -8,9 +9,11 @@ import "./case.css";
 export interface CaseReaderProps {
   snapshot: GameSessionViewSnapshot;
   dispatch: GameSessionView["dispatch"];
+  decisionRevealDelayMs?: number;
 }
 
-export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
+export function CaseReader({ snapshot, dispatch, decisionRevealDelayMs }: CaseReaderProps) {
+  const { t } = useI18n();
   const titleId = useId();
   const panelHeadingRef = useRef<HTMLHeadingElement>(null);
   const startingRef = useRef(false);
@@ -69,7 +72,7 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
     try {
       const result = await dispatch({ type: "startCase", caseId });
       if (!result.ok) {
-        setCommandError(result.message);
+        setCommandError(translateSessionError(t, result.code));
       }
     } finally {
       startingRef.current = false;
@@ -78,26 +81,34 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
   };
 
   if (snapshot.status === "idle") {
-    return <CaseReaderState title="尚未载入档案" detail="进入本地档案后即可查阅案件。" />;
+    return <CaseReaderState title={t("case.idleTitle")} detail={t("case.idleDetail")} />;
   }
 
   if (snapshot.status === "loading") {
-    return <CaseReaderState title="正在调取案卷" detail="请稍候，档案内容正在载入。" busy />;
+    return <CaseReaderState title={t("case.loadingTitle")} detail={t("case.loadingDetail")} busy />;
   }
 
   if (snapshot.status === "error") {
-    return <CaseReaderState title="无法载入案卷" detail={snapshot.error.message} tone="error" />;
+    return (
+      <CaseReaderState
+        title={t("case.errorTitle")}
+        detail={
+          snapshot.error ? translateSessionError(t, snapshot.error.code) : t("case.invalidDetail")
+        }
+        tone="error"
+      />
+    );
   }
 
   if (!selectedCaseId) {
-    return <CaseReaderState title="尚未选择案件" detail="请从案卷列表中选择一项记录。" />;
+    return <CaseReaderGuide />;
   }
 
   if (!caseDefinition || !progress) {
     return (
       <CaseReaderState
-        title="案卷引用无效"
-        detail="当前状态与内容包无法匹配此案件，请重新载入档案。"
+        title={t("case.invalidTitle")}
+        detail={t("case.invalidDetail")}
         tone="error"
       />
     );
@@ -108,6 +119,14 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
   const interactionLocked = !caseCommandsAllowed;
   const currentNode =
     progress.status === "active" ? caseDefinition.nodes[progress.currentNodeId] : undefined;
+  const resolvedPresentation =
+    progress.status === "resolved" ? caseDefinition.resolutions[progress.resolutionId] : undefined;
+  const finalChoice =
+    progress.status === "resolved"
+      ? Object.values(caseDefinition.nodes)
+          .flatMap((node) => node.choices)
+          .find((choice) => choice.id === progress.finalChoiceId)
+      : undefined;
 
   return (
     <article
@@ -119,25 +138,22 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
     >
       <header className="case-reader__header">
         <div>
-          <p className="kicker">Judicial record</p>
+          <p className="kicker">{t("case.recordKicker")}</p>
           <h1 id={titleId}>{caseDefinition.title}</h1>
         </div>
         <span className={`case-reader__status case-reader__status--${progress.status}`}>
-          {progress.status === "pending"
-            ? "待审理"
-            : progress.status === "active"
-              ? "审理中"
-              : "已归档"}
+          {t(`case.status.${progress.status}`)}
         </span>
       </header>
 
       {snapshot.status === "saving" ? (
         <div className="case-reader__notice" role="status" aria-live="polite">
-          正在归档当前操作，本案暂时只读。
+          {t("case.savingNotice")}
         </div>
       ) : snapshot.status === "needsReload" ? (
         <div className="case-reader__notice case-reader__notice--error" role="alert">
-          <strong>需要重新载入档案。</strong> {snapshot.error.message}
+          <strong>{t("case.reloadNotice")}</strong>{" "}
+          {snapshot.error ? translateSessionError(t, snapshot.error.code) : t("case.invalidDetail")}
         </div>
       ) : commandError ? (
         <div className="case-reader__notice case-reader__notice--error" role="alert">
@@ -148,7 +164,7 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
       <div
         className="case-reader__scroll-region"
         role="region"
-        aria-label={`${caseDefinition.title}正文与裁定`}
+        aria-label={t("case.regionAria", { title: caseDefinition.title })}
         tabIndex={0}
       >
         <CharacterSection characters={caseDefinition.characters} />
@@ -158,43 +174,73 @@ export function CaseReader({ snapshot, dispatch }: CaseReaderProps) {
         <div className="case-reader__workflow">
           {progress.status === "pending" ? (
             <section className="case-start" aria-labelledby={`${titleId}-start`}>
-              <p className="kicker">Review docket</p>
+              <p className="kicker">{t("case.startKicker")}</p>
               <h2 id={`${titleId}-start`} ref={panelHeadingRef} tabIndex={-1}>
-                准备开始审理
+                {t("case.startTitle")}
               </h2>
-              <p>开始后将进入首个裁定节点。案卷正文会保留在当前页面。</p>
+              <p>{t("case.startDetail")}</p>
               <button
                 className="button button--primary case-start__button"
                 type="button"
                 disabled={interactionLocked || starting}
                 onClick={() => void startCase()}
               >
-                {starting || snapshot.status === "saving" ? "正在归档…" : "开始案件"}
+                {t(starting || snapshot.status === "saving" ? "case.archiving" : "case.start")}
               </button>
             </section>
           ) : progress.status === "active" ? (
             currentNode ? (
               <DecisionPanel
+                key={progress.currentNodeId}
                 caseId={selectedCaseId}
                 nodeId={progress.currentNodeId}
                 node={currentNode}
                 dispatch={dispatch}
                 disabled={interactionLocked}
+                revealDelayMs={decisionRevealDelayMs}
                 headingRef={panelHeadingRef}
                 onCommandError={setCommandError}
               />
             ) : (
               <section className="case-reader__integrity-error" role="alert">
-                <h2>裁定节点不可用</h2>
-                <p>存档引用的当前节点不在内容包中。请重新载入或检查内容版本。</p>
+                <h2>{t("case.nodeUnavailableTitle")}</h2>
+                <p>{t("case.nodeUnavailableDetail")}</p>
               </section>
             )
+          ) : resolvedPresentation ? (
+            <ResolutionPanel
+              resolution={progress.snapshot}
+              finalChoiceText={finalChoice?.text ?? progress.finalChoiceId}
+              verdict={resolvedPresentation.verdict}
+              result={resolvedPresentation.result}
+              attributes={snapshot.content!.attributes}
+              headingRef={panelHeadingRef}
+            />
           ) : (
-            <ResolutionPanel resolution={progress.snapshot} headingRef={panelHeadingRef} />
+            <section className="case-reader__integrity-error" role="alert">
+              <h2>{t("case.nodeUnavailableTitle")}</h2>
+              <p>{t("case.nodeUnavailableDetail")}</p>
+            </section>
           )}
         </div>
       </div>
     </article>
+  );
+}
+
+function CaseReaderGuide() {
+  const { t } = useI18n();
+
+  return (
+    <section className="case-reader-guide" role="status" aria-labelledby="archive-guide-title">
+      <div className="archive-emblem" aria-hidden="true">
+        <span>{t("brand.seal")}</span>
+        <small>{t("brand.office")}</small>
+      </div>
+      <p className="kicker">{t("case.guideKicker")}</p>
+      <h1 id="archive-guide-title">{t("case.guideTitle")}</h1>
+      <p>{t("case.guideDetail")}</p>
+    </section>
   );
 }
 
@@ -206,13 +252,15 @@ interface CaseReaderStateProps {
 }
 
 function CaseReaderState({ title, detail, busy = false, tone = "neutral" }: CaseReaderStateProps) {
+  const { t } = useI18n();
+
   return (
     <section
       className={`case-reader-state case-reader-state--${tone}`}
       aria-busy={busy}
       role={tone === "error" ? "alert" : "status"}
     >
-      <p className="kicker">Judicial archive</p>
+      <p className="kicker">{t("case.stateKicker")}</p>
       <h1>{title}</h1>
       <p>{detail}</p>
     </section>

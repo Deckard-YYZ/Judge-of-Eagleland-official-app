@@ -1,20 +1,14 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { loadContentPackage, type ContentPackageSource } from "../src/content/packageFormat";
+import {
+  loadSplitContentPackage,
+  type ContentPackageSource,
+} from "../src/content/localizedPackageFormat";
 import type { ContentValidationPath } from "../src/content/validate";
 
 const DEFAULT_CONTENT_ROOT = "content";
-const PACKAGE_MARKERS = new Set([
-  "manifest.json",
-  "attributes.json",
-  "initial.json",
-  "progression.json",
-  "endings.json",
-  "assets.json",
-  "cases",
-  "stories",
-]);
+const PACKAGE_MARKERS = new Set(["game.json"]);
 
 const compareNames = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
@@ -129,15 +123,13 @@ const validatePackageDirectory = async (packageDirectory: string): Promise<boole
   const { sources, inventory } = await readPackageInput(packageDirectory);
   const expectedPackageId = path.basename(path.dirname(packageDirectory));
   const expectedVersion = path.basename(packageDirectory);
-  const result = loadContentPackage(sources, {
-    fileInventory: inventory,
-    expectedPackageId,
-    expectedVersion,
-  });
+  const options = { fileInventory: inventory, expectedPackageId, expectedVersion };
+  const result = loadSplitContentPackage(sources, options);
 
   if (result.ok) {
+    const catalog = result.gameContent;
     console.log(
-      `VALID ${displayPath(packageDirectory)} (${result.catalog.manifest.packageId}@${result.catalog.manifest.version}, ${Object.keys(result.catalog.cases).length} cases)`,
+      `VALID ${displayPath(packageDirectory)} (${catalog.manifest.packageId}@${catalog.manifest.version}, ${Object.keys(catalog.cases).length} cases)`,
     );
     return true;
   }

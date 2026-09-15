@@ -1,4 +1,4 @@
-import type { CaseDefinition, ContentCatalog } from "./schema";
+import type { GameCaseDefinition, GameContentCatalog } from "./schema";
 
 export type CaseGraphValidationIssueCode =
   "CASE_NODE_UNREACHABLE" | "CASE_GRAPH_CYCLE" | "CASE_PATH_NON_TERMINATING";
@@ -23,10 +23,10 @@ interface DfsFrame {
 const compareIds = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
-const sortedNodeIds = (definition: CaseDefinition): string[] =>
+const sortedNodeIds = (definition: GameCaseDefinition): string[] =>
   Object.keys(definition.nodes).sort(compareIds);
 
-const hasMissingNodeReference = (definition: CaseDefinition): boolean => {
+const hasMissingNodeReference = (definition: GameCaseDefinition): boolean => {
   for (const nodeId of Object.keys(definition.nodes)) {
     for (const choice of definition.nodes[nodeId].choices) {
       if (choice.target.type === "node" && !Object.hasOwn(definition.nodes, choice.target.nodeId)) {
@@ -41,7 +41,7 @@ const hasMissingNodeReference = (definition: CaseDefinition): boolean => {
  * Missing node references are deliberately ignored here. C1 owns that diagnostic, and an
  * incomplete edge cannot safely prove either reachability or termination.
  */
-const reachableNodeIds = (definition: CaseDefinition): ReadonlySet<string> => {
+const reachableNodeIds = (definition: GameCaseDefinition): ReadonlySet<string> => {
   if (!Object.hasOwn(definition.nodes, definition.startNodeId)) {
     return new Set();
   }
@@ -72,7 +72,7 @@ const reachableNodeIds = (definition: CaseDefinition): ReadonlySet<string> => {
 
 const graphIssuesForCase = (
   caseId: string,
-  definition: CaseDefinition,
+  definition: GameCaseDefinition,
 ): readonly CaseGraphValidationIssue[] => {
   const issues: CaseGraphValidationIssue[] = [];
   const nodeIds = sortedNodeIds(definition);
@@ -168,7 +168,7 @@ const graphIssuesForCase = (
 
 /** Pure graph validation over already structurally parsed content. */
 export const collectCaseGraphIssues = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): readonly CaseGraphValidationIssue[] => {
   const issues: CaseGraphValidationIssue[] = [];
   for (const caseId of Object.keys(content.cases).sort(compareIds)) {

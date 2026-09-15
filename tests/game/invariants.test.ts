@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { ContentCatalog } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import { createInitialGameState } from "../../src/game/initialization";
 import { checkGameStateInvariants, type GameStateInvariantIssue } from "../../src/game/invariants";
 import type { GameState } from "../../src/game/model";
 
-const initialState = (content: Readonly<ContentCatalog> = MINIMAL_CATALOG): GameState => {
+const initialState = (content: Readonly<GameContentCatalog> = MINIMAL_GAME_CONTENT): GameState => {
   const result = createInitialGameState(content);
   if (!result.ok) {
     throw new Error("Test catalog should produce an initial state.");
@@ -15,7 +15,7 @@ const initialState = (content: Readonly<ContentCatalog> = MINIMAL_CATALOG): Game
 
 const issuesFor = (
   candidate: unknown,
-  content: Readonly<ContentCatalog> = MINIMAL_CATALOG,
+  content: Readonly<GameContentCatalog> = MINIMAL_GAME_CONTENT,
 ): readonly GameStateInvariantIssue[] => {
   const result = checkGameStateInvariants(candidate, content);
   if (result.ok) {
@@ -33,22 +33,17 @@ const resolvedCaseState = (): GameState => ({
       status: "resolved",
       history: [{ nodeId: "assessment", choiceId: "insufficient_evidence" }],
       resolutionId: "close_with_note",
+      finalChoiceId: "insufficient_evidence",
       snapshot: {
-        caseTitle: "第 001 号：夜间档案室事件",
-        finalChoiceText: "现有材料不足以支持进一步处分",
-        verdict: [{ type: "paragraph", text: "保留程序违规记录，本次不追加处分。" }],
-        result: [{ type: "paragraph", text: "档案室接受了决定，同时提出修订外借登记流程。" }],
         attributeChanges: [
           {
             attributeId: "restraint",
-            label: "克制",
             before: 50,
             after: 53,
             actualDelta: 3,
           },
           {
             attributeId: "authority",
-            label: "权威",
             before: 50,
             after: 48,
             actualDelta: -2,
@@ -72,7 +67,7 @@ describe("checkGameStateInvariants", () => {
       history: [{ nodeId: "assessment", choiceId: "confirm_violation" }],
     };
 
-    expect(checkGameStateInvariants(state, MINIMAL_CATALOG)).toEqual({ ok: true });
+    expect(checkGameStateInvariants(state, MINIMAL_GAME_CONTENT)).toEqual({ ok: true });
 
     state.cases.case_001 = {
       status: "active",
@@ -100,7 +95,7 @@ describe("checkGameStateInvariants", () => {
     const state = resolvedCaseState();
     const before = structuredClone(state);
 
-    expect(checkGameStateInvariants(state, MINIMAL_CATALOG)).toEqual({ ok: true });
+    expect(checkGameStateInvariants(state, MINIMAL_GAME_CONTENT)).toEqual({ ok: true });
     expect(state).toEqual(before);
 
     const progress = state.cases.case_001;
@@ -189,7 +184,7 @@ describe("checkGameStateInvariants", () => {
     const ending = initialState();
     ending.phase = { type: "ending", endingId: "balanced" };
     ending.pendingStoryIds = ["story_after_case_001", "ending_balanced"];
-    expect(checkGameStateInvariants(ending, MINIMAL_CATALOG)).toEqual({ ok: true });
+    expect(checkGameStateInvariants(ending, MINIMAL_GAME_CONTENT)).toEqual({ ok: true });
 
     ending.pendingStoryIds.reverse();
     expect(issuesFor(ending).map((issue) => issue.code)).toContain("PHASE_STORY_INVALID");
@@ -206,7 +201,7 @@ describe("checkGameStateInvariants", () => {
     const ended = initialState();
     ended.phase = { type: "ended", endingId: "fallback" };
     ended.completedStoryIds = ["ending_fallback"];
-    expect(checkGameStateInvariants(ended, MINIMAL_CATALOG)).toEqual({ ok: true });
+    expect(checkGameStateInvariants(ended, MINIMAL_GAME_CONTENT)).toEqual({ ok: true });
 
     ended.completedStoryIds = ["ending_balanced", "ending_fallback"];
     expect(issuesFor(ended).map((issue) => issue.code)).toContain("PHASE_STORY_INVALID");

@@ -1,4 +1,4 @@
-import type { ContentCatalog } from "../content/schema";
+import type { GameContentCatalog } from "../content/schema";
 import type {
   GameCommand,
   FeedbackRequest,
@@ -29,7 +29,7 @@ const describeResolutionIssue = (issue: ResolutionIssue): string => {
 
 const accept = (
   nextState: GameState,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   feedback: readonly FeedbackRequest[] = [],
 ): TransitionResult => {
   const invariantResult = checkGameStateInvariants(nextState, content);
@@ -55,7 +55,7 @@ const rejectBlockedCaseCommand = (state: Readonly<GameState>): TransitionResult 
 const startCase = (
   state: Readonly<GameState>,
   command: Extract<GameCommand, { type: "startCase" }>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): TransitionResult => {
   const blocked = rejectBlockedCaseCommand(state);
   if (blocked) {
@@ -106,7 +106,7 @@ const startCase = (
 type ResolutionChoiceHandler = (
   state: Readonly<GameState>,
   command: Extract<GameCommand, { type: "chooseOption" }>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   context: TransitionContext,
 ) => TransitionResult;
 
@@ -138,7 +138,7 @@ const handleResolutionChoice: ResolutionChoiceHandler = (state, command, content
 const chooseOption = (
   state: Readonly<GameState>,
   command: Extract<GameCommand, { type: "chooseOption" }>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   context: TransitionContext,
 ): TransitionResult => {
   const blocked = rejectBlockedCaseCommand(state);
@@ -215,7 +215,7 @@ const chooseOption = (
 const completeStory = (
   state: Readonly<GameState>,
   command: Extract<GameCommand, { type: "completeStory" }>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): TransitionResult => {
   if (state.phase.type === "ended") {
     return reject("RUN_FINISHED", "The run has already ended.");

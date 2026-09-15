@@ -1,5 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import type { StoryDefinition, StoryId } from "../../../content/schema";
+import type { ContentStoryView } from "../../../application/gameContentView";
+import type { StoryId } from "../../../content/schema";
+import { useI18n, type MessageKey } from "../../i18n";
 import { StoryBlocks } from "./StoryBlocks";
 import "./story.css";
 
@@ -7,16 +9,16 @@ export type StoryCompletionReason = "completed" | "skipped";
 
 export interface StoryPlayerProps {
   storyId: StoryId;
-  story: Readonly<StoryDefinition>;
+  story: Readonly<ContentStoryView>;
   busy?: boolean;
   completionError?: string | null;
   onComplete(reason: StoryCompletionReason): void | Promise<void>;
 }
 
-const effectLabel = {
-  blood: "血色掠过卷宗",
-  fade: "画面渐暗",
-} as const;
+const effectLabelKeys = {
+  blood: "story.effect.blood",
+  fade: "story.effect.fade",
+} as const satisfies Record<"blood" | "fade", MessageKey>;
 
 /**
  * Plays one persisted story unit. The step cursor is intentionally local: only
@@ -29,9 +31,10 @@ export function StoryPlayer({
   completionError = null,
   onComplete,
 }: StoryPlayerProps) {
+  const { formatNumber, t } = useI18n();
   const [stepIndex, setStepIndex] = useState(0);
   const [finishedEffectKey, setFinishedEffectKey] = useState<string | null>(null);
-  const [videoRetryMessage, setVideoRetryMessage] = useState<string | null>(null);
+  const [videoRetryFailed, setVideoRetryFailed] = useState(false);
   const step = story.steps[stepIndex];
   const effectKey = `${storyId}:${stepIndex}`;
   const effectFinished = finishedEffectKey === effectKey;
@@ -39,11 +42,11 @@ export function StoryPlayer({
   useEffect(() => {
     setStepIndex(0);
     setFinishedEffectKey(null);
-    setVideoRetryMessage(null);
+    setVideoRetryFailed(false);
   }, [storyId]);
 
   useEffect(() => {
-    setVideoRetryMessage(null);
+    setVideoRetryFailed(false);
 
     if (step?.type !== "effect") {
       return;
@@ -61,16 +64,16 @@ export function StoryPlayer({
   if (!step) {
     return (
       <section className="story-player story-player--error" aria-labelledby="story-error-title">
-        <p className="story-player__kicker">演出内容异常</p>
+        <p className="story-player__kicker">{t("story.errorKicker")}</p>
         <h2 id="story-error-title">{story.title}</h2>
-        <p role="alert">当前剧情没有可显示的步骤。可以确认后继续，不会改变案件规则结果。</p>
+        <p role="alert">{t("story.emptyDetail")}</p>
         <button
           className="story-button story-button--primary"
           type="button"
           disabled={busy}
           onClick={() => void onComplete("completed")}
         >
-          {busy ? "正在保存…" : "确认并继续"}
+          {t(busy ? "story.saving" : "story.confirmContinue")}
         </button>
       </section>
     );
@@ -102,47 +105,49 @@ export function StoryPlayer({
     >
       <header className="story-player__header">
         <div>
-          <p className="story-player__kicker">Important story</p>
+          <p className="story-player__kicker">{t("story.kicker")}</p>
           <h2 id="story-player-title">{story.title}</h2>
         </div>
         <span
           className="story-player__progress"
-          aria-label={`第 ${stepIndex + 1} 步，共 ${story.steps.length} 步`}
+          aria-label={t("story.progressAria", {
+            current: formatNumber(stepIndex + 1),
+            total: formatNumber(story.steps.length),
+          })}
         >
-          {String(stepIndex + 1).padStart(2, "0")} / {String(story.steps.length).padStart(2, "0")}
+          {formatNumber(stepIndex + 1, { minimumIntegerDigits: 2, useGrouping: false })} /{" "}
+          {formatNumber(story.steps.length, { minimumIntegerDigits: 2, useGrouping: false })}
         </span>
       </header>
 
-      <div className="story-player__stage">
+      <div className="story-player__stage" key={stepIndex}>
         {step.type === "text" ? <StoryBlocks blocks={step.blocks} /> : null}
 
         {step.type === "video" ? (
           <section className="story-video-fallback" aria-labelledby="story-video-title">
             <div className="story-video-fallback__frame" aria-hidden="true">
-              <span>VIDEO UNAVAILABLE</span>
+              <span>{t("story.videoUnavailableFrame")}</span>
             </div>
             <div className="story-video-fallback__notice">
-              <p className="story-video-fallback__label">影像暂不可用</p>
-              <h3 id="story-video-title">已切换到替代叙事</h3>
-              <p>当前版本尚未接入受控媒体解析器，因此不会尝试读取内容包路径或任意本地文件。</p>
+              <p className="story-video-fallback__label">{t("story.videoUnavailableLabel")}</p>
+              <h3 id="story-video-title">{t("story.videoFallbackTitle")}</h3>
+              <p>{t("story.videoFallbackDetail")}</p>
               <button
                 className="story-button story-button--secondary"
                 type="button"
                 disabled={busy}
-                onClick={() =>
-                  setVideoRetryMessage("仍无法播放：媒体解析器尚未接入。请阅读下方替代叙事。")
-                }
+                onClick={() => setVideoRetryFailed(true)}
               >
-                重试影像（占位）
+                {t("story.videoRetry")}
               </button>
-              {videoRetryMessage ? (
+              {videoRetryFailed ? (
                 <p className="story-video-fallback__retry" role="status" aria-live="polite">
-                  {videoRetryMessage}
+                  {t("story.videoRetryFailed")}
                 </p>
               ) : null}
             </div>
             <div className="story-video-fallback__copy">
-              <p className="story-video-fallback__label">替代叙事</p>
+              <p className="story-video-fallback__label">{t("story.videoFallbackLabel")}</p>
               <StoryBlocks blocks={step.fallbackBlocks} />
             </div>
           </section>
@@ -157,8 +162,8 @@ export function StoryPlayer({
             />
             <p>
               {effectFinished
-                ? `${effectLabel[step.effect]}，演出完成。`
-                : effectLabel[step.effect]}
+                ? t("story.effectFinished", { effect: t(effectLabelKeys[step.effect]) })
+                : t(effectLabelKeys[step.effect])}
             </p>
           </section>
         ) : null}
@@ -166,7 +171,7 @@ export function StoryPlayer({
 
       {completionError ? (
         <p className="story-player__error" role="alert">
-          保存失败：{completionError}
+          {t("story.saveFailed", { message: completionError })}
         </p>
       ) : null}
 
@@ -178,10 +183,10 @@ export function StoryPlayer({
             disabled={busy}
             onClick={() => void onComplete("skipped")}
           >
-            跳过整段剧情
+            {t("story.skip")}
           </button>
         ) : (
-          <span className="story-player__required">本段剧情不可跳过</span>
+          <span className="story-player__required">{t("story.required")}</span>
         )}
 
         <button
@@ -190,13 +195,15 @@ export function StoryPlayer({
           disabled={busy || !canAdvance}
           onClick={advance}
         >
-          {busy
-            ? "正在保存…"
-            : step.type === "effect" && !effectFinished
-              ? "演出进行中…"
-              : atLastStep
-                ? "完成剧情"
-                : "继续"}
+          {t(
+            busy
+              ? "story.saving"
+              : step.type === "effect" && !effectFinished
+                ? "story.effectRunning"
+                : atLastStep
+                  ? "story.complete"
+                  : "story.continue",
+          )}
         </button>
       </footer>
     </article>

@@ -1,5 +1,7 @@
 import { useId } from "react";
-import type { CharacterBrief, TextBlock as TextBlockDefinition } from "../../content/schema";
+import type { ContentCaseView } from "../../application/gameContentView";
+import type { TextBlock as TextBlockDefinition } from "../../content/schema";
+import { useI18n } from "../i18n";
 
 export interface TextBlockProps {
   block: Readonly<TextBlockDefinition>;
@@ -36,10 +38,11 @@ export function TextBlockList({ blocks }: TextBlockListProps) {
 }
 
 export interface CharacterSectionProps {
-  characters: readonly Readonly<CharacterBrief>[];
+  characters: Readonly<ContentCaseView>["characters"];
 }
 
 export function CharacterSection({ characters }: CharacterSectionProps) {
+  const { t } = useI18n();
   const headingId = useId();
 
   if (characters.length === 0) {
@@ -49,7 +52,7 @@ export function CharacterSection({ characters }: CharacterSectionProps) {
   return (
     <section className="case-section case-characters" aria-labelledby={headingId}>
       <h2 id={headingId} className="case-section__title">
-        相关人员
+        {t("case.people")}
       </h2>
       <ul className="case-characters__list">
         {characters.map((character) => (
@@ -70,12 +73,13 @@ export interface CaseSummaryProps {
 }
 
 export function CaseSummary({ blocks }: CaseSummaryProps) {
+  const { t } = useI18n();
   const headingId = useId();
 
   return (
     <section className="case-section case-summary" aria-labelledby={headingId}>
       <h2 id={headingId} className="case-section__title">
-        案情摘要
+        {t("case.summary")}
       </h2>
       <TextBlockList blocks={blocks} />
     </section>
@@ -87,12 +91,13 @@ export interface CaseBodyProps {
 }
 
 export function CaseBody({ blocks }: CaseBodyProps) {
+  const { t } = useI18n();
   const headingId = useId();
 
   return (
     <section className="case-section case-body" aria-labelledby={headingId}>
       <h2 id={headingId} className="case-section__title">
-        案卷正文
+        {t("case.body")}
       </h2>
       <TextBlockList blocks={blocks} />
     </section>

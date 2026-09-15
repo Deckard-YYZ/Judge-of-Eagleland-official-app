@@ -3,6 +3,9 @@ import type {
   GameSessionView,
   GameSessionViewSnapshot,
 } from "../../../application/gameSessionView";
+import type { GameSessionErrorCode } from "../../../application/gameSession";
+import { LocaleSwitch } from "../../LocaleSwitch";
+import { translateSessionError, useI18n } from "../../i18n";
 import { EndingView } from "./EndingView";
 import { StoryPlayer, type StoryCompletionReason } from "./StoryPlayer";
 import "./story.css";
@@ -44,6 +47,7 @@ interface ModalFrameProps {
 }
 
 function ModalFrame({ identity, onDismiss, children }: ModalFrameProps) {
+  const { t } = useI18n();
   const frameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,8 +103,16 @@ function ModalFrame({ identity, onDismiss, children }: ModalFrameProps) {
   };
 
   return (
-    <div className="story-overlay" role="dialog" aria-modal="true" aria-label="重要剧情">
+    <div
+      className="story-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("story.dialogAria")}
+    >
       <div className="story-overlay__frame" ref={frameRef} tabIndex={-1} onKeyDown={trapFocus}>
+        <div className="story-overlay__toolbar">
+          <LocaleSwitch />
+        </div>
         {children}
       </div>
     </div>
@@ -117,8 +129,11 @@ export function StoryOverlay({
   endingOpen,
   onCloseEnding,
 }: StoryOverlayProps) {
+  const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
-  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<
+    GameSessionErrorCode | "unexpected" | null
+  >(null);
   const operationVersion = useRef(0);
   const submittingRef = useRef(false);
   const state = snapshot.state;
@@ -166,9 +181,7 @@ export function StoryOverlay({
 
         submittingRef.current = false;
         setSubmitting(false);
-        setCompletionError(
-          error instanceof Error ? error.message : "剧情完成操作未能提交。请重试。",
-        );
+        setCompletionError("unexpected");
         return;
       }
 
@@ -179,7 +192,7 @@ export function StoryOverlay({
       submittingRef.current = false;
       setSubmitting(false);
       if (!result.ok) {
-        setCompletionError(result.message);
+        setCompletionError(result.code);
       }
     },
     [currentStoryId, sessionView, snapshot.status],
@@ -189,6 +202,14 @@ export function StoryOverlay({
     // idle/loading/error snapshots have no committed story or ending to present.
     return null;
   }
+
+  const completionErrorMessage = completionError
+    ? completionError === "unexpected"
+      ? t("story.completeUnexpectedError")
+      : translateSessionError(t, completionError)
+    : snapshot.error
+      ? translateSessionError(t, snapshot.error.code)
+      : null;
 
   if (currentStoryId) {
     const story = content.stories[currentStoryId];
@@ -202,7 +223,7 @@ export function StoryOverlay({
             storyId={currentStoryId}
             story={story}
             busy={submitting || snapshot.status === "saving"}
-            completionError={completionError ?? snapshot.error?.message}
+            completionError={completionErrorMessage}
             onComplete={completeStory}
           />
         ) : (
@@ -210,14 +231,12 @@ export function StoryOverlay({
             className="story-player story-player--error"
             aria-labelledby="missing-story-title"
           >
-            <p className="story-player__kicker">演出内容异常</p>
-            <h2 id="missing-story-title">剧情内容无法载入</h2>
-            <p role="alert">
-              队列中的剧情未在当前内容版本中找到。确认后可以继续，不会重新计算案件结果。
-            </p>
-            {completionError || snapshot.error ? (
+            <p className="story-player__kicker">{t("story.errorKicker")}</p>
+            <h2 id="missing-story-title">{t("story.missingTitle")}</h2>
+            <p role="alert">{t("story.missingDetail")}</p>
+            {completionErrorMessage ? (
               <p className="story-player__error" role="alert">
-                {completionError ?? snapshot.error?.message}
+                {completionErrorMessage}
               </p>
             ) : null}
             <button
@@ -226,7 +245,11 @@ export function StoryOverlay({
               disabled={submitting || snapshot.status !== "ready"}
               onClick={() => void completeStory("completed")}
             >
-              {submitting || snapshot.status === "saving" ? "正在保存…" : "确认并继续"}
+              {t(
+                submitting || snapshot.status === "saving"
+                  ? "story.saving"
+                  : "story.confirmContinue",
+              )}
             </button>
           </section>
         )}
@@ -246,7 +269,7 @@ export function StoryOverlay({
       <ModalFrame identity={identity} onDismiss={onCloseEnding}>
         <EndingView
           endingId={state.phase.endingId}
-          title={ending?.title ?? "未命名结局"}
+          title={ending?.title ?? t("story.unnamedEnding")}
           onReturnToArchive={onCloseEnding}
         />
       </ModalFrame>
@@ -260,12 +283,12 @@ export function StoryOverlay({
           className="story-player story-player--error"
           aria-labelledby="ending-pending-title"
         >
-          <p className="story-player__kicker">Final archive</p>
-          <h2 id="ending-pending-title">结局正在归档</h2>
-          <p role="status">结局阶段尚未完成，主工作区将保持锁定。请重新载入档案以恢复演出队列。</p>
+          <p className="story-player__kicker">{t("story.endingPendingKicker")}</p>
+          <h2 id="ending-pending-title">{t("story.endingPendingTitle")}</h2>
+          <p role="status">{t("story.endingPendingDetail")}</p>
           {snapshot.error ? (
             <p className="story-player__error" role="alert">
-              {snapshot.error.message}
+              {translateSessionError(t, snapshot.error.code)}
             </p>
           ) : null}
         </section>

@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { createDemoSave } from "../../src/app/demoSession";
 import { demoTransition } from "../../src/app/demoTransition";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import type { GameCommand, TransitionResult } from "../../src/game/commands";
 import type { GameState } from "../../src/game/model";
 import { transition } from "../../src/game/transition";
 
 const NOW = "2026-09-15T00:00:00.000Z";
 
-const initialState = (): GameState => createDemoSave("profile", "save", MINIMAL_CATALOG, NOW).state;
+const initialState = (): GameState =>
+  createDemoSave("profile", "save", MINIMAL_GAME_CONTENT, NOW).state;
 
 const run = (state: GameState, command: GameCommand): TransitionResult =>
-  demoTransition(state, command, MINIMAL_CATALOG, { nowIso: NOW });
+  demoTransition(state, command, MINIMAL_GAME_CONTENT, { nowIso: NOW });
 
 const success = (result: TransitionResult): GameState => {
   expect(result.ok).toBe(true);
@@ -73,8 +74,8 @@ describe("demoTransition", () => {
     expect(state.cases.case_001).toMatchObject({
       status: "resolved",
       resolutionId: "warning",
+      finalChoiceId: "formal_warning",
       snapshot: {
-        finalChoiceText: "给予书面警告",
         resolvedAt: NOW,
         resolvedOrder: 1,
         attributeChanges: [
@@ -182,7 +183,7 @@ describe("demoTransition", () => {
   });
 
   it("reports invalid initial content at the demo composition boundary", () => {
-    const content = structuredClone(MINIMAL_CATALOG);
+    const content = structuredClone(MINIMAL_GAME_CONTENT);
     content.initial.caseIds = ["case_001", "case_001"];
 
     expect(() => createDemoSave("profile", "save", content, NOW)).toThrow(/INITIAL_CASE_DUPLICATE/);

@@ -1,7 +1,80 @@
 .case-reader,
-.case-reader-state {
+.case-reader-state,
+.case-reader-guide,
+.case-loading-state {
   color: var(--ui-ink);
   background: var(--ui-surface);
+}
+
+.case-reader-guide,
+.case-loading-state {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 20rem;
+  padding: clamp(2rem, 8vw, 5rem) clamp(1rem, 5vw, 3.5rem);
+  place-content: center;
+  justify-items: center;
+  border-top: 0.32rem solid var(--ui-emphasis);
+  text-align: center;
+}
+
+.case-reader-guide h1,
+.case-loading-state h1 {
+  margin: 0.55rem 0 0.8rem;
+  color: var(--ui-ink);
+  font-size: clamp(1.35rem, 2.4vw, 2.1rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.case-reader-guide > p:last-child,
+.case-loading-state > p:last-child {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--ui-muted);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.archive-emblem {
+  display: grid;
+  width: clamp(7rem, 18vw, 9rem);
+  aspect-ratio: 1;
+  margin-bottom: 1.1rem;
+  place-content: center;
+  border: 1px solid var(--ui-line);
+  border-radius: 50%;
+  background: var(--ui-quiet);
+  box-shadow: inset 0 0 0 0.45rem var(--ui-surface);
+}
+
+.archive-emblem span {
+  color: var(--ui-emphasis);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.3rem, 6vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.archive-emblem small {
+  margin-top: 0.55rem;
+  color: var(--ui-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.case-loading-state__spinner {
+  width: 2.65rem;
+  aspect-ratio: 1;
+  margin-bottom: 1.35rem;
+  border: 3px solid var(--ui-line);
+  border-top-color: var(--ui-emphasis);
+  border-radius: 50%;
+  animation: case-loading-spin 0.8s linear infinite;
 }
 
 .case-reader {
@@ -187,6 +260,7 @@
   border-top: 1px solid var(--ui-line);
   border-bottom: 1px solid var(--ui-line);
   background: var(--ui-quiet);
+  animation: case-interaction-enter var(--motion-standard) var(--motion-ease) both;
 }
 
 .case-start h2,
@@ -212,11 +286,59 @@
 .decision-panel__choices {
   display: grid;
   min-width: 0;
-  margin: 1.5rem 0 0;
+  margin: 0;
   padding: 0;
   border: 0;
   gap: 0;
   border-top: 1px solid var(--ui-line);
+}
+
+.decision-reveal {
+  min-width: 0;
+  min-height: 7rem;
+  margin-top: 1.5rem;
+}
+
+.decision-thinking {
+  display: flex;
+  min-height: 7rem;
+  padding: 1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-top: 1px solid var(--ui-line);
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-muted);
+  text-align: center;
+}
+
+.decision-thinking__label {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.decision-thinking__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.decision-thinking__dots i {
+  width: 0.28rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+  animation: decision-thinking-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.decision-thinking__dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.decision-thinking__dots i:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
 .decision-option {
@@ -236,6 +358,10 @@
   background: transparent;
   text-align: left;
   line-height: 1.5;
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease);
 }
 
 .decision-option__button:hover:not(:disabled),
@@ -258,6 +384,17 @@
   color: var(--ui-muted);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.65rem;
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.decision-option__button:hover:not(:disabled) .decision-option__mark,
+.decision-option__button:focus-visible .decision-option__mark {
+  color: var(--ui-inverse);
+  background: var(--ui-emphasis);
+  transform: translateX(-0.15rem);
 }
 
 .annotation-popover__close:focus-visible {
@@ -276,6 +413,7 @@
   color: var(--ui-ink);
   background: var(--ui-surface);
   box-shadow: var(--ui-shadow);
+  animation: annotation-popover-enter var(--motion-fast) var(--motion-ease) both;
 }
 
 .annotation-popover--pinned {
@@ -464,6 +602,48 @@
 
 .case-reader-state--error > p:last-child {
   color: var(--ui-danger);
+}
+
+@keyframes case-interaction-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.3rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes case-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes decision-thinking-pulse {
+  from {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-0.12rem);
+  }
+}
+
+@keyframes annotation-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.2rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 48rem) {

@@ -8,17 +8,15 @@ import {
   type NodeId,
   type ResolutionId,
   type StoryId,
-  TextBlockSchema,
 } from "../content/schema";
 import { z } from "zod";
 
 const IdSchema = z.string().min(1);
-const TextSchema = z.string().min(1);
 const IntegerSchema = z.number().int().finite();
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
 /** 当前支持的存档 Schema 版本。改变存档形状时必须提供迁移路径。 */
-export const SUPPORTED_SAVE_SCHEMA_VERSION = 1;
+export const SUPPORTED_SAVE_SCHEMA_VERSION = 2;
 
 export const ChoiceRecordSchema = z.strictObject({
   nodeId: IdSchema,
@@ -29,7 +27,6 @@ export type ChoiceRecord = z.infer<typeof ChoiceRecordSchema>;
 
 export const AttributeChangeSnapshotSchema = z.strictObject({
   attributeId: IdSchema,
-  label: TextSchema,
   before: IntegerSchema,
   after: IntegerSchema,
   actualDelta: IntegerSchema,
@@ -38,10 +35,6 @@ export const AttributeChangeSnapshotSchema = z.strictObject({
 export type AttributeChangeSnapshot = z.infer<typeof AttributeChangeSnapshotSchema>;
 
 export const ResolutionSnapshotSchema = z.strictObject({
-  caseTitle: TextSchema,
-  finalChoiceText: TextSchema,
-  verdict: z.array(TextBlockSchema),
-  result: z.array(TextBlockSchema),
   attributeChanges: z.array(AttributeChangeSnapshotSchema),
   resolvedAt: IsoDateTimeSchema,
   resolvedOrder: IntegerSchema.positive(),
@@ -63,6 +56,7 @@ export const ResolvedCaseProgressSchema = z.strictObject({
   status: z.literal("resolved"),
   history: z.array(ChoiceRecordSchema),
   resolutionId: IdSchema,
+  finalChoiceId: IdSchema,
   snapshot: ResolutionSnapshotSchema,
 });
 

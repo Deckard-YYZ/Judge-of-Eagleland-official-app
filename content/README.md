@@ -1,9 +1,25 @@
 # 内容包编写与校验
 
 内容包位于 `content/<packageId>/<version>/`。同一个已发布的 packageId/version 应视为不可变；
-修改内容时创建新版本。运行时统一消费 `ContentCatalog`，物理文件仅用于作者协作和发布校验。
+修改内容时创建新版本。Schema v2 将唯一的规则图与各语言表现严格分开；locale 是独立加载维度，
+不进入只含 packageId/version 的 `ContentRef`。
 
-## 分文件格式
+## Schema v2 格式（正式新包）
+
+| 文件 | 内容 |
+| ---- | ---- |
+| `game.json` | 唯一 `GameContentCatalog`：ID、顺序、规则、target/effects、资源与带稳定 ID 的 story step |
+| `locales/<AppLocale>.json` | 一个严格 `LocalizedContentCatalog`：所有可显示文案，不允许任何业务字段 |
+| `media/**` | `game.json` 的 asset path 引用的包内媒体 |
+
+`game.json.manifest.supportedLocales` 中每个 locale 必须恰好有一个完整语言包。语言包以稳定 ID 覆盖
+attribute、case/character/node/choice/resolution、story text/video fallback step 和 ending；人物、选项
+与 story step 的顺序只由 `game.json` 决定。`content/minimal-test-package/1.0.0` 提供完整中英文示例。
+
+旧 schema v1 分文件内容格式已经从正式 loader 与 CLI 删除；仓库中若仍有旧目录，只是迁移历史，
+不能作为可发布内容包。旧存档兼容由 storage migration 独立处理，不会重新启用旧内容格式。
+
+## Schema v1 历史格式（不可发布）
 
 | 文件                     | 内容                                            |
 | ------------------------ | ----------------------------------------------- |
@@ -27,8 +43,8 @@ case/story 的文件名（不含 `.json`）就是 Catalog key。case 文件内�
 # 自动发现 content/<packageId>/<version>
 npm run validate:content
 
-# 校验一个 package 目录、packageId 目录或内容根目录；可传多个路径
-npm run validate:content -- content/validator-fixture/1.0.0
+# 校验一个 schema v2 package 目录、packageId 目录或内容根目录；可传多个路径
+npm run validate:content -- content/minimal-test-package/1.0.0
 ```
 
 校验失败返回非零退出码，并报告源文件、对象 ID、字段路径、诊断码和问题。示例包中的

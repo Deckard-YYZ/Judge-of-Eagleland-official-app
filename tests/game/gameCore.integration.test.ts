@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import type { GameCommand, TransitionResult } from "../../src/game/commands";
 import { createInitialGameState } from "../../src/game/initialization";
 import type { GameState } from "../../src/game/model";
@@ -9,7 +9,7 @@ const FIRST_TIME = "2026-09-15T09:00:00.000Z";
 const SECOND_TIME = "2026-09-15T10:00:00.000Z";
 
 const newGame = (): GameState => {
-  const result = createInitialGameState(MINIMAL_CATALOG);
+  const result = createInitialGameState(MINIMAL_GAME_CONTENT);
   if (!result.ok) {
     throw new Error(`Cannot initialize fixture: ${JSON.stringify(result.issues)}`);
   }
@@ -17,7 +17,7 @@ const newGame = (): GameState => {
 };
 
 const run = (state: Readonly<GameState>, command: GameCommand, nowIso = FIRST_TIME) =>
-  transition(state, command, MINIMAL_CATALOG, { nowIso });
+  transition(state, command, MINIMAL_GAME_CONTENT, { nowIso });
 
 const stateOf = (result: TransitionResult): GameState => {
   if (!result.ok) {

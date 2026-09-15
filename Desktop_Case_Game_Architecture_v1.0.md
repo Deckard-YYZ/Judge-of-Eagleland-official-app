@@ -92,7 +92,7 @@ Application：GameSession
       ▼                 ▼                   ▼
 Game 纯逻辑        Content 内容读取      Storage 本地存储
   选项推进          JSON + 校验           Profile
-  案件结算          只读 ContentCatalog   整局 JSON 存档
+  案件结算          只读规则目录          整局 JSON 存档
   解锁与结局        图片 / 视频索引        设置
       │                                     │
       └── 返回新状态和临时演出请求           ▼
@@ -109,7 +109,7 @@ Tauri 提供桌面运行环境、数据库和必要的平台能力，不承载�
 
 **持久化先于结果展示。** 有效操作先计算新状态，保存成功后再将其发布给 UI，并触发临时特效。保存失败不能表现为已成功判决。
 
-**历史结果与重新计算分离。** 已处理文档读取结算时保存的快照，不重新施加效果，也不使用当前属性重新推导旧结果。
+**历史事实与表现分离。** 已处理文档读取结算时保存的稳定 ID、时间、顺序和实际属性变化；显示文字按当前 locale 从绑定内容版本读取。历史展示不重新施加或推导 effects。
 
 **重要剧情与普通特效分离。** 前者有持久化完成状态，后者只是可丢弃的表现。
 
@@ -232,7 +232,8 @@ App
 
 | 类别 | 示例 | 所有者 | 持久化方式 |
 | --- | --- | --- | --- |
-| 内容定义 | 案件正文、分支、结果模板、视频资源 ID | ContentCatalog | 随应用提供的内容包 |
+| 内容规则 | 分支、effects、条件、顺序、资源 ID | GameContentCatalog | 随应用提供的内容包 |
+| 内容表现 | 案件正文、人物、选项、裁定、剧情与结局文字 | LocalizedContentCatalog | 同一内容版本、按 AppLocale 加载 |
 | 游戏状态 | 属性、节点、选择历史、结算结果、剧情队列 | GameSession 中的 GameState | SQLite 整局 JSON |
 | 会话／临时 UI 状态 | 当前文档、提交中、错误提示、当前标注、视频播放进度 | 会话 Store 或局部组件 | 默认不保存 |
 | 偏好设置 | 侧边栏折叠、三个分区折叠、音量、字号、减少动态效果 | 设置模块 | 同一 SQLite 中的设置记录 |
@@ -282,19 +283,20 @@ export interface ContentRef {
 
 export interface ContentManifest extends ContentRef {
   contentSchemaVersion: number;
-  title: string;
+  defaultLocale: AppLocale;
+  supportedLocales: AppLocale[];
 }
 ```
+
+`ContentRef` 永远只有 `packageId + version`；locale 是独立的表现加载维度，不进入内容引用、存档或游戏命令。每个规则包只有一份事实图，并为 manifest 声明的每个 locale 提供完整语言包。
 
 首版正文采用少量结构化文本块。不允许案件文件提供任意 React 组件、JavaScript、SQL 或可直接执行的 HTML。以后确有富文本需求时，再增加经过限制的格式能力。
 
 ### 6.2 案件与选项
 
 ```ts
-export interface CharacterBrief {
+export interface GameCharacterDefinition {
   id: string;
-  name: string;
-  description: TextBlock[];
 }
 
 export interface ChoiceAnnotation {
@@ -306,43 +308,38 @@ export type ChoiceTarget =
   | { type: "node"; nodeId: NodeId }
   | { type: "resolution"; resolutionId: ResolutionId };
 
-export interface ChoiceDefinition {
+export interface GameChoiceDefinition {
   id: ChoiceId;
-  text: string;
-  annotation?: ChoiceAnnotation;
+  hasAnnotation: boolean;
   target: ChoiceTarget;
 }
 
-export interface DecisionNode {
-  prompt?: string;
-  choices: ChoiceDefinition[];
+export interface GameDecisionNode {
+  choices: GameChoiceDefinition[];
 }
 
-export interface ResolutionDefinition {
-  verdict: TextBlock[];
-  result: TextBlock[];
+export interface GameResolutionDefinition {
   effects: {
     attributeDeltas: Record<AttributeId, number>;
     setFlags: Record<FlagId, boolean>;
   };
 }
 
-export interface CaseDefinition {
+export interface GameCaseDefinition {
   id: CaseId;
-  title: string;
   order: number;
-  characters: CharacterBrief[];
-  summary: TextBlock[];
-  body: TextBlock[];
+  characters: GameCharacterDefinition[];
   startNodeId: NodeId;
-  nodes: Record<NodeId, DecisionNode>;
-  resolutions: Record<ResolutionId, ResolutionDefinition>;
+  nodes: Record<NodeId, GameDecisionNode>;
+  resolutions: Record<ResolutionId, GameResolutionDefinition>;
 }
 ```
 
+对应 `LocalizedCase` 只保存 `title`、人物名称／简介、summary/body、node prompt、choice text／annotation、resolution verdict／result，并用稳定 ID record 对齐。严格 Schema 使语言包从结构上不能携带 target、effects、predicate、unlock、flag 等规则字段；人物、选项与剧情步骤的显示顺序只取规则层数组。
+
 `ChoiceTarget` 是互斥联合：一个选项只能前往新节点或产生最终结果，不能两者都填，也不能都不填。首版选择节点图允许分叉与合流，但不允许环，保证玩家不会陷入无终点的选择循环。
 
-中间选项没有 `effects`；效果集中在 `ResolutionDefinition`。不要为了尚未出现的特殊案件预先引入任意步骤副作用。
+中间选项没有 `effects`；效果集中在 `GameResolutionDefinition`。不要为了尚未出现的特殊案件预先引入任意步骤副作用。
 
 人物简介首版可以内嵌在案件中。只有确实出现大量跨案件复用人物时，再增加全局人物定义与案件内覆盖字段，避免一开始就把每个文本块拆成独立实体。
 
@@ -350,7 +347,6 @@ export interface CaseDefinition {
 
 ```ts
 export interface AttributeDefinition {
-  label: string;
   initial: number;
   min: number;
   max: number;
@@ -362,6 +358,8 @@ export interface InitialGameDefinition {
   flags: Record<FlagId, boolean>;
 }
 ```
+
+属性 `label` 属于 LocalizedContentCatalog；规则与存档始终只识别 `attributeId`。
 
 首版属性使用整数。内容校验要求 `min <= initial <= max`；结算后限制在配置范围内。
 
@@ -397,7 +395,6 @@ export interface StoryRule {
 }
 
 export interface EndingDefinition {
-  title: string;
   priority: number;
   when: Condition;
   storyId: StoryId;
@@ -413,15 +410,14 @@ export interface EndingDefinition {
 ### 6.5 演出定义
 
 ```ts
-export type StoryStep =
-  | { type: "text"; blocks: TextBlock[] }
-  | { type: "video"; assetId: AssetId; fallbackBlocks: TextBlock[] }
-  | { type: "effect"; effect: "blood" | "fade"; durationMs: number };
+export type GameStoryStep =
+  | { id: string; type: "text" }
+  | { id: string; type: "video"; assetId: AssetId }
+  | { id: string; type: "effect"; effect: "blood" | "fade"; durationMs: number };
 
-export interface StoryDefinition {
-  title: string;
+export interface GameStoryDefinition {
   skippable: boolean;
-  steps: StoryStep[];
+  steps: GameStoryStep[];
 }
 
 export interface AssetDefinition {
@@ -429,16 +425,25 @@ export interface AssetDefinition {
   path: string;
 }
 
-export interface ContentCatalog {
+export interface GameContentCatalog {
   manifest: ContentManifest;
   attributes: Record<AttributeId, AttributeDefinition>;
   initial: InitialGameDefinition;
-  cases: Record<CaseId, CaseDefinition>;
+  cases: Record<CaseId, GameCaseDefinition>;
   unlockRules: UnlockRule[];
   storyRules: StoryRule[];
-  stories: Record<StoryId, StoryDefinition>;
+  stories: Record<StoryId, GameStoryDefinition>;
   endings: Record<EndingId, EndingDefinition>;
   assets: Record<AssetId, AssetDefinition>;
+}
+
+export interface LocalizedContentCatalog extends ContentRef {
+  locale: AppLocale;
+  manifest: { title: string };
+  attributes: Record<AttributeId, { label: string }>;
+  cases: Record<CaseId, LocalizedCase>;
+  stories: Record<StoryId, LocalizedStory>;
+  endings: Record<EndingId, { title: string }>;
 }
 ```
 
@@ -460,17 +465,12 @@ export interface ChoiceRecord {
 
 export interface AttributeChangeSnapshot {
   attributeId: AttributeId;
-  label: string;
   before: number;
   after: number;
   actualDelta: number;
 }
 
 export interface ResolutionSnapshot {
-  caseTitle: string;
-  finalChoiceText: string;
-  verdict: TextBlock[];
-  result: TextBlock[];
   attributeChanges: AttributeChangeSnapshot[];
   resolvedAt: string;
   resolvedOrder: number;
@@ -487,6 +487,7 @@ export type CaseProgress =
       status: "resolved";
       history: ChoiceRecord[];
       resolutionId: ResolutionId;
+      finalChoiceId: ChoiceId;
       snapshot: ResolutionSnapshot;
     };
 ```
@@ -495,7 +496,7 @@ export type CaseProgress =
 
 `history` 必须包含最终选项。选择 ID 可以是案件内唯一，但记录仍保存来源节点，便于验证路径与排查过期操作。
 
-最终结果快照保存结算当时的显示文本和实际属性变化。正文仍来自该局锁定版本的内容包，因此不用把整篇案件复制进每份存档。
+save schema v2 的结果快照只保存事实：`resolutionId`、`finalChoiceId`、历史路径、结算时间／顺序和每项 `actualDelta`。案件标题、选项文字、verdict/result 与属性 label 均不进入存档；回看时按稳定 ID 从当前 locale 的同版本语言包投影。静态文字变化不会重算或改写已保存的数值事实。
 
 属性达到上下限时，实际变化可能小于内容配置值。例如属性从 98 增加 5、上限为 100，快照应记录 `actualDelta = 2`；结果面板与反馈飘字都显示实际变化，而不是再次读取模板中的 `+5`。
 
@@ -520,7 +521,7 @@ export interface SaveEnvelope {
   saveId: string;
   profileId: string;
   revision: number;
-  saveSchemaVersion: number;
+  saveSchemaVersion: 2;
   contentRef: ContentRef;
   createdAt: string;
   updatedAt: string;
@@ -602,7 +603,7 @@ export interface TransitionContext {
 export type Transition = (
   state: Readonly<GameState>,
   command: GameCommand,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   context: TransitionContext
 ) => TransitionResult;
 ```
@@ -834,7 +835,7 @@ Rust 层只需初始化 SQL 插件、启用 SQLite、注册迁移和配置必需
 
 区分三种版本：数据库表结构迁移版本、`saveSchemaVersion`、`contentRef.version`。它们不能用同一个数字代替。
 
-改变存档 JSON 结构时提供明确的旧到新转换，并用旧版存档样本测试。没有迁移路径时拒绝修改原存档。
+改变存档 JSON 结构时提供明确的旧到新转换，并用旧版存档样本测试。当前在 storage/load 边界执行 v1→v2：从 resolved history 最后一项推导 `finalChoiceId`，保留 ID、数值、时间、顺序和 revision，丢弃旧本地化字符串与 attribute label；正式 writer 只写 v2。迁移后再次读取是幂等的，失败则返回稳定诊断且不修改原记录。
 
 正式发布前至少提供已提交存档的 JSON 导出／导入或等效备份路径；做迁移与覆盖操作前保留原始数据。首版开发阶段不必建设多代自动备份系统，但不能把“损坏后自动重开”当作恢复方案。
 
@@ -845,12 +846,16 @@ Rust 层只需初始化 SQL 插件、启用 SQLite、注册迁移和配置必需
 ### 11.1 一个统一加载入口
 
 ```ts
-export interface ContentRepository {
-  load(ref: ContentRef): Promise<Readonly<ContentCatalog>>;
+export interface SplitContentRepository {
+  loadGameContent(ref: ContentRef): Promise<Readonly<GameContentCatalog>>;
+  loadLocalization(
+    ref: ContentRef,
+    locale: AppLocale,
+  ): Promise<Readonly<LocalizedContentCatalog>>;
 }
 ```
 
-GameSession 在开始或恢复一局时异步加载精确版本、完成校验；随后游戏规则只接收已经加载的只读 ContentCatalog，同步读取案件与规则。
+GameSession 在开始或恢复一局时按 `ContentRef` 加载并校验精确规则版本；Game Core 只接收只读 `GameContentCatalog`。Application 的 UI-facing adapter 再按根 locale 加载 `LocalizedContentCatalog` 并生成不含 target/effects 的只读 `GameContentView`。切换语言不 dispatch GameCommand、不写存档、不改变 revision 或 GameState；缺失语言包明确报错并可回退 manifest 默认语言。
 
 不让每次选项点击都触发文件或网络请求。首版文本内容可整体加载，媒体只保存索引，按需播放；若实测文本规模造成明显启动问题，再做索引与按案加载。
 
@@ -862,20 +867,16 @@ Repository 内部可以直接 import 内置 JSON，也可以读取资源文件�
 content/
 └── base-story/
     └── 1.0.0/
-        ├── manifest.json
-        ├── attributes.json
-        ├── initial.json
-        ├── progression.json
-        ├── cases/
-        ├── stories/
-        ├── endings.json
-        ├── assets.json
+        ├── game.json
+        ├── locales/
+        │   ├── zh-CN.json
+        │   └── en-US.json
         └── media/
             ├── images/
             └── videos/
 ```
 
-目录只是组织文件的方式。加载后统一组装成 ContentCatalog，规则层不关心物理目录结构。
+`game.json` 是唯一结构／规则目录，语言文件只含严格显示字段。Validator 要求每个声明 locale 对规则层所有可显示 ID 完整且精确覆盖，拒绝缺失、额外 ID、身份不匹配、非法 TextBlock 和夹带业务字段。规则层不关心物理目录结构，UI 不直接读取内容路径。
 
 图片和视频使用 assetId 引用，AssetResolver 将包内相对路径解析成当前运行环境可用的 URL；不能把开发机绝对路径写入案件或存档。
 
@@ -885,7 +886,7 @@ content/
 
 **版本绑定必须同时保证对应内容仍然可获得。** 正式发布后，应用更新不能只留下新内容并删除旧包。首版可将仍受支持的旧包继续随安装包分发；以后再决定下载保留或明确迁移策略。
 
-结算快照只覆盖历史结果，不包含所有正文和未完成分支。因此“保存了结果快照”不意味着可以任意删除旧内容包。
+结算快照只保存历史事实，不包含静态正文、裁定文字或未完成分支。因此历史与进行中内容都需要绑定版本的规则包及语言包，“保存了结果快照”不意味着可以删除旧内容包。
 
 已发布的相同 `packageId + version` 必须内容不可变。修正文案或规则时也产生新版本，不能悄悄修改原版本后继续使用相同标识。
 
@@ -893,7 +894,7 @@ content/
 
 ### 11.4 将来的热更新
 
-首版只保留 ContentRepository、ContentRef、Schema 校验和资源 ID 边界，不实现下载器。
+首版只保留 SplitContentRepository、ContentRef、Schema 校验和资源 ID 边界，不实现下载器。
 
 真正增加远程内容时，在仓库后面新增下载、验证、安装和版本管理流程。新包先完整下载并通过验证，再激活供新局使用；下载失败不能破坏现有包。旧局仍使用旧版本，除非存在显式迁移。
 
@@ -1204,7 +1205,7 @@ UI 可以增加组件，规则可以增加普通函数，内容可以增加文�
 
 ## 附录 A：案件内容示例
 
-以下是一个符合本文 CaseDefinition 结构的虚构案件。它展示静态正文、两级选择、选项标注和最终结果，不代表真实法律程序或量刑标准。
+以下是便于作者阅读的“规则 + zh-CN 文案”合并展示稿，不是可加载的物理格式。发布时必须按稳定 ID 拆到 `game.json` 与 `locales/zh-CN.json`：前者保留 order、target、effects，后者保留 title、正文、人物、选项、verdict/result；不得把第二份规则写入语言文件。它不代表真实法律程序或量刑标准。
 
 ```json
 {

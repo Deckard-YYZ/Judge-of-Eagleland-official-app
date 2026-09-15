@@ -1,6 +1,6 @@
-import type { ContentCatalog } from "../content/schema";
-import { isContentRepositoryError, type ContentRepository } from "../content/repository";
-import { validateContentCatalog } from "../content/validate";
+import type { GameContentCatalog } from "../content/schema";
+import { isContentRepositoryError, type SplitContentRepository } from "../content/repository";
+import { validateGameContentCatalog } from "../content/validate";
 import {
   GameCommandSchema,
   TransitionContextSchema,
@@ -69,7 +69,7 @@ export type GameSessionReadySnapshot = Readonly<{
   status: "ready";
   envelope: Readonly<SaveEnvelope>;
   state: Readonly<GameState>;
-  content: Readonly<ContentCatalog>;
+  content: Readonly<GameContentCatalog>;
   error: null;
 }>;
 
@@ -77,7 +77,7 @@ export type GameSessionSavingSnapshot = Readonly<{
   status: "saving";
   envelope: Readonly<SaveEnvelope>;
   state: Readonly<GameState>;
-  content: Readonly<ContentCatalog>;
+  content: Readonly<GameContentCatalog>;
   error: null;
 }>;
 
@@ -85,7 +85,7 @@ export type GameSessionNeedsReloadSnapshot = Readonly<{
   status: "needsReload";
   envelope: Readonly<SaveEnvelope>;
   state: Readonly<GameState>;
-  content: Readonly<ContentCatalog>;
+  content: Readonly<GameContentCatalog>;
   error: Readonly<GameSessionError>;
 }>;
 
@@ -129,7 +129,7 @@ export type GameSessionDispatchResult = GameSessionDispatchSuccess | GameSession
 
 export interface GameSessionDependencies {
   readonly saveRepository: SaveRepository;
-  readonly contentRepository: ContentRepository;
+  readonly contentRepository: SplitContentRepository;
   readonly transition: Transition;
   readonly clock: GameSessionClock;
 }
@@ -208,8 +208,8 @@ const freezeEnvelope = (value: SaveEnvelope): Readonly<SaveEnvelope> => {
   return deepFreeze(parsed) as Readonly<SaveEnvelope>;
 };
 
-const freezeContent = (value: Readonly<ContentCatalog>): Readonly<ContentCatalog> =>
-  deepFreeze(value) as Readonly<ContentCatalog>;
+const freezeContent = (value: Readonly<GameContentCatalog>): Readonly<GameContentCatalog> =>
+  deepFreeze(value) as Readonly<GameContentCatalog>;
 
 const emptySnapshot = (): GameSessionIdleSnapshot =>
   Object.freeze({
@@ -222,7 +222,7 @@ const emptySnapshot = (): GameSessionIdleSnapshot =>
 
 const readySnapshot = (
   envelope: Readonly<SaveEnvelope>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): GameSessionReadySnapshot =>
   Object.freeze({
     status: "ready" as const,
@@ -400,7 +400,7 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       let loadedContent: unknown;
       try {
         // 使用存档精确 contentRef，不能改成默认或最新版内容。
-        loadedContent = await dependencies.contentRepository.load(parsedSave.contentRef);
+        loadedContent = await dependencies.contentRepository.loadGameContent(parsedSave.contentRef);
       } catch (error) {
         if (isContentRepositoryError(error) && error.code === "INVALID_CONTENT") {
           return loadFailure(createError("CONTENT_INVALID", error.message));
@@ -415,7 +415,7 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
 
       // ContentRepository is an extension boundary. A custom implementation cannot bypass the
       // same structural, reference, graph, progression, and asset checks used by built-in content.
-      const contentValidation = validateContentCatalog(loadedContent);
+      const contentValidation = validateGameContentCatalog(loadedContent);
       if (!contentValidation.ok) {
         return loadFailure(
           createError(

@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import type { GameSessionViewSnapshot } from "../../application/gameSessionView";
 import type { LocalProfileSummary } from "../../application/profileEntry";
 import type { CaseId } from "../../content/schema";
+import { LocaleSwitch } from "../LocaleSwitch";
 import { ThemeSwitch } from "../ThemeSwitch";
+import { translateSessionError, useI18n, type MessageKey } from "../i18n";
 import type { UiThemeMode } from "../theme";
 import { Sidebar } from "./Sidebar";
 import "./shell.css";
@@ -18,14 +20,14 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
-const sessionStatusLabel = {
-  idle: "等待载入",
-  loading: "正在载入",
-  ready: "档案就绪",
-  saving: "正在归档",
-  needsReload: "需要重新载入",
-  error: "载入失败",
-} as const;
+const sessionStatusKeys = {
+  idle: "shell.status.idle",
+  loading: "shell.status.loading",
+  ready: "shell.status.ready",
+  saving: "shell.status.saving",
+  needsReload: "shell.status.needsReload",
+  error: "shell.status.error",
+} as const satisfies Record<GameSessionViewSnapshot["status"], MessageKey>;
 
 export function AppShell({
   profile,
@@ -37,6 +39,7 @@ export function AppShell({
   onExit,
   children,
 }: AppShellProps) {
+  const { t } = useI18n();
   const ioLocked = snapshot.status === "loading" || snapshot.status === "saving";
   const interactionLocked = ioLocked || modalActive;
 
@@ -57,21 +60,22 @@ export function AppShell({
         <a
           className="wordmark wordmark--compact"
           href="#case-workspace"
-          aria-label="鹰国法官工作区"
+          aria-label={t("shell.workspaceLabel")}
         >
           <span className="wordmark__seal" aria-hidden="true">
-            衡
+            {t("brand.seal")}
           </span>
           <span>
-            <strong>鹰国法官</strong>
-            <small>司法档案处</small>
+            <strong>{t("brand.name")}</strong>
+            <small>{t("brand.office")}</small>
           </span>
         </a>
 
         <div className="app-shell__account">
+          <LocaleSwitch />
           <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
           <span className={`app-shell__status app-shell__status--${snapshot.status}`}>
-            {sessionStatusLabel[snapshot.status]}
+            {t(sessionStatusKeys[snapshot.status])}
           </span>
           <span className="app-shell__profile" title={profile.displayName}>
             {profile.displayName}
@@ -82,7 +86,7 @@ export function AppShell({
             onClick={exit}
             disabled={interactionLocked}
           >
-            退出档案
+            {t("shell.exit")}
           </button>
         </div>
       </header>
@@ -96,14 +100,21 @@ export function AppShell({
         <main className="app-shell__main" id="case-workspace" tabIndex={-1}>
           {snapshot.error ? (
             <p className="app-shell__error" role="alert">
-              {snapshot.error.message}
+              {translateSessionError(t, snapshot.error.code)}
+            </p>
+          ) : null}
+          {snapshot.localizationError ? (
+            <p className="app-shell__error" role="alert">
+              {t(
+                snapshot.localizationStatus === "fallback"
+                  ? "content.localizationFallback"
+                  : "content.localizationFailed",
+              )}
             </p>
           ) : null}
           {ioLocked ? (
             <p className="sr-only" role="status" aria-live="polite">
-              {snapshot.status === "loading"
-                ? "正在载入档案，暂时无法切换文档或退出。"
-                : "正在保存裁定，暂时无法切换文档或退出。"}
+              {t(snapshot.status === "loading" ? "shell.lockedLoading" : "shell.lockedSaving")}
             </p>
           ) : null}
           {children}

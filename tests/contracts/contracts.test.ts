@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ContentCatalogSchema, ContentManifestSchema } from "../../src/content/schema";
-import { FakeContentRepository } from "../../src/content/repository";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import { GameContentCatalogSchema, GameContentManifestSchema } from "../../src/content/schema";
+import { FakeSplitContentRepository } from "../../src/content/repository";
+import {
+  MINIMAL_GAME_CONTENT,
+  MINIMAL_LOCALIZATIONS,
+} from "../../src/content/fixtures/minimalCatalog";
 import { GameCommandSchema, TransitionResultSchema } from "../../src/game/commands";
 import { GameStateSchema, SaveEnvelopeSchema } from "../../src/game/model";
 
@@ -20,10 +23,10 @@ const baseSave = {
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 1,
+  saveSchemaVersion: 2,
   contentRef: {
-    packageId: MINIMAL_CATALOG.manifest.packageId,
-    version: MINIMAL_CATALOG.manifest.version,
+    packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
+    version: MINIMAL_GAME_CONTENT.manifest.version,
   },
   createdAt: "2026-09-14T10:00:00.000Z",
   updatedAt: "2026-09-14T10:00:00.000Z",
@@ -32,38 +35,39 @@ const baseSave = {
 
 describe("content and state contracts", () => {
   it("accepts the complete minimal fixture", () => {
-    expect(ContentCatalogSchema.parse(MINIMAL_CATALOG)).toEqual(MINIMAL_CATALOG);
-    expect(MINIMAL_CATALOG.cases.case_001.nodes.assessment.choices).toHaveLength(2);
-    expect(MINIMAL_CATALOG.cases.case_002).toBeDefined();
+    expect(GameContentCatalogSchema.parse(MINIMAL_GAME_CONTENT)).toEqual(MINIMAL_GAME_CONTENT);
+    expect(MINIMAL_GAME_CONTENT.cases.case_001.nodes.assessment.choices).toHaveLength(2);
+    expect(MINIMAL_GAME_CONTENT.cases.case_002).toBeDefined();
   });
 
   it("rejects unsupported content schema versions", () => {
     expect(() =>
-      ContentManifestSchema.parse({
+      GameContentManifestSchema.parse({
         packageId: "pkg",
         version: "2.0.0",
-        contentSchemaVersion: 2,
-        title: "future",
+        contentSchemaVersion: 3,
+        defaultLocale: "zh-CN",
+        supportedLocales: ["zh-CN"],
       }),
     ).toThrow();
   });
 
   it("keeps choice targets and command variants closed", () => {
     expect(() =>
-      ContentCatalogSchema.parse({
-        ...MINIMAL_CATALOG,
+      GameContentCatalogSchema.parse({
+        ...MINIMAL_GAME_CONTENT,
         cases: {
-          ...MINIMAL_CATALOG.cases,
+          ...MINIMAL_GAME_CONTENT.cases,
           case_001: {
-            ...MINIMAL_CATALOG.cases.case_001,
+            ...MINIMAL_GAME_CONTENT.cases.case_001,
             nodes: {
-              ...MINIMAL_CATALOG.cases.case_001.nodes,
+              ...MINIMAL_GAME_CONTENT.cases.case_001.nodes,
               assessment: {
-                ...MINIMAL_CATALOG.cases.case_001.nodes.assessment,
+                ...MINIMAL_GAME_CONTENT.cases.case_001.nodes.assessment,
                 choices: [
                   {
                     id: "bad",
-                    text: "bad",
+                    hasAnnotation: false,
                     target: {
                       type: "node",
                       nodeId: "assessment",
@@ -110,22 +114,24 @@ describe("content and state contracts", () => {
   });
 
   it("loads only the exact content ref and clones returned catalogs", async () => {
-    const repository = new FakeContentRepository([MINIMAL_CATALOG]);
-    const loaded = await repository.load({
-      packageId: MINIMAL_CATALOG.manifest.packageId,
-      version: MINIMAL_CATALOG.manifest.version,
+    const repository = new FakeSplitContentRepository([
+      { gameContent: MINIMAL_GAME_CONTENT, localizations: MINIMAL_LOCALIZATIONS },
+    ]);
+    const loaded = await repository.loadGameContent({
+      packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
+      version: MINIMAL_GAME_CONTENT.manifest.version,
     });
 
     (loaded.cases.case_001.nodes.assessment.choices as Array<unknown>).pop();
-    const reloaded = await repository.load({
-      packageId: MINIMAL_CATALOG.manifest.packageId,
-      version: MINIMAL_CATALOG.manifest.version,
+    const reloaded = await repository.loadGameContent({
+      packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
+      version: MINIMAL_GAME_CONTENT.manifest.version,
     });
 
     expect(reloaded.cases.case_001.nodes.assessment.choices).toHaveLength(2);
     await expect(
-      repository.load({
-        packageId: MINIMAL_CATALOG.manifest.packageId,
+      repository.loadGameContent({
+        packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
         version: "9.9.9",
       }),
     ).rejects.toMatchObject({ code: "CONTENT_NOT_FOUND" });

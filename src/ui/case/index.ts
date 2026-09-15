@@ -1,4 +1,5 @@
 export { CaseReader, type CaseReaderProps } from "./CaseReader";
+export { CASE_OPEN_DELAY_MS, CaseWorkspace, type CaseWorkspaceProps } from "./CaseWorkspace";
 export { AnnotationPopover, type AnnotationPopoverProps } from "./AnnotationPopover";
 export { DecisionPanel, type DecisionPanelProps } from "./DecisionPanel";
 export {

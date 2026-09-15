@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import type { CaseId } from "../../content/schema";
 import type { GameSessionViewSnapshot } from "../../application/gameSessionView";
+import { useI18n } from "../i18n";
 import { createSidebarModel } from "./sidebarModel";
 
 export interface SidebarProps {
@@ -19,6 +20,8 @@ interface SidebarSectionProps {
 }
 
 function SidebarSection({ id, title, count, expanded, onToggle, children }: SidebarSectionProps) {
+  const { formatNumber, t } = useI18n();
+
   return (
     <section className="case-sidebar__section" aria-labelledby={`${id}-toggle`}>
       <h2 className="case-sidebar__section-heading">
@@ -31,15 +34,18 @@ function SidebarSection({ id, title, count, expanded, onToggle, children }: Side
           onClick={onToggle}
         >
           <span>{title}</span>
-          <span className="case-sidebar__section-count" aria-label={`${count} 项`}>
-            {count}
+          <span
+            className="case-sidebar__section-count"
+            aria-label={t("sidebar.count", { count: formatNumber(count) })}
+          >
+            {formatNumber(count)}
           </span>
           <span className="case-sidebar__chevron" aria-hidden="true">
             {expanded ? "−" : "+"}
           </span>
         </button>
       </h2>
-      <div id={`${id}-content`} hidden={!expanded}>
+      <div className="case-sidebar__section-content" id={`${id}-content`} hidden={!expanded}>
         {children}
       </div>
     </section>
@@ -47,6 +53,7 @@ function SidebarSection({ id, title, count, expanded, onToggle, children }: Side
 }
 
 export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarProps) {
+  const { formatNumber, t } = useI18n();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [attributesExpanded, setAttributesExpanded] = useState(true);
   const [pendingExpanded, setPendingExpanded] = useState(true);
@@ -64,7 +71,7 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
   return (
     <aside
       className={`case-sidebar${sidebarExpanded ? "" : " case-sidebar--collapsed"}`}
-      aria-label="案件导航"
+      aria-label={t("sidebar.navigationLabel")}
     >
       <div className="case-sidebar__rail">
         <button
@@ -72,7 +79,7 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
           type="button"
           aria-expanded={sidebarExpanded}
           aria-controls={`${baseId}-panels`}
-          aria-label={sidebarExpanded ? "收起侧边栏" : "展开侧边栏"}
+          aria-label={t(sidebarExpanded ? "sidebar.collapse" : "sidebar.expand")}
           onClick={() => setSidebarExpanded((current) => !current)}
         >
           <span aria-hidden="true">{sidebarExpanded ? "‹" : "›"}</span>
@@ -82,7 +89,7 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
       <div className="case-sidebar__panels" id={`${baseId}-panels`} hidden={!sidebarExpanded}>
         <SidebarSection
           id={`${baseId}-attributes`}
-          title="属性"
+          title={t("sidebar.attributes")}
           count={model.attributes.length}
           expanded={attributesExpanded}
           onToggle={() => setAttributesExpanded((current) => !current)}
@@ -93,22 +100,25 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
                 <div className="case-sidebar__attribute" key={attribute.id}>
                   <dt>{attribute.label}</dt>
                   <dd>
-                    <strong>{attribute.value}</strong>
+                    <strong>{formatNumber(attribute.value)}</strong>
                     <span>
-                      范围 {attribute.min}–{attribute.max}
+                      {t("sidebar.attributeRange", {
+                        min: formatNumber(attribute.min),
+                        max: formatNumber(attribute.max),
+                      })}
                     </span>
                   </dd>
                 </div>
               ))}
             </dl>
           ) : (
-            <p className="case-sidebar__empty">尚无可显示属性</p>
+            <p className="case-sidebar__empty">{t("sidebar.noAttributes")}</p>
           )}
         </SidebarSection>
 
         <SidebarSection
           id={`${baseId}-pending`}
-          title="未处理文档"
+          title={t("sidebar.pending")}
           count={model.pendingCases.length}
           expanded={pendingExpanded}
           onToggle={() => setPendingExpanded((current) => !current)}
@@ -117,14 +127,19 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
             <ul className="case-sidebar__case-list">
               {model.pendingCases.map(({ caseId, definition, progress }) => {
                 const selected = snapshot.selectedCaseId === caseId;
-                const statusLabel = progress.status === "active" ? "审理中" : "待开始";
+                const statusLabel = t(
+                  progress.status === "active" ? "sidebar.status.active" : "sidebar.status.pending",
+                );
                 return (
                   <li key={caseId}>
                     <button
                       className="case-sidebar__case"
                       type="button"
                       aria-current={selected ? "page" : undefined}
-                      aria-label={`${definition.title}，${statusLabel}`}
+                      aria-label={t("sidebar.caseAria", {
+                        title: definition.title,
+                        status: statusLabel,
+                      })}
                       title={definition.title}
                       disabled={interactionLocked}
                       onClick={() => selectCase(caseId)}
@@ -141,13 +156,13 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
               })}
             </ul>
           ) : (
-            <p className="case-sidebar__empty">没有未处理文档</p>
+            <p className="case-sidebar__empty">{t("sidebar.noPending")}</p>
           )}
         </SidebarSection>
 
         <SidebarSection
           id={`${baseId}-resolved`}
-          title="已处理文档"
+          title={t("sidebar.resolved")}
           count={model.resolvedCases.length}
           expanded={resolvedExpanded}
           onToggle={() => setResolvedExpanded((current) => !current)}
@@ -162,14 +177,17 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
                       className="case-sidebar__case"
                       type="button"
                       aria-current={selected ? "page" : undefined}
-                      aria-label={`${definition.title}，已结案`}
+                      aria-label={t("sidebar.caseAria", {
+                        title: definition.title,
+                        status: t("sidebar.status.resolved"),
+                      })}
                       title={definition.title}
                       disabled={interactionLocked}
                       onClick={() => selectCase(caseId)}
                     >
                       <span className="case-sidebar__case-title">{definition.title}</span>
                       <span className="case-sidebar__case-status case-sidebar__case-status--resolved">
-                        已结案
+                        {t("sidebar.status.resolved")}
                       </span>
                     </button>
                   </li>
@@ -177,7 +195,7 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
               })}
             </ul>
           ) : (
-            <p className="case-sidebar__empty">尚无已处理文档</p>
+            <p className="case-sidebar__empty">{t("sidebar.noResolved")}</p>
           )}
         </SidebarSection>
       </div>

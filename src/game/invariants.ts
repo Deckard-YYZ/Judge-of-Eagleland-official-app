@@ -1,4 +1,4 @@
-import type { CaseDefinition, ContentCatalog } from "../content/schema";
+import type { GameCaseDefinition, GameContentCatalog } from "../content/schema";
 import { GameStateSchema, type GameState } from "./model";
 
 export type GameStateInvariantIssueCode =
@@ -37,12 +37,12 @@ const sameMembers = (left: readonly string[], right: readonly string[]): boolean
   return left.length === right.length && left.every((member) => rightMembers.has(member));
 };
 
-const findChoice = (definition: CaseDefinition, nodeId: string, choiceId: string) =>
+const findChoice = (definition: GameCaseDefinition, nodeId: string, choiceId: string) =>
   definition.nodes[nodeId]?.choices.find((choice) => choice.id === choiceId);
 
 const checkCaseHistory = (
   caseId: string,
-  definition: CaseDefinition,
+  definition: GameCaseDefinition,
   progress: Extract<GameState["cases"][string], { status: "active" } | { status: "resolved" }>,
   addIssue: IssueCollector,
 ): void => {
@@ -105,13 +105,14 @@ const checkCaseHistory = (
     if (
       progress.status === "active" ||
       !isFinalRecord ||
-      choice.target.resolutionId !== progress.resolutionId
+      choice.target.resolutionId !== progress.resolutionId ||
+      record.choiceId !== progress.finalChoiceId
     ) {
       addIssue(
         "CASE_PATH_INVALID",
         recordPath,
         progress.status === "resolved"
-          ? `Final history choice for case "${caseId}" does not select resolution "${progress.resolutionId}".`
+          ? `Final history choice for case "${caseId}" must be choice "${progress.finalChoiceId}" selecting resolution "${progress.resolutionId}".`
           : `Active case "${caseId}" has already selected a resolution in its history.`,
       );
     }
@@ -137,9 +138,9 @@ const checkCaseHistory = (
 
 const checkResolutionSnapshot = (
   caseId: string,
-  definition: CaseDefinition,
+  definition: GameCaseDefinition,
   progress: Extract<GameState["cases"][string], { status: "resolved" }>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   addIssue: IssueCollector,
 ): void => {
   const basePath = ["cases", caseId] as const;
@@ -210,7 +211,7 @@ const checkResolutionSnapshot = (
  */
 export const checkGameStateInvariants = (
   candidate: unknown,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): GameStateInvariantResult => {
   const parsed = GameStateSchema.safeParse(candidate);
   if (!parsed.success) {

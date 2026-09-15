@@ -20,6 +20,10 @@
   --ui-overlay: rgba(8, 9, 10, 0.84);
   --ui-shadow: none;
   --ui-content-max: 80rem;
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-emphasized: 220ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 
   /* Compatibility aliases keep feature styles on the same approved palette. */
   --ink-950: var(--ui-ink);
@@ -104,6 +108,12 @@ select {
 
 button {
   cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
 }
 
 button:disabled,
@@ -153,7 +163,8 @@ h2,
   text-transform: uppercase;
 }
 
-.theme-switch {
+.theme-switch,
+.locale-switch {
   display: inline-flex;
   flex: 0 0 auto;
   border: 1px solid var(--ui-line);
@@ -161,7 +172,8 @@ h2,
   background: var(--ui-surface);
 }
 
-.theme-switch button {
+.theme-switch button,
+.locale-switch button {
   min-width: 3.6rem;
   min-height: 2.35rem;
   padding: 0.45rem 0.7rem;
@@ -174,13 +186,22 @@ h2,
   letter-spacing: 0.06em;
 }
 
-.theme-switch button + button {
+.theme-switch button + button,
+.locale-switch button + button {
   border-left: 1px solid var(--ui-line);
 }
 
-.theme-switch button[aria-pressed="true"] {
+.theme-switch button[aria-pressed="true"],
+.locale-switch button[aria-pressed="true"] {
   color: var(--ui-inverse);
   background: var(--ui-emphasis);
+}
+
+.theme-switch button:active:not(:disabled),
+.locale-switch button:active:not(:disabled),
+.button:active:not(:disabled),
+.avatar-action:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .wordmark {
@@ -249,25 +270,34 @@ h2,
   gap: 1.5rem;
 }
 
-.profile-intro .theme-switch,
-.app-shell__bar .theme-switch {
+.ui-preferences {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile-intro :is(.theme-switch, .locale-switch),
+.app-shell__bar :is(.theme-switch, .locale-switch) {
   border-color: color-mix(in srgb, var(--ui-inverse) 34%, transparent);
   color: var(--ui-inverse);
   background: transparent;
 }
 
-.profile-intro .theme-switch button,
-.app-shell__bar .theme-switch button {
+.profile-intro :is(.theme-switch, .locale-switch) button,
+.app-shell__bar :is(.theme-switch, .locale-switch) button {
   color: color-mix(in srgb, var(--ui-inverse) 62%, transparent);
 }
 
-.profile-intro .theme-switch button + button,
-.app-shell__bar .theme-switch button + button {
+.profile-intro :is(.theme-switch, .locale-switch) button + button,
+.app-shell__bar :is(.theme-switch, .locale-switch) button + button {
   border-left-color: color-mix(in srgb, var(--ui-inverse) 34%, transparent);
 }
 
-.profile-intro .theme-switch button[aria-pressed="true"],
-.app-shell__bar .theme-switch button[aria-pressed="true"] {
+.profile-intro :is(.theme-switch, .locale-switch) button[aria-pressed="true"],
+.app-shell__bar :is(.theme-switch, .locale-switch) button[aria-pressed="true"] {
   color: var(--ui-emphasis);
   background: var(--ui-inverse);
 }
@@ -314,6 +344,11 @@ h2,
   border-top: 0.35rem solid var(--ui-emphasis);
 }
 
+.profile-access__content {
+  width: min(100%, 32rem);
+  margin-inline: auto;
+}
+
 .profile-access__header {
   padding-bottom: 2rem;
   border-bottom: 1px solid var(--ui-line);
@@ -337,6 +372,10 @@ h2,
 
 .profile-form {
   margin: 2rem 0 0;
+}
+
+.profile-access__stage {
+  animation: profile-stage-enter var(--motion-emphasized) var(--motion-ease) both;
 }
 
 .profile-form fieldset {
@@ -365,12 +404,7 @@ h2,
   text-transform: uppercase;
 }
 
-.field-row {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.profile-form input,
+.profile-form input:not([type="file"]),
 .profile-form select {
   width: 100%;
   min-width: 0;
@@ -381,7 +415,163 @@ h2,
   background: var(--ui-surface);
 }
 
-.profile-form input::placeholder {
+.profile-form--register > fieldset > input[type="text"] {
+  display: block;
+}
+
+.profile-picker {
+  display: flex;
+  margin: 0;
+  padding: 0.25rem 0.15rem 0.8rem;
+  gap: 1rem;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  justify-content: safe center;
+}
+
+.profile-picker li {
+  flex: 0 0 5.25rem;
+  scroll-snap-align: start;
+}
+
+.profile-choice {
+  display: grid;
+  width: 100%;
+  padding: 0.25rem;
+  place-items: center;
+  gap: 0.55rem;
+  border: 0;
+  color: var(--ui-muted);
+  background: transparent;
+  text-align: center;
+}
+
+.profile-choice:hover:not(:disabled),
+.profile-choice[aria-pressed="true"] {
+  color: var(--ui-ink);
+}
+
+.profile-choice[aria-pressed="true"] {
+  transform: translateY(-2px);
+}
+
+.profile-avatar,
+.avatar-preview {
+  display: grid;
+  aspect-ratio: 1;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid var(--ui-line);
+  border-radius: 50%;
+  color: var(--ui-ink);
+  background: var(--ui-quiet);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-weight: 750;
+  transition:
+    border-color var(--motion-standard) var(--motion-ease),
+    background-color var(--motion-standard) var(--motion-ease),
+    transform var(--motion-standard) var(--motion-ease);
+}
+
+.profile-avatar {
+  width: 4.25rem;
+  font-size: 1.05rem;
+}
+
+.profile-choice:hover:not(:disabled) .profile-avatar {
+  border-color: var(--ui-muted);
+}
+
+.profile-choice[aria-pressed="true"] .profile-avatar {
+  border: 2px solid var(--ui-emphasis);
+  background: var(--ui-surface-raised);
+}
+
+.profile-avatar img,
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-choice__name {
+  width: 100%;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-actions {
+  display: flex;
+  margin-top: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.profile-actions .button {
+  width: auto;
+  min-width: 5.25rem;
+  min-height: 2.65rem;
+  padding-inline: 1.15rem;
+}
+
+.avatar-editor {
+  display: grid;
+  margin-bottom: 1.5rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.avatar-preview {
+  width: 5.4rem;
+  font-size: 1.35rem;
+}
+
+.avatar-editor__controls > p:first-child {
+  margin: 0 0 0.55rem;
+  color: var(--ui-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.avatar-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.avatar-action {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--ui-line);
+  color: var(--ui-ink);
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.avatar-action:hover:not(:disabled) {
+  background: var(--ui-quiet);
+}
+
+.avatar-editor__error {
+  margin: 0.5rem 0 0;
+  color: var(--ui-danger);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.profile-form input:not([type="file"])::placeholder {
   color: var(--ui-muted);
 }
 
@@ -421,24 +611,6 @@ h2,
   background: transparent;
 }
 
-.section-divider {
-  display: flex;
-  margin-top: 2.2rem;
-  align-items: center;
-  gap: 0.8rem;
-  color: var(--ui-muted);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-}
-
-.section-divider::before,
-.section-divider::after {
-  height: 1px;
-  flex: 1;
-  background: var(--ui-line);
-  content: "";
-}
-
 .field-hint,
 .notice {
   color: var(--ui-muted);
@@ -471,6 +643,18 @@ h2,
   text-decoration: none;
 }
 
+@keyframes profile-stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (min-width: 60rem) {
   .profile-page {
     display: grid;
@@ -483,10 +667,6 @@ h2,
   .profile-intro,
   .profile-access {
     min-height: calc(100vh - 6rem);
-  }
-
-  .field-row {
-    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
@@ -513,12 +693,20 @@ h2,
     flex-direction: column;
   }
 
-  .profile-intro .theme-switch {
+  .ui-preferences {
+    justify-content: flex-start;
+  }
+
+  .profile-intro :is(.theme-switch, .locale-switch) {
     align-self: flex-start;
   }
 
   .profile-intro h1 {
     font-size: clamp(2.35rem, 13vw, 3.6rem);
+  }
+
+  .avatar-editor {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -527,6 +715,8 @@ h2,
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

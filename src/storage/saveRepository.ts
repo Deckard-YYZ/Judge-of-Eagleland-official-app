@@ -4,6 +4,7 @@ import {
   type GameState,
   type SaveEnvelope,
 } from "../game/model";
+import { migrateStoredSaveEnvelope } from "./migrateSave";
 
 /** 输入版本条件写入时使用的参数，和数据库 UPDATE 的条件完全对应。 */
 export interface SaveCommitInput {
@@ -80,5 +81,14 @@ export const parseSaveEnvelopeForStorage = (value: unknown): SaveEnvelope => {
       "The supplied save envelope does not satisfy the save contract.",
       error,
     );
+  }
+};
+
+/** Persisted rows may be v1; migration is confined to this read boundary. */
+export const parseStoredSaveEnvelope = (value: unknown): SaveEnvelope => {
+  try {
+    return migrateStoredSaveEnvelope(value);
+  } catch (error) {
+    throw new SaveRepositoryError("INVALID_SAVE", "The stored save cannot be migrated.", error);
   }
 };

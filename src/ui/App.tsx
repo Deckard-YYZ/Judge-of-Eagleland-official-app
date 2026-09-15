@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSessionView } from "../application/gameSessionView";
 import type { LocalProfileSummary, ProfileEntry } from "../application/profileEntry";
-import { CaseReader } from "./case";
+import { CaseWorkspace } from "./case";
+import { I18nProvider, useI18n } from "./i18n";
 import { FeedbackLayer } from "./presentation/feedback";
 import { StoryOverlay } from "./presentation/story";
 import { ProfilePage } from "./profile/ProfilePage";
@@ -10,12 +11,16 @@ import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme"
 
 export interface AppProps {
   profileEntry: ProfileEntry;
+  caseOpenDelayMs?: number;
+  decisionRevealDelayMs?: number;
 }
 
 interface AuthenticatedWorkspaceProps {
   profile: Readonly<LocalProfileSummary>;
   session: GameSessionView;
   themeMode: UiThemeMode;
+  caseOpenDelayMs?: number;
+  decisionRevealDelayMs?: number;
   onThemeChange(mode: UiThemeMode): void;
   onExit: () => void;
 }
@@ -24,6 +29,8 @@ function AuthenticatedWorkspace({
   profile,
   session,
   themeMode,
+  caseOpenDelayMs,
+  decisionRevealDelayMs,
   onThemeChange,
   onExit,
 }: AuthenticatedWorkspaceProps) {
@@ -61,7 +68,12 @@ function AuthenticatedWorkspace({
         onSelectCase={session.selectCase}
         onExit={onExit}
       >
-        <CaseReader snapshot={snapshot} dispatch={session.dispatch} />
+        <CaseWorkspace
+          snapshot={snapshot}
+          dispatch={session.dispatch}
+          caseOpenDelayMs={caseOpenDelayMs}
+          decisionRevealDelayMs={decisionRevealDelayMs}
+        />
       </AppShell>
       <FeedbackLayer sessionView={session} />
       <StoryOverlay
@@ -81,25 +93,60 @@ function AuthenticatedWorkspace({
 }
 
 /** App owns only the authenticated UI reference; exiting never writes GameState. */
-export function App({ profileEntry }: AppProps) {
+function LocalizedApp({ profileEntry, caseOpenDelayMs, decisionRevealDelayMs }: AppProps) {
+  const { locale } = useI18n();
   const [themeMode, setThemeMode] = useState<UiThemeMode>(readInitialThemeMode);
+  const [profileAvatarUrls, setProfileAvatarUrls] = useState<Readonly<Record<string, string>>>({});
+  const ownedAvatarUrls = useRef(new Set<string>());
   const [active, setActive] = useState<{
     profile: Readonly<LocalProfileSummary>;
     session: GameSessionView;
   } | null>(null);
+
+  useEffect(() => {
+    if (active) void active.session.setLocale(locale);
+  }, [active, locale]);
 
   useLayoutEffect(() => {
     // The document attribute is the single theme boundary shared by the shell and portalled overlays.
     applyThemeMode(themeMode);
   }, [themeMode]);
 
+  useEffect(
+    () => () => {
+      // Avatar blobs never cross the UI boundary. App owns the copies that
+      // survive ProfilePage unmounts and releases all of them on teardown.
+      for (const objectUrl of ownedAvatarUrls.current) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      ownedAvatarUrls.current.clear();
+    },
+    [],
+  );
+
+  const authenticate = (
+    profile: Readonly<LocalProfileSummary>,
+    session: GameSessionView,
+    avatarFile?: File,
+  ): void => {
+    if (avatarFile) {
+      const objectUrl = URL.createObjectURL(avatarFile);
+      ownedAvatarUrls.current.add(objectUrl);
+      setProfileAvatarUrls((current) => ({ ...current, [profile.profileId]: objectUrl }));
+    }
+    // Locale is UI state. Loading a presentation never dispatches or writes the save.
+    void session.setLocale(locale);
+    setActive({ profile, session });
+  };
+
   if (!active) {
     return (
       <ProfilePage
         entry={profileEntry}
         themeMode={themeMode}
+        profileAvatarUrls={profileAvatarUrls}
         onThemeChange={setThemeMode}
-        onAuthenticated={(profile, session) => setActive({ profile, session })}
+        onAuthenticated={authenticate}
       />
     );
   }
@@ -109,8 +156,19 @@ export function App({ profileEntry }: AppProps) {
       profile={active.profile}
       session={active.session}
       themeMode={themeMode}
+      caseOpenDelayMs={caseOpenDelayMs}
+      decisionRevealDelayMs={decisionRevealDelayMs}
       onThemeChange={setThemeMode}
       onExit={() => setActive(null)}
     />
+  );
+}
+
+/** The formal App root owns locale before authentication and across all portalled UI. */
+export function App(props: AppProps) {
+  return (
+    <I18nProvider>
+      <LocalizedApp {...props} />
+    </I18nProvider>
   );
 }

@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ContentCatalog, ContentRef } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
-import { ContentRepositoryError, type ContentRepository } from "../../src/content/repository";
+import type {
+  ContentLocale,
+  ContentRef,
+  GameContentCatalog,
+  LocalizedContentCatalog,
+} from "../../src/content/schema";
+import {
+  MINIMAL_GAME_CONTENT,
+  MINIMAL_LOCALIZATIONS,
+} from "../../src/content/fixtures/minimalCatalog";
+import { ContentRepositoryError, type SplitContentRepository } from "../../src/content/repository";
 import {
   createGameSession,
   type GameSession,
@@ -31,10 +39,10 @@ const makeSave = (overrides: Partial<SaveEnvelope> = {}): SaveEnvelope => ({
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 1,
+  saveSchemaVersion: 2,
   contentRef: {
-    packageId: MINIMAL_CATALOG.manifest.packageId,
-    version: MINIMAL_CATALOG.manifest.version,
+    packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
+    version: MINIMAL_GAME_CONTENT.manifest.version,
   },
   createdAt: NOW,
   updatedAt: NOW,
@@ -82,18 +90,25 @@ class TestSaveRepository implements SaveRepository {
   }
 }
 
-class TestContentRepository implements ContentRepository {
+class TestContentRepository implements SplitContentRepository {
   readonly refs: ContentRef[] = [];
-  catalog: ContentCatalog = MINIMAL_CATALOG;
-  loadImpl?: (ref: ContentRef) => Promise<Readonly<ContentCatalog>>;
+  catalog: GameContentCatalog = MINIMAL_GAME_CONTENT;
+  loadImpl?: (ref: ContentRef) => Promise<Readonly<GameContentCatalog>>;
 
-  async load(ref: ContentRef): Promise<Readonly<ContentCatalog>> {
+  async loadGameContent(ref: ContentRef): Promise<Readonly<GameContentCatalog>> {
     this.refs.push(clone(ref));
     if (this.loadImpl) {
       return this.loadImpl(ref);
     }
 
     return clone(this.catalog);
+  }
+
+  async loadLocalization(
+    _ref: ContentRef,
+    locale: ContentLocale,
+  ): Promise<Readonly<LocalizedContentCatalog>> {
+    return clone(MINIMAL_LOCALIZATIONS[locale]);
   }
 }
 
@@ -135,7 +150,7 @@ const command: GameCommand = { type: "startCase", caseId: "case_001" };
 
 const semanticallyInvalidContent: readonly {
   readonly name: string;
-  readonly mutate: (catalog: ContentCatalog) => void;
+  readonly mutate: (catalog: GameContentCatalog) => void;
 }[] = [
   {
     name: "missing start",
@@ -241,7 +256,6 @@ describe("GameSession", () => {
           changes: [
             {
               attributeId: "restraint",
-              label: "克制",
               before: 50,
               after: 55,
               actualDelta: 5,
@@ -308,9 +322,9 @@ describe("GameSession", () => {
 
     const mismatchingContent = new TestContentRepository();
     mismatchingContent.catalog = {
-      ...clone(MINIMAL_CATALOG),
+      ...clone(MINIMAL_GAME_CONTENT),
       manifest: {
-        ...MINIMAL_CATALOG.manifest,
+        ...MINIMAL_GAME_CONTENT.manifest,
         version: "2.0.0",
       },
     };
@@ -324,7 +338,7 @@ describe("GameSession", () => {
     "rejects $name returned by an arbitrary ContentRepository",
     async ({ mutate }) => {
       const contentRepository = new TestContentRepository();
-      contentRepository.catalog = clone(MINIMAL_CATALOG);
+      contentRepository.catalog = clone(MINIMAL_GAME_CONTENT);
       mutate(contentRepository.catalog);
       const { session, saveRepository } = makeSession(new TestSaveRepository(), contentRepository);
 

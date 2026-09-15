@@ -5,6 +5,8 @@
 **当前状态：** 已完成  
 **最后更新：** 2026-09-15
 
+后续本地化工程的边界、slice 与验证记录见 `Desktop_Case_Game_Localization_Implementation.md`。
+
 ## 1. 目标与完成标准
 
 完成以下可运行链路：
@@ -90,6 +92,22 @@ Theme Lab 只保留“01 绝对刻度 / Exactitude”与“02 纪碑留白 / Mon
 
 `?themeLab=1` 继续保留两套候选，作为设计决策依据和回归参照；正式根入口不读取候选数据，也不提供运行时方案切换。后续正式 UI 的修改直接演进“绝对刻度”，不再维持“纪碑留白”的生产分支。
 
+### D-012：头像属于本次 UI 生命周期
+
+Profile 入口以横向圆形头像列表承载已有本地档案选择；无图像时使用规范化显示名的首个 Unicode 字符作为占位。注册时的拍摄与图像上传只生成浏览器 object URL：ProfilePage 负责释放注册预览 URL，App 负责释放跨登录页面保留的本次应用内头像 URL。头像不进入 `ProfileEntry`、GameState、存档或内容包。
+
+### D-013：交互动效使用统一短时 token
+
+按钮、主题切换、侧栏、档案选择、案件选项、附注、反馈与剧情/结局只使用 `120–220ms` 的淡入、位移或颜色过渡，不增加弹簧、连续装饰动画或独立动画框架。`prefers-reduced-motion` 在全局缩短所有新增动画，业务演出步骤仍沿用自身已有的减少动态处理。
+
+### D-014：案卷选择与案卷呈现分离
+
+进入档案后 `selectedCaseId` 保持 `null`，右侧由原创“衡 / 司法档案处”徽记引导用户主动调卷。侧栏选择立即更新，以表达当前请求；右侧案卷由 UI-only `CaseWorkspace` 延迟 1500ms 呈现。每次新选择递增请求版本并清理旧 timer，防止快速切换时旧案卷回闪；该延迟不进入 Application、GameState 或存档。
+
+### D-015：决策选项在视口内完成一次准备
+
+每个 `caseId + nodeId` 的选项区域通过 `IntersectionObserver` 首次进入视口后进入固定 2500ms 的 `thinking` 状态，再一次性展示全部选项。不支持 Observer 的 WebView 从相同等待直接开始，避免永久隐藏；节点切换与卸载时清理 observer 和 timer。测试通过 App 注入的延迟覆盖值避免真实等待，不改变 saving、重复提交或 `STALE_CHOICE` 边界。
+
 ## 5. 明确不做
 
 - SQLite、正式 SaveRepository、数据库迁移或真实 Profile 持久化。
@@ -103,6 +121,8 @@ Theme Lab 只保留“01 绝对刻度 / Exactitude”与“02 纪碑留白 / Mon
 - 在 Theme Lab 使用现实政权标志、仇恨符号，或直接复刻参考项目的视觉语言。
 - 将 Theme Lab 的“纪碑留白”或其他已淘汰候选接入正式运行时。
 - 将主题偏好写入 `GameState`、Profile 存档或游戏命令。
+- 将 Profile 头像上传到云端、写入 SQLite/Tauri、调用摄像头服务或建设图像裁剪/编辑系统；当前只使用浏览器本地文件选择与 `capture` 提示。
+- 引入通用动画库、复杂页面转场或改变“绝对刻度”既有配色、正文层级和水平审计线语法。
 
 ## 6. 风险与处理
 
@@ -111,6 +131,9 @@ Theme Lab 只保留“01 绝对刻度 / Exactitude”与“02 纪碑留白 / Mon
 - **重复提交：** 依赖 Application 层首个 `await` 前的锁，并在 saving 时禁用交互。
 - **已结算案件被重算：** 结果面板只读 snapshot；测试回看不触发 dispatch/feedback。
 - **旧锚点与定时器泄漏：** 选项替换、Popover/Feedback/Story 卸载时显式清理。
+- **头像资源泄漏：** 注册预览和 App 生命周期头像分别拥有独立 object URL，并在替换、返回或组件卸载时由各自所有者释放。
+- **动态效果不适：** 所有新增过渡共享短时 motion token；减少动态偏好下把动画与过渡压缩到近乎即时。
+- **异步呈现竞态：** 案卷调取与决策准备均由组件生命周期拥有 timer；切换标识或卸载会失效旧回调并清理 observer/timer，业务状态始终即时且不受表现延迟影响。
 - **测试环境：** 当前 Vitest 为 Node 环境；优先测试 selectors、adapter 和 transition。若增加 DOM 测试，再以最小依赖引入 jsdom/Testing Library。
 
 ## 7. 验证记录
@@ -143,6 +166,10 @@ Theme Lab 只保留“01 绝对刻度 / Exactitude”与“02 纪碑留白 / Mon
 | 2026-09-15 | 正式 UI 定案   | `npm run build`、`git diff --check` | 通过；Vite 生产包生成成功，差异空白检查无报错                                                                                                     |
 | 2026-09-15 | 正式 UI 定案   | 浏览器完整演示流程                  | 通过：Profile、正式工作区、决策、标注、反馈、剧情、视频 fallback、结局和结束后回看；Light / Dark 共用同一正式 token 边界                         |
 | 2026-09-15 | 正式 UI 定案   | 窄窗口视觉检查与浏览器 console      | 320px 下剧情、结局与案件回看无横向溢出；正文标题维持阅读层级；无装饰性竖线；最终重载无 warning/error                                               |
+| 2026-09-15 | Profile/动效优化 | `npm run check`                     | 通过：23 个测试文件、206 项测试；typecheck、boundary、Prettier 全部通过；新增头像纯逻辑与注册/预览/返回/重进 DOM 回归                              |
+| 2026-09-15 | Profile/动效优化 | `npm run build`、`git diff --check` | 通过；Vite 生产包生成成功，差异空白检查无报错                                                                                                     |
+| 2026-09-15 | 案卷延迟呈现     | `npm run check`                     | 通过：25 个测试文件、211 项测试；覆盖初始空白、pending/resolved 调取、快速切换防回闪、视口 thinking 与安全降级                                  |
+| 2026-09-15 | 案卷延迟呈现     | `npm run build`、`git diff --check` | 通过；Vite 生产包生成成功，差异空白检查无报错                                                                                                     |
 
 计划使用：
 
@@ -178,3 +205,7 @@ Theme Lab 只保留“01 绝对刻度 / Exactitude”与“02 纪碑留白 / Mon
 - 2026-09-15：按视觉复核意见移除“绝对刻度”的全部装饰性竖线，包括竖向刻度背景、侧栏粗竖条、纵向分隔与引文左线；保留横向登记线和状态对比。Light / Dark 浏览器复核通过。
 - 2026-09-15：正式 UI 定案为“绝对刻度”。将双主题 token、排版、水平审计线、方形控件和状态语法迁入 Profile、AppShell、案件、反馈与剧情/结局全链路；加入主题持久化及回归测试。Theme Lab 仅作为历史比较入口保留。
 - 2026-09-15：移除决策选项旁独立的“注”按钮及其预留列；附注仅由整个选项的悬浮或键盘聚焦触发，不占用额外视觉控件，也不改变选项的游戏命令语义。
+- 2026-09-15：重构 Profile 入口为横向头像选择与原位登录/注册模式；加入本地图像拍摄/上传预览、首字占位和 object URL 生命周期管理。为现有主交互点补充统一短时过渡，并保持“绝对刻度”配色、正文层级及无装饰性竖线约束。
+- 2026-09-15：将 Profile 登录与注册态统一收进同一个限宽居中内容区；头像横向列表和紧凑操作在宽、窄窗口下保持原有交互与无溢出边界。
+- 2026-09-15：认证后改为不预选案卷的司法档案处引导态；pending/resolved 案卷统一经过 1500ms 可取消调取状态。决策选项首次进入视口后以 2500ms `thinking` 状态集中呈现，并补齐 timer/observer 清理及 DOM 回归。
+- 2026-09-15：启动独立本地化工程；前端实施文档不重复维护其细节，后续记录统一转入 `Desktop_Case_Game_Localization_Implementation.md`。

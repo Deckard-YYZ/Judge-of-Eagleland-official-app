@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { ChoiceAnnotation } from "../../content/schema";
+import { useI18n } from "../i18n";
 import { TextBlock } from "./TextBlocks";
 
 export interface AnnotationPopoverProps {
@@ -41,6 +42,7 @@ export function AnnotationPopover({
   onMouseEnter,
   onMouseLeave,
 }: AnnotationPopoverProps) {
+  const { t } = useI18n();
   const popoverRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
@@ -218,13 +220,13 @@ export function AnnotationPopover({
       onMouseLeave={onMouseLeave}
     >
       <header className="annotation-popover__header">
-        <h3 id={titleId}>{annotation.title ?? "选项附注"}</h3>
+        <h3 id={titleId}>{annotation.title ?? t("annotation.fallbackTitle")}</h3>
         {pinned ? (
           <button
             ref={closeButtonRef}
             className="annotation-popover__close"
             type="button"
-            aria-label="关闭选项附注"
+            aria-label={t("annotation.close")}
             onClick={restoreAnchorFocus}
           >
             ×

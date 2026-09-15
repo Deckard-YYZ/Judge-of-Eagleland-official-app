@@ -5,7 +5,7 @@ import {
   type AttributeChangeSnapshot,
   type GameState,
 } from "./model";
-import type { CaseId, ChoiceId, ContentCatalog, NodeId, StoryId } from "../content/schema";
+import type { CaseId, ChoiceId, GameContentCatalog, NodeId, StoryId } from "../content/schema";
 
 const IdSchema = z.string().min(1);
 
@@ -82,7 +82,7 @@ export type TransitionContext = z.infer<typeof TransitionContextSchema>;
 export type Transition = (
   state: Readonly<GameState>,
   command: GameCommand,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   context: TransitionContext,
 ) => TransitionResult;
 

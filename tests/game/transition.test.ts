@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ContentCatalog } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import type { TransitionErrorCode, TransitionResult } from "../../src/game/commands";
 import { createInitialGameState } from "../../src/game/initialization";
 import type { GameState } from "../../src/game/model";
@@ -8,9 +8,9 @@ import { transition } from "../../src/game/transition";
 
 const NOW = "2026-09-15T00:00:00.000Z";
 
-const catalogCopy = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const catalogCopy = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
-const initialState = (content: Readonly<ContentCatalog> = MINIMAL_CATALOG): GameState => {
+const initialState = (content: Readonly<GameContentCatalog> = MINIMAL_GAME_CONTENT): GameState => {
   const result = createInitialGameState(content);
   if (!result.ok) {
     throw new Error(`Expected a valid initial state: ${JSON.stringify(result.issues)}`);
@@ -53,22 +53,17 @@ const resolvedStateWithPendingStory = (): GameState => ({
       status: "resolved",
       history: [{ nodeId: "assessment", choiceId: "insufficient_evidence" }],
       resolutionId: "close_with_note",
+      finalChoiceId: "insufficient_evidence",
       snapshot: {
-        caseTitle: "第 001 号：夜间档案室事件",
-        finalChoiceText: "现有材料不足以支持进一步处分",
-        verdict: [{ type: "paragraph", text: "保留程序违规记录，本次不追加处分。" }],
-        result: [{ type: "paragraph", text: "档案室接受了决定，同时提出修订外借登记流程。" }],
         attributeChanges: [
           {
             attributeId: "restraint",
-            label: "克制",
             before: 50,
             after: 53,
             actualDelta: 3,
           },
           {
             attributeId: "authority",
-            label: "权威",
             before: 50,
             after: 48,
             actualDelta: -2,
@@ -90,7 +85,7 @@ describe("transition startCase", () => {
     deepFreeze(state);
 
     const nextState = nextStateOf(
-      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
     );
@@ -110,7 +105,7 @@ describe("transition startCase", () => {
     ending.phase = { type: "ending", endingId: "balanced" };
     ending.pendingStoryIds = ["ending_balanced"];
     expectFailure(
-      transition(ending, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(ending, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "RUN_FINISHED",
@@ -120,7 +115,7 @@ describe("transition startCase", () => {
     ended.phase = { type: "ended", endingId: "fallback" };
     ended.completedStoryIds = ["ending_fallback"];
     expectFailure(
-      transition(ended, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(ended, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "RUN_FINISHED",
@@ -132,7 +127,7 @@ describe("transition startCase", () => {
     state.pendingStoryIds = ["story_after_case_001"];
 
     expectFailure(
-      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "STORY_BLOCKING",
@@ -142,7 +137,7 @@ describe("transition startCase", () => {
   it("rejects locked, already active, and resolved cases with distinct codes", () => {
     const locked = initialState();
     expectFailure(
-      transition(locked, { type: "startCase", caseId: "case_002" }, MINIMAL_CATALOG, {
+      transition(locked, { type: "startCase", caseId: "case_002" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "CASE_LOCKED",
@@ -150,7 +145,7 @@ describe("transition startCase", () => {
 
     const active = activeState();
     expectFailure(
-      transition(active, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(active, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "CASE_ALREADY_STARTED",
@@ -159,7 +154,7 @@ describe("transition startCase", () => {
     const resolved = resolvedStateWithPendingStory();
     resolved.pendingStoryIds = [];
     expectFailure(
-      transition(resolved, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(resolved, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "CASE_ALREADY_RESOLVED",
@@ -196,7 +191,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         ending,
         { type: "chooseOption", caseId: "case_001", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "RUN_FINISHED",
@@ -208,7 +203,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         storyBlocking,
         { type: "chooseOption", caseId: "case_001", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "STORY_BLOCKING",
@@ -218,7 +213,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         activeState(),
         { type: "chooseOption", caseId: "case_002", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "CASE_LOCKED",
@@ -230,7 +225,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         initialState(),
         { type: "chooseOption", caseId: "case_001", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "INVALID_CHOICE",
@@ -242,7 +237,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         resolved,
         { type: "chooseOption", caseId: "case_001", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "CASE_ALREADY_RESOLVED",
@@ -254,7 +249,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         activeState(),
         { type: "chooseOption", caseId: "case_001", nodeId: "disposition", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "STALE_CHOICE",
@@ -264,7 +259,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         activeState(),
         { type: "chooseOption", caseId: "case_001", nodeId: "assessment", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "INVALID_CHOICE",
@@ -285,7 +280,7 @@ describe("transition chooseOption node targets", () => {
           nodeId: "assessment",
           choiceId: "confirm_violation",
         },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
     );
@@ -298,7 +293,7 @@ describe("transition chooseOption node targets", () => {
           nodeId: "assessment",
           choiceId: "confirm_violation",
         },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: "2030-01-01T00:00:00.000Z" },
       ),
     );
@@ -328,7 +323,7 @@ describe("transition chooseOption node targets", () => {
       transition(
         missingCurrent,
         { type: "chooseOption", caseId: "case_001", nodeId: "missing_node", choiceId: "bad" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
       "CONTENT_INVALID",
@@ -365,7 +360,7 @@ describe("transition completeStory", () => {
     ended.phase = { type: "ended", endingId: "fallback" };
     ended.completedStoryIds = ["ending_fallback"];
     expectFailure(
-      transition(ended, { type: "completeStory", storyId: "missing_story" }, MINIMAL_CATALOG, {
+      transition(ended, { type: "completeStory", storyId: "missing_story" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "RUN_FINISHED",
@@ -418,7 +413,7 @@ describe("transition completeStory", () => {
       transition(
         state,
         { type: "completeStory", storyId: "story_after_case_001" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
     );
@@ -428,7 +423,7 @@ describe("transition completeStory", () => {
       transition(
         afterOrdinaryStory,
         { type: "completeStory", storyId: "ending_balanced" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
     );
@@ -444,7 +439,7 @@ describe("transition completeStory", () => {
       transition(
         state,
         { type: "completeStory", storyId: "story_after_case_001" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
     );
@@ -463,7 +458,7 @@ describe("transition invariant boundary", () => {
     const before = structuredClone(state);
 
     expectFailure(
-      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_CATALOG, {
+      transition(state, { type: "startCase", caseId: "case_001" }, MINIMAL_GAME_CONTENT, {
         nowIso: NOW,
       }),
       "CONTENT_INVALID",

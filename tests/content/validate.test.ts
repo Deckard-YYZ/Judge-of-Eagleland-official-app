@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
-import type { ContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
 import {
-  validateContentCatalog,
+  validateGameContentCatalog,
   type ContentValidationIssue,
   type ContentValidationIssueCode,
 } from "../../src/content/validate";
 
-const cloneCatalog = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const cloneCatalog = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
 const invalidIssues = (input: unknown): readonly ContentValidationIssue[] => {
-  const result = validateContentCatalog(input, { source: "fixture.json" });
+  const result = validateGameContentCatalog(input, { source: "fixture.json" });
   expect(result.ok).toBe(false);
   if (result.ok) {
     throw new Error("Expected content validation to fail.");
@@ -29,7 +29,7 @@ interface ExpectedIssue {
 }
 
 const expectSemanticIssues = (
-  mutate: (catalog: ContentCatalog) => void,
+  mutate: (catalog: GameContentCatalog) => void,
   expected: readonly ExpectedIssue[],
 ): void => {
   const catalog = cloneCatalog();
@@ -37,12 +37,12 @@ const expectSemanticIssues = (
   expect(issueSummary(invalidIssues(catalog))).toEqual(expected);
 };
 
-describe("validateContentCatalog", () => {
+describe("validateGameContentCatalog", () => {
   it("returns a discriminated success without mutating valid content", () => {
     const catalog = cloneCatalog();
     const before = structuredClone(catalog);
 
-    const result = validateContentCatalog(catalog, { source: "valid.json" });
+    const result = validateGameContentCatalog(catalog, { source: "valid.json" });
 
     expect(result).toMatchObject({ ok: true, issues: [] });
     expect(catalog).toEqual(before);
@@ -53,16 +53,16 @@ describe("validateContentCatalog", () => {
 
   it("maps Zod failures into the stable public diagnostic shape", () => {
     const catalog = cloneCatalog();
-    catalog.cases.case_001.nodes.assessment.choices[0].text = "";
+    catalog.cases.case_001.nodes.assessment.choices[0].id = "";
 
     const issues = invalidIssues(catalog);
 
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: "CONTENT_SCHEMA_INVALID",
+      code: "GAME_CONTENT_SCHEMA_INVALID",
       source: "fixture.json",
       objectId: "case_001",
-      path: ["cases", "case_001", "nodes", "assessment", "choices", 0, "text"],
+      path: ["cases", "case_001", "nodes", "assessment", "choices", 0, "id"],
     });
     expect(issues[0].message.length).toBeGreaterThan(0);
     expect(Object.keys(issues[0])).toEqual(["code", "source", "objectId", "path", "message"]);
@@ -76,16 +76,16 @@ describe("validateContentCatalog", () => {
       },
     });
 
-    expect(() => validateContentCatalog(hostileInput)).not.toThrow();
-    expect(validateContentCatalog(hostileInput)).toEqual({
+    expect(() => validateGameContentCatalog(hostileInput)).not.toThrow();
+    expect(validateGameContentCatalog(hostileInput)).toEqual({
       ok: false,
       issues: [
         {
-          code: "CONTENT_SCHEMA_INVALID",
-          source: "<catalog>",
+          code: "GAME_CONTENT_SCHEMA_INVALID",
+          source: "<game-content>",
           objectId: "catalog",
           path: [],
-          message: "Content schema validation failed unexpectedly.",
+          message: "Game content schema validation failed unexpectedly.",
         },
       ],
     });

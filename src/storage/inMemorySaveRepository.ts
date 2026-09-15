@@ -6,6 +6,7 @@ import {
   type SaveRepository,
   parseGameStateForStorage,
   parseSaveEnvelopeForStorage,
+  parseStoredSaveEnvelope,
 } from "./saveRepository";
 
 /**
@@ -38,9 +39,9 @@ const validateRevision = (revision: number): void => {
 export class InMemorySaveRepository implements SaveRepository {
   private readonly saves = new Map<string, SaveEnvelope>();
 
-  constructor(initialSaves: readonly SaveEnvelope[] = []) {
+  constructor(initialSaves: readonly unknown[] = []) {
     for (const save of initialSaves) {
-      const parsed = parseSaveEnvelopeForStorage(save);
+      const parsed = parseStoredSaveEnvelope(save);
       if (this.saves.has(parsed.saveId)) {
         throw new SaveRepositoryError(
           "SAVE_ALREADY_EXISTS",

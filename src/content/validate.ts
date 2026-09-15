@@ -1,4 +1,11 @@
-import { ContentCatalogSchema, type Condition, type ContentCatalog } from "./schema";
+import {
+  GameContentCatalogSchema,
+  LocalizedContentCatalogSchema,
+  type Condition,
+  type ContentLocale,
+  type GameContentCatalog,
+  type LocalizedContentCatalog,
+} from "./schema";
 import { collectCaseGraphIssues } from "./validateCaseGraph";
 
 export type ContentValidationIssueCode =
@@ -31,7 +38,17 @@ export type ContentValidationIssueCode =
   | "ASSET_KIND_INVALID"
   | "ASSET_FILE_MISSING"
   | "MANIFEST_PACKAGE_ID_MISMATCH"
-  | "MANIFEST_VERSION_MISMATCH";
+  | "MANIFEST_VERSION_MISMATCH"
+  | "GAME_CONTENT_SCHEMA_INVALID"
+  | "STORY_STEP_ID_DUPLICATE"
+  | "LOCALIZATION_SCHEMA_INVALID"
+  | "LOCALIZATION_PACKAGE_ID_MISMATCH"
+  | "LOCALIZATION_VERSION_MISMATCH"
+  | "LOCALIZATION_LOCALE_UNSUPPORTED"
+  | "LOCALIZATION_LOCALE_MISMATCH"
+  | "LOCALIZATION_ID_MISSING"
+  | "LOCALIZATION_ID_EXTRA"
+  | "LOCALIZATION_ANNOTATION_MISMATCH";
 
 export type ContentValidationPath = readonly (string | number)[];
 
@@ -54,16 +71,26 @@ export interface ContentValidationOptions {
   readonly expectedVersion?: string;
 }
 
-export type ContentValidationResult =
+export type GameContentValidationResult =
   | {
       readonly ok: true;
-      readonly catalog: Readonly<ContentCatalog>;
+      readonly catalog: Readonly<GameContentCatalog>;
       readonly issues: readonly [];
     }
+  | { readonly ok: false; readonly issues: readonly ContentValidationIssue[] };
+
+export interface LocalizationValidationOptions {
+  readonly source?: string;
+  readonly expectedLocale?: ContentLocale;
+}
+
+export type LocalizationValidationResult =
   | {
-      readonly ok: false;
-      readonly issues: readonly ContentValidationIssue[];
-    };
+      readonly ok: true;
+      readonly catalog: Readonly<LocalizedContentCatalog>;
+      readonly issues: readonly [];
+    }
+  | { readonly ok: false; readonly issues: readonly ContentValidationIssue[] };
 
 type IssueCollector = (
   code: ContentValidationIssueCode,
@@ -71,8 +98,6 @@ type IssueCollector = (
   path: ContentValidationPath,
   message: string,
 ) => void;
-
-const DEFAULT_SOURCE = "<catalog>";
 
 const compareStrings = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
@@ -156,7 +181,7 @@ const checkConditionReferences = (
   condition: Condition,
   basePath: ContentValidationPath,
   objectId: string,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   addIssue: IssueCollector,
 ): void => {
   condition.all.forEach((predicate, predicateIndex) => {
@@ -216,7 +241,7 @@ const checkConditionReferences = (
 };
 
 const checkInitialReferences = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   addIssue: IssueCollector,
 ): void => {
   const seenCaseIds = new Set<string>();
@@ -262,7 +287,10 @@ const checkInitialReferences = (
   });
 };
 
-const checkCaseReferences = (content: Readonly<ContentCatalog>, addIssue: IssueCollector): void => {
+const checkCaseReferences = (
+  content: Readonly<GameContentCatalog>,
+  addIssue: IssueCollector,
+): void => {
   for (const caseId of sortedKeys(content.cases)) {
     const definition = content.cases[caseId];
     const casePath = ["cases", caseId] as const;
@@ -375,7 +403,7 @@ const checkRuleIds = (
 };
 
 const checkProgressionReferences = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   addIssue: IssueCollector,
 ): void => {
   checkRuleIds(content.unlockRules, "unlockRules", "UNLOCK_RULE_ID_DUPLICATE", addIssue);
@@ -411,7 +439,7 @@ const checkProgressionReferences = (
 };
 
 const checkEndingReferences = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   addIssue: IssueCollector,
 ): void => {
   const firstEndingByPriority = new Map<number, string>();
@@ -506,7 +534,7 @@ const assetPathProblem = (path: string): string | undefined => {
 };
 
 const checkAssets = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   options: ContentValidationOptions,
   addIssue: IssueCollector,
 ): void => {
@@ -561,7 +589,7 @@ const checkAssets = (
 };
 
 const checkExpectedManifestIdentity = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   options: ContentValidationOptions,
   addIssue: IssueCollector,
 ): void => {
@@ -589,34 +617,29 @@ const checkExpectedManifestIdentity = (
   }
 };
 
-/**
- * Validates an unknown value without mutating it or throwing for malformed content.
- * Asset references and paths are checked here; physical existence is checked only when an
- * inventory is supplied. Package layout and filesystem discovery remain adapter responsibilities.
- */
-export const validateContentCatalog = (
+/** Validates the schema-v2 rules catalog without requiring presentation data. */
+export const validateGameContentCatalog = (
   input: unknown,
   options: ContentValidationOptions = {},
-): ContentValidationResult => {
-  const source = options.source ?? DEFAULT_SOURCE;
-  let parsed: ReturnType<typeof ContentCatalogSchema.safeParse>;
+): GameContentValidationResult => {
+  const source = options.source ?? "<game-content>";
+  let parsed: ReturnType<typeof GameContentCatalogSchema.safeParse>;
   try {
-    parsed = ContentCatalogSchema.safeParse(input);
+    parsed = GameContentCatalogSchema.safeParse(input);
   } catch {
     return {
       ok: false,
       issues: [
         {
-          code: "CONTENT_SCHEMA_INVALID",
+          code: "GAME_CONTENT_SCHEMA_INVALID",
           source,
           objectId: "catalog",
           path: [],
-          message: "Content schema validation failed unexpectedly.",
+          message: "Game content schema validation failed unexpectedly.",
         },
       ],
     };
   }
-
   if (!parsed.success) {
     return {
       ok: false,
@@ -624,7 +647,7 @@ export const validateContentCatalog = (
         parsed.error.issues.map((issue) => {
           const path = normalizePath(issue.path);
           return {
-            code: "CONTENT_SCHEMA_INVALID" as const,
+            code: "GAME_CONTENT_SCHEMA_INVALID" as const,
             source,
             objectId: objectIdForSchemaIssue(input, path),
             path,
@@ -651,7 +674,214 @@ export const validateContentCatalog = (
     addIssue(issue.code, issue.objectId, issue.path, issue.message);
   }
 
+  for (const [storyId, story] of Object.entries(content.stories)) {
+    const firstIndexById = new Map<string, number>();
+    story.steps.forEach((step, index) => {
+      const firstIndex = firstIndexById.get(step.id);
+      if (firstIndex === undefined) {
+        firstIndexById.set(step.id, index);
+      } else {
+        addIssue(
+          "STORY_STEP_ID_DUPLICATE",
+          storyId,
+          ["stories", storyId, "steps", index, "id"],
+          `Story step id "${step.id}" duplicates steps[${firstIndex}].`,
+        );
+      }
+    });
+  }
+
   return issues.length === 0
     ? { ok: true, catalog: content, issues: [] }
+    : { ok: false, issues: sortContentValidationIssues(issues) };
+};
+
+const checkExactLocalizationIds = (
+  expected: readonly string[],
+  actual: Readonly<Record<string, unknown>>,
+  basePath: ContentValidationPath,
+  objectId: string,
+  addIssue: IssueCollector,
+): void => {
+  const expectedSet = new Set(expected);
+  for (const id of [...expectedSet].sort(compareStrings)) {
+    if (!Object.hasOwn(actual, id)) {
+      addIssue(
+        "LOCALIZATION_ID_MISSING",
+        objectId,
+        [...basePath, id],
+        `Localized catalog is missing id "${id}".`,
+      );
+    }
+  }
+  for (const id of Object.keys(actual).sort(compareStrings)) {
+    if (!expectedSet.has(id)) {
+      addIssue(
+        "LOCALIZATION_ID_EXTRA",
+        objectId,
+        [...basePath, id],
+        `Localized catalog contains unknown id "${id}".`,
+      );
+    }
+  }
+};
+
+/**
+ * Validates locale identity and exact display coverage against one rules catalog.
+ * Strict Zod objects reject business fields before any coverage comparison runs.
+ */
+export const validateLocalizedContentCatalog = (
+  input: unknown,
+  gameContent: Readonly<GameContentCatalog>,
+  options: LocalizationValidationOptions = {},
+): LocalizationValidationResult => {
+  const source = options.source ?? "<localization>";
+  const parsed = LocalizedContentCatalogSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      issues: sortContentValidationIssues(
+        parsed.error.issues.map((issue) => {
+          const path = normalizePath(issue.path);
+          return {
+            code: "LOCALIZATION_SCHEMA_INVALID" as const,
+            source,
+            objectId: objectIdForSchemaIssue(input, path),
+            path,
+            message: issue.message,
+          };
+        }),
+      ),
+    };
+  }
+
+  const localized = parsed.data;
+  const issues: ContentValidationIssue[] = [];
+  const addIssue: IssueCollector = (code, objectId, path, message) => {
+    issues.push({ code, source, objectId, path: [...path], message });
+  };
+
+  if (localized.packageId !== gameContent.manifest.packageId) {
+    addIssue(
+      "LOCALIZATION_PACKAGE_ID_MISMATCH",
+      "localization",
+      ["packageId"],
+      `Localized packageId "${localized.packageId}" does not match "${gameContent.manifest.packageId}".`,
+    );
+  }
+  if (localized.version !== gameContent.manifest.version) {
+    addIssue(
+      "LOCALIZATION_VERSION_MISMATCH",
+      "localization",
+      ["version"],
+      `Localized version "${localized.version}" does not match "${gameContent.manifest.version}".`,
+    );
+  }
+  if (!gameContent.manifest.supportedLocales.includes(localized.locale)) {
+    addIssue(
+      "LOCALIZATION_LOCALE_UNSUPPORTED",
+      "localization",
+      ["locale"],
+      `Locale "${localized.locale}" is not declared by the game content manifest.`,
+    );
+  }
+  if (options.expectedLocale !== undefined && localized.locale !== options.expectedLocale) {
+    addIssue(
+      "LOCALIZATION_LOCALE_MISMATCH",
+      "localization",
+      ["locale"],
+      `Localized locale "${localized.locale}" does not match requested locale "${options.expectedLocale}".`,
+    );
+  }
+
+  checkExactLocalizationIds(
+    Object.keys(gameContent.attributes),
+    localized.attributes,
+    ["attributes"],
+    "attributes",
+    addIssue,
+  );
+  checkExactLocalizationIds(
+    Object.keys(gameContent.cases),
+    localized.cases,
+    ["cases"],
+    "cases",
+    addIssue,
+  );
+  checkExactLocalizationIds(
+    Object.keys(gameContent.stories),
+    localized.stories,
+    ["stories"],
+    "stories",
+    addIssue,
+  );
+  checkExactLocalizationIds(
+    Object.keys(gameContent.endings),
+    localized.endings,
+    ["endings"],
+    "endings",
+    addIssue,
+  );
+
+  for (const [caseId, definition] of Object.entries(gameContent.cases)) {
+    const copy = localized.cases[caseId];
+    if (!copy) continue;
+    checkExactLocalizationIds(
+      definition.characters.map(({ id }) => id),
+      copy.characters,
+      ["cases", caseId, "characters"],
+      caseId,
+      addIssue,
+    );
+    checkExactLocalizationIds(
+      Object.keys(definition.nodes),
+      copy.nodes,
+      ["cases", caseId, "nodes"],
+      caseId,
+      addIssue,
+    );
+    checkExactLocalizationIds(
+      Object.keys(definition.resolutions),
+      copy.resolutions,
+      ["cases", caseId, "resolutions"],
+      caseId,
+      addIssue,
+    );
+    const choices = Object.values(definition.nodes).flatMap((node) => node.choices);
+    checkExactLocalizationIds(
+      choices.map(({ id }) => id),
+      copy.choices,
+      ["cases", caseId, "choices"],
+      caseId,
+      addIssue,
+    );
+    for (const choice of choices) {
+      const localizedChoice = copy.choices[choice.id];
+      if (!localizedChoice) continue;
+      if (choice.hasAnnotation !== (localizedChoice.annotation !== undefined)) {
+        addIssue(
+          "LOCALIZATION_ANNOTATION_MISMATCH",
+          caseId,
+          ["cases", caseId, "choices", choice.id, "annotation"],
+          `Choice "${choice.id}" annotation presence does not match the rules catalog.`,
+        );
+      }
+    }
+  }
+
+  for (const [storyId, story] of Object.entries(gameContent.stories)) {
+    const copy = localized.stories[storyId];
+    if (!copy) continue;
+    checkExactLocalizationIds(
+      story.steps.filter((step) => step.type !== "effect").map(({ id }) => id),
+      copy.steps,
+      ["stories", storyId, "steps"],
+      storyId,
+      addIssue,
+    );
+  }
+
+  return issues.length === 0
+    ? { ok: true, catalog: localized, issues: [] }
     : { ok: false, issues: sortContentValidationIssues(issues) };
 };

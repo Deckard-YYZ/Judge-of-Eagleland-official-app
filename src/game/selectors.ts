@@ -1,4 +1,4 @@
-import type { CaseDefinition, CaseId, ContentCatalog } from "../content/schema";
+import type { CaseId, GameCaseDefinition, GameContentCatalog } from "../content/schema";
 import type { CaseProgress, GameState } from "./model";
 
 export type PendingOrActiveCaseProgress = Extract<
@@ -9,7 +9,7 @@ export type ResolvedCaseProgress = Extract<CaseProgress, { status: "resolved" }>
 
 export interface CaseListItem<TProgress extends CaseProgress> {
   readonly caseId: CaseId;
-  readonly definition: Readonly<CaseDefinition>;
+  readonly definition: Readonly<GameCaseDefinition>;
   readonly progress: Readonly<TProgress>;
 }
 
@@ -18,7 +18,7 @@ const compareIds = (left: string, right: string): number =>
 
 const caseItems = <TProgress extends CaseProgress>(
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   accepts: (progress: CaseProgress) => progress is TProgress,
 ): CaseListItem<TProgress>[] => {
   const items: CaseListItem<TProgress>[] = [];
@@ -37,7 +37,7 @@ const caseItems = <TProgress extends CaseProgress>(
 /** Pending and active cases share the same content-authored order in the sidebar. */
 export const selectPendingAndActiveCases = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): readonly CaseListItem<PendingOrActiveCaseProgress>[] =>
   caseItems(
     state,
@@ -51,7 +51,7 @@ export const selectPendingAndActiveCases = (
 /** Most recently resolved cases appear first; case ID is only a deterministic tie-breaker. */
 export const selectResolvedCases = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): readonly CaseListItem<ResolvedCaseProgress>[] =>
   caseItems(
     state,

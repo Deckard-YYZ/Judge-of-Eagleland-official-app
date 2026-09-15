@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
-import { ContentRepositoryError, FakeContentRepository } from "../../src/content/repository";
-import type { ContentCatalog } from "../../src/content/schema";
+import {
+  MINIMAL_GAME_CONTENT,
+  MINIMAL_LOCALIZATIONS,
+} from "../../src/content/fixtures/minimalCatalog";
+import { ContentRepositoryError, FakeSplitContentRepository } from "../../src/content/repository";
+import type { GameContentCatalog } from "../../src/content/schema";
 import type { ContentValidationIssue } from "../../src/content/validate";
 
-const cloneCatalog = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const cloneCatalog = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 const CONTENT_REF = {
-  packageId: MINIMAL_CATALOG.manifest.packageId,
-  version: MINIMAL_CATALOG.manifest.version,
+  packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
+  version: MINIMAL_GAME_CONTENT.manifest.version,
 } as const;
 
 const invalidMutations: readonly {
   readonly name: string;
   readonly expectedCode: ContentValidationIssue["code"];
-  readonly mutate: (catalog: ContentCatalog) => void;
+  readonly mutate: (catalog: GameContentCatalog) => void;
 }[] = [
   {
     name: "missing start",
@@ -68,25 +71,28 @@ const issuesFrom = (error: ContentRepositoryError): readonly ContentValidationIs
   return error.cause as readonly ContentValidationIssue[];
 };
 
-describe("FakeContentRepository content validation", () => {
+describe("FakeSplitContentRepository content validation", () => {
   it("rejects structurally invalid registration with readonly validation issues as cause", () => {
     const malformed = cloneCatalog() as unknown as {
-      manifest: { title?: string };
+      manifest: { packageId?: string };
     };
-    delete malformed.manifest.title;
+    delete malformed.manifest.packageId;
 
     try {
-      new FakeContentRepository().register(malformed as unknown as ContentCatalog);
+      new FakeSplitContentRepository().register({
+        gameContent: malformed as unknown as GameContentCatalog,
+        localizations: MINIMAL_LOCALIZATIONS,
+      });
       throw new Error("Expected registration to fail.");
     } catch (error) {
       expect(error).toBeInstanceOf(ContentRepositoryError);
       const repositoryError = error as ContentRepositoryError;
       expect(repositoryError).toMatchObject({
         code: "INVALID_CONTENT",
-        message: "The supplied content catalog is invalid (1 content issue(s)).",
+        message: "The supplied game content catalog is invalid.",
       });
       const issues = issuesFrom(repositoryError);
-      expect(issues[0].code).toBe("CONTENT_SCHEMA_INVALID");
+      expect(issues[0].code).toBe("GAME_CONTENT_SCHEMA_INVALID");
       expect(Object.isFrozen(issues)).toBe(true);
       expect(Object.isFrozen(issues[0])).toBe(true);
       expect(Object.isFrozen(issues[0].path)).toBe(true);
@@ -98,35 +104,43 @@ describe("FakeContentRepository content validation", () => {
     mutate(catalog);
 
     try {
-      new FakeContentRepository().register(catalog);
+      new FakeSplitContentRepository().register({
+        gameContent: catalog,
+        localizations: MINIMAL_LOCALIZATIONS,
+      });
       throw new Error("Expected registration to fail.");
     } catch (error) {
       expect(error).toBeInstanceOf(ContentRepositoryError);
       const repositoryError = error as ContentRepositoryError;
       expect(repositoryError.code).toBe("INVALID_CONTENT");
-      expect(repositoryError.message).toContain("supplied content catalog is invalid");
+      expect(repositoryError.message).toContain("supplied game content catalog is invalid");
       expect(issuesFrom(repositoryError).map((issue) => issue.code)).toContain(expectedCode);
     }
   });
 
   it("revalidates stored content during load and preserves its issues as cause", async () => {
-    const repository = new FakeContentRepository([MINIMAL_CATALOG]);
+    const repository = new FakeSplitContentRepository([
+      { gameContent: MINIMAL_GAME_CONTENT, localizations: MINIMAL_LOCALIZATIONS },
+    ]);
     const corrupted = cloneCatalog();
     corrupted.cases.case_001.startNodeId = "missing_start";
     const internal = repository as unknown as {
-      catalogs: Map<string, ContentCatalog>;
+      gameCatalogs: Map<string, GameContentCatalog>;
     };
-    internal.catalogs.set(JSON.stringify([CONTENT_REF.packageId, CONTENT_REF.version]), corrupted);
+    internal.gameCatalogs.set(
+      JSON.stringify([CONTENT_REF.packageId, CONTENT_REF.version]),
+      corrupted,
+    );
 
     try {
-      await repository.load(CONTENT_REF);
+      await repository.loadGameContent(CONTENT_REF);
       throw new Error("Expected load to fail.");
     } catch (error) {
       expect(error).toBeInstanceOf(ContentRepositoryError);
       const repositoryError = error as ContentRepositoryError;
       expect(repositoryError).toMatchObject({
         code: "INVALID_CONTENT",
-        message: "The stored content catalog is invalid (1 content issue(s)).",
+        message: "The stored game content catalog is invalid.",
       });
       expect(issuesFrom(repositoryError)[0].code).toBe("NODE_REFERENCE_INVALID");
     }
@@ -134,19 +148,19 @@ describe("FakeContentRepository content validation", () => {
 
   it("isolates registration input and every loaded catalog from shared mutation", async () => {
     const source = cloneCatalog();
-    const originalTitle = source.cases.case_001.title;
-    const repository = new FakeContentRepository();
-    repository.register(source);
-    source.cases.case_001.title = "mutated after registration";
+    const originalOrder = source.cases.case_001.order;
+    const repository = new FakeSplitContentRepository();
+    repository.register({ gameContent: source, localizations: MINIMAL_LOCALIZATIONS });
+    source.cases.case_001.order = 999;
 
-    const first = await repository.load(CONTENT_REF);
-    const second = await repository.load(CONTENT_REF);
+    const first = await repository.loadGameContent(CONTENT_REF);
+    const second = await repository.loadGameContent(CONTENT_REF);
     expect(first).not.toBe(second);
     expect(first.cases.case_001).not.toBe(second.cases.case_001);
-    expect(first.cases.case_001.title).toBe(originalTitle);
+    expect(first.cases.case_001.order).toBe(originalOrder);
 
-    first.cases.case_001.nodes.assessment.choices[0].text = "mutated loaded copy";
-    const third = await repository.load(CONTENT_REF);
-    expect(third.cases.case_001.nodes.assessment.choices[0].text).not.toBe("mutated loaded copy");
+    first.cases.case_001.nodes.assessment.choices[0].id = "mutated loaded copy";
+    const third = await repository.loadGameContent(CONTENT_REF);
+    expect(third.cases.case_001.nodes.assessment.choices[0].id).not.toBe("mutated loaded copy");
   });
 });

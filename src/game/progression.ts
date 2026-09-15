@@ -1,7 +1,7 @@
 import type {
   CaseId,
   Condition,
-  ContentCatalog,
+  GameContentCatalog,
   EndingId,
   Predicate,
   StoryId,
@@ -54,7 +54,7 @@ export const countResolvedCases = (state: Readonly<GameState>): number =>
 const evaluatePredicateAtPath = (
   state: Readonly<GameState>,
   predicate: Predicate,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   path: Path,
 ): ProgressionResult<boolean> => {
   switch (predicate.type) {
@@ -151,13 +151,13 @@ const evaluatePredicateAtPath = (
 export const evaluatePredicate = (
   state: Readonly<GameState>,
   predicate: Predicate,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): ProgressionResult<boolean> => evaluatePredicateAtPath(state, predicate, content, []);
 
 const evaluateConditionAtPath = (
   state: Readonly<GameState>,
   condition: Condition,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   path: Path,
 ): ProgressionResult<boolean> => {
   let matches = true;
@@ -179,12 +179,12 @@ const evaluateConditionAtPath = (
 export const evaluateCondition = (
   state: Readonly<GameState>,
   condition: Condition,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): ProgressionResult<boolean> => evaluateConditionAtPath(state, condition, content, []);
 
 export const findCaseIdsToUnlock = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): ProgressionResult<readonly CaseId[]> => {
   const issues: ProgressionIssue[] = [];
   const seen = new Set(Object.keys(state.cases));
@@ -221,12 +221,12 @@ export const findCaseIdsToUnlock = (
 
 export const findStoryIdsToQueue = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): ProgressionResult<readonly StoryId[]> => {
   const issues: ProgressionIssue[] = [];
   const matchingRules: {
     readonly index: number;
-    readonly rule: ContentCatalog["storyRules"][number];
+    readonly rule: GameContentCatalog["storyRules"][number];
   }[] = [];
 
   content.storyRules.forEach((rule, ruleIndex) => {
@@ -276,7 +276,7 @@ export const findStoryIdsToQueue = (
 
 export const selectEnding = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
 ): ProgressionResult<EndingSelection | null> => {
   const issues: ProgressionIssue[] = [];
   const matches: EndingSelection[] = [];

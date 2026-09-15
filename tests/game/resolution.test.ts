@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ContentCatalog } from "../../src/content/schema";
-import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
+import type { GameContentCatalog } from "../../src/content/schema";
+import { MINIMAL_GAME_CONTENT } from "../../src/content/fixtures/minimalCatalog";
 import type { TransitionResult } from "../../src/game/commands";
 import { createInitialGameState } from "../../src/game/initialization";
 import type { GameState } from "../../src/game/model";
@@ -9,7 +9,7 @@ import { transition } from "../../src/game/transition";
 
 const NOW = "2026-09-15T08:30:00.000Z";
 
-const catalogCopy = (): ContentCatalog => structuredClone(MINIMAL_CATALOG);
+const catalogCopy = (): GameContentCatalog => structuredClone(MINIMAL_GAME_CONTENT);
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) {
@@ -20,7 +20,7 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   return value;
 };
 
-const initialState = (content: Readonly<ContentCatalog>): GameState => {
+const initialState = (content: Readonly<GameContentCatalog>): GameState => {
   const result = createInitialGameState(content);
   if (!result.ok) {
     throw new Error(`Expected valid initial state: ${JSON.stringify(result.issues)}`);
@@ -40,7 +40,7 @@ const expectContentFailure = (result: TransitionResult): void => {
 };
 
 const startFirstCase = (
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   state = initialState(content),
 ): GameState =>
   expectSuccess(
@@ -49,7 +49,7 @@ const startFirstCase = (
 
 const choose = (
   state: Readonly<GameState>,
-  content: Readonly<ContentCatalog>,
+  content: Readonly<GameContentCatalog>,
   nodeId: string,
   choiceId: string,
   nowIso = NOW,
@@ -60,12 +60,12 @@ const choose = (
 
 describe("final choice settlement", () => {
   it("atomically resolves a direct choice with effects, snapshot, unlock, story, and feedback", () => {
-    const state = startFirstCase(MINIMAL_CATALOG);
+    const state = startFirstCase(MINIMAL_GAME_CONTENT);
     const before = structuredClone(state);
     deepFreeze(state);
 
     const result = expectSuccess(
-      choose(state, MINIMAL_CATALOG, "assessment", "insufficient_evidence"),
+      choose(state, MINIMAL_GAME_CONTENT, "assessment", "insufficient_evidence"),
     );
     const progress = result.nextState.cases.case_001;
 
@@ -74,9 +74,8 @@ describe("final choice settlement", () => {
       status: "resolved",
       history: [{ nodeId: "assessment", choiceId: "insufficient_evidence" }],
       resolutionId: "close_with_note",
+      finalChoiceId: "insufficient_evidence",
       snapshot: {
-        caseTitle: "第 001 号：夜间档案室事件",
-        finalChoiceText: "现有材料不足以支持进一步处分",
         resolvedAt: NOW,
         resolvedOrder: 1,
       },
@@ -93,20 +92,20 @@ describe("final choice settlement", () => {
         type: "attributeFeedback",
         caseId: "case_001",
         changes: [
-          { attributeId: "authority", label: "权威", before: 50, after: 48, actualDelta: -2 },
-          { attributeId: "restraint", label: "克制", before: 50, after: 53, actualDelta: 3 },
+          { attributeId: "authority", before: 50, after: 48, actualDelta: -2 },
+          { attributeId: "restraint", before: 50, after: 53, actualDelta: 3 },
         ],
       },
     ]);
   });
 
   it("retains intermediate history before appending the final choice", () => {
-    const started = startFirstCase(MINIMAL_CATALOG);
+    const started = startFirstCase(MINIMAL_GAME_CONTENT);
     const intermediate = expectSuccess(
-      choose(started, MINIMAL_CATALOG, "assessment", "confirm_violation"),
+      choose(started, MINIMAL_GAME_CONTENT, "assessment", "confirm_violation"),
     ).nextState;
     const settled = expectSuccess(
-      choose(intermediate, MINIMAL_CATALOG, "disposition", "formal_warning"),
+      choose(intermediate, MINIMAL_GAME_CONTENT, "disposition", "formal_warning"),
     ).nextState;
 
     expect(settled.cases.case_001).toMatchObject({
@@ -137,8 +136,8 @@ describe("final choice settlement", () => {
     }
 
     expect(progress.snapshot.attributeChanges).toEqual([
-      { attributeId: "authority", label: "权威", before: 0, after: 0, actualDelta: 0 },
-      { attributeId: "restraint", label: "克制", before: 100, after: 100, actualDelta: 0 },
+      { attributeId: "authority", before: 0, after: 0, actualDelta: 0 },
+      { attributeId: "restraint", before: 100, after: 100, actualDelta: 0 },
     ]);
     expect(result.feedback[0]).toMatchObject({
       type: "attributeFeedback",
@@ -146,7 +145,7 @@ describe("final choice settlement", () => {
     });
   });
 
-  it("deep-copies snapshot blocks, attribute changes, and final history", () => {
+  it("deep-copies factual attribute changes and final history", () => {
     const content = catalogCopy();
     const state = startFirstCase(content);
     const priorHistory = state.cases.case_001;
@@ -159,25 +158,17 @@ describe("final choice settlement", () => {
     if (progress.status !== "resolved") {
       throw new Error("Expected resolved progress.");
     }
-    const resolution = content.cases.case_001.resolutions.close_with_note;
-
     expect(progress.history).not.toBe(priorHistory.history);
-    expect(progress.snapshot.verdict).not.toBe(resolution.verdict);
-    expect(progress.snapshot.verdict[0]).not.toBe(resolution.verdict[0]);
-    expect(progress.snapshot.result).not.toBe(resolution.result);
     expect(progress.snapshot.attributeChanges).not.toBe(result.feedback[0].changes);
-
-    resolution.verdict[0].text = "mutated content";
-    resolution.result[0].text = "mutated content";
-    expect(progress.snapshot.verdict[0].text).not.toBe("mutated content");
-    expect(progress.snapshot.result[0].text).not.toBe("mutated content");
+    expect(progress.snapshot).not.toHaveProperty("verdict");
+    expect(progress.snapshot).not.toHaveProperty("result");
   });
 
   it("rejects a repeated final choice without changing the committed result", () => {
     const settled = expectSuccess(
       choose(
-        startFirstCase(MINIMAL_CATALOG),
-        MINIMAL_CATALOG,
+        startFirstCase(MINIMAL_GAME_CONTENT),
+        MINIMAL_GAME_CONTENT,
         "assessment",
         "insufficient_evidence",
       ),
@@ -186,35 +177,36 @@ describe("final choice settlement", () => {
       transition(
         settled,
         { type: "completeStory", storyId: "story_after_case_001" },
-        MINIMAL_CATALOG,
+        MINIMAL_GAME_CONTENT,
         { nowIso: NOW },
       ),
     ).nextState;
     const before = structuredClone(afterStory);
     deepFreeze(afterStory);
 
-    const repeated = choose(afterStory, MINIMAL_CATALOG, "assessment", "insufficient_evidence");
+    const repeated = choose(
+      afterStory,
+      MINIMAL_GAME_CONTENT,
+      "assessment",
+      "insufficient_evidence",
+    );
     expect(repeated).toMatchObject({ ok: false, code: "CASE_ALREADY_RESOLVED" });
     expect(afterStory).toEqual(before);
   });
 
   it("derives resolvedOrder from the number of previously resolved cases", () => {
-    const state = initialState(MINIMAL_CATALOG);
+    const state = initialState(MINIMAL_GAME_CONTENT);
     state.attributes.restraint = 55;
     state.flags.second_case_reviewed = true;
     state.cases.case_002 = {
       status: "resolved",
       history: [{ nodeId: "assessment", choiceId: "request_review" }],
       resolutionId: "review_required",
+      finalChoiceId: "request_review",
       snapshot: {
-        caseTitle: "第 002 号：调阅权限申请",
-        finalChoiceText: "要求补充复核后再调阅",
-        verdict: [{ type: "paragraph", text: "snapshot verdict" }],
-        result: [{ type: "paragraph", text: "snapshot result" }],
         attributeChanges: [
           {
             attributeId: "restraint",
-            label: "克制",
             before: 50,
             after: 55,
             actualDelta: 5,
@@ -227,8 +219,8 @@ describe("final choice settlement", () => {
 
     const settled = expectSuccess(
       choose(
-        startFirstCase(MINIMAL_CATALOG, state),
-        MINIMAL_CATALOG,
+        startFirstCase(MINIMAL_GAME_CONTENT, state),
+        MINIMAL_GAME_CONTENT,
         "assessment",
         "insufficient_evidence",
       ),
@@ -242,13 +234,13 @@ describe("final choice settlement", () => {
 });
 
 describe("resolveFinalChoice trust boundary", () => {
-  it("derives final choice text and resolution only from the referenced content choice", () => {
-    const state = startFirstCase(MINIMAL_CATALOG);
+  it("derives final choice and resolution IDs only from the referenced content choice", () => {
+    const state = startFirstCase(MINIMAL_GAME_CONTENT);
 
     const result = resolveFinalChoice(
       state,
       { caseId: "case_001", nodeId: "assessment", choiceId: "insufficient_evidence" },
-      MINIMAL_CATALOG,
+      MINIMAL_GAME_CONTENT,
       { nowIso: NOW },
     );
 
@@ -259,7 +251,7 @@ describe("resolveFinalChoice trust boundary", () => {
     expect(progress).toMatchObject({
       status: "resolved",
       resolutionId: "close_with_note",
-      snapshot: { finalChoiceText: "现有材料不足以支持进一步处分" },
+      finalChoiceId: "insufficient_evidence",
     });
   });
 
@@ -284,11 +276,11 @@ describe("resolveFinalChoice trust boundary", () => {
       code: "CHOICE_REFERENCE_INVALID",
     },
   ])("rejects $name without modifying input", ({ input, code }) => {
-    const state = startFirstCase(MINIMAL_CATALOG);
+    const state = startFirstCase(MINIMAL_GAME_CONTENT);
     const before = structuredClone(state);
     deepFreeze(state);
 
-    const result = resolveFinalChoice(state, input, MINIMAL_CATALOG, { nowIso: NOW });
+    const result = resolveFinalChoice(state, input, MINIMAL_GAME_CONTENT, { nowIso: NOW });
 
     expect(result).toMatchObject({ ok: false, issues: [{ code }] });
     expect(state).toEqual(before);
@@ -358,7 +350,7 @@ describe("settlement progression pipeline", () => {
 describe("atomic settlement failures", () => {
   const cases: {
     readonly name: string;
-    readonly mutate: (content: ContentCatalog) => void;
+    readonly mutate: (content: GameContentCatalog) => void;
   }[] = [
     {
       name: "missing resolution",
@@ -429,11 +421,11 @@ describe("atomic settlement failures", () => {
   });
 
   it("rejects an invalid settlement timestamp through output invariants", () => {
-    const state = startFirstCase(MINIMAL_CATALOG);
+    const state = startFirstCase(MINIMAL_GAME_CONTENT);
     const before = structuredClone(state);
 
     expectContentFailure(
-      choose(state, MINIMAL_CATALOG, "assessment", "insufficient_evidence", "not-an-iso-date"),
+      choose(state, MINIMAL_GAME_CONTENT, "assessment", "insufficient_evidence", "not-an-iso-date"),
     );
     expect(state).toEqual(before);
   });

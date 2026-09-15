@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "../shared/locale";
+import type { AppLocale } from "../shared/locale";
 
 /**
  * 内容包中的稳定标识都使用字符串，并由内容包负责保证其唯一性。
@@ -20,7 +22,7 @@ export type EndingId = z.infer<typeof IdSchema>;
 export type AssetId = z.infer<typeof IdSchema>;
 
 /** 当前骨架支持的内容 Schema 版本。升级时需显式增加迁移或兼容策略。 */
-export const SUPPORTED_CONTENT_SCHEMA_VERSION = 1;
+export const SUPPORTED_CONTENT_SCHEMA_VERSION = 2;
 
 export const TextBlockSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -46,23 +48,6 @@ export const ContentRefSchema = z.strictObject({
 
 export type ContentRef = z.infer<typeof ContentRefSchema>;
 
-export const ContentManifestSchema = z.strictObject({
-  packageId: IdSchema,
-  version: IdSchema,
-  contentSchemaVersion: z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION),
-  title: TextSchema,
-});
-
-export type ContentManifest = z.infer<typeof ContentManifestSchema>;
-
-export const CharacterBriefSchema = z.strictObject({
-  id: IdSchema,
-  name: TextSchema,
-  description: z.array(TextBlockSchema),
-});
-
-export type CharacterBrief = z.infer<typeof CharacterBriefSchema>;
-
 export const ChoiceAnnotationSchema = z.strictObject({
   title: TextSchema.optional(),
   body: z.array(TextBlockSchema),
@@ -83,73 +68,10 @@ export const ChoiceTargetSchema = z.discriminatedUnion("type", [
 
 export type ChoiceTarget = z.infer<typeof ChoiceTargetSchema>;
 
-export const ChoiceDefinitionSchema = z.strictObject({
-  id: IdSchema,
-  text: TextSchema,
-  annotation: ChoiceAnnotationSchema.optional(),
-  target: ChoiceTargetSchema,
+export const ResolutionEffectsSchema = z.strictObject({
+  attributeDeltas: z.record(IdSchema, IntegerSchema),
+  setFlags: z.record(IdSchema, z.boolean()),
 });
-
-export type ChoiceDefinition = z.infer<typeof ChoiceDefinitionSchema>;
-
-export const DecisionNodeSchema = z.strictObject({
-  prompt: TextSchema.optional(),
-  choices: z.array(ChoiceDefinitionSchema).min(1),
-});
-
-export type DecisionNode = z.infer<typeof DecisionNodeSchema>;
-
-export const ResolutionDefinitionSchema = z.strictObject({
-  verdict: z.array(TextBlockSchema),
-  result: z.array(TextBlockSchema),
-  effects: z.strictObject({
-    attributeDeltas: z.record(IdSchema, IntegerSchema),
-    setFlags: z.record(IdSchema, z.boolean()),
-  }),
-});
-
-export type ResolutionDefinition = z.infer<typeof ResolutionDefinitionSchema>;
-
-export const CaseDefinitionSchema = z.strictObject({
-  id: IdSchema,
-  title: TextSchema,
-  order: IntegerSchema,
-  characters: z.array(CharacterBriefSchema),
-  summary: z.array(TextBlockSchema),
-  body: z.array(TextBlockSchema),
-  startNodeId: IdSchema,
-  nodes: z.record(IdSchema, DecisionNodeSchema),
-  resolutions: z.record(IdSchema, ResolutionDefinitionSchema),
-});
-
-export type CaseDefinition = z.infer<typeof CaseDefinitionSchema>;
-
-export const AttributeDefinitionSchema = z
-  .strictObject({
-    label: TextSchema,
-    initial: IntegerSchema,
-    min: IntegerSchema,
-    max: IntegerSchema,
-  })
-  .superRefine((attribute, context) => {
-    if (attribute.min > attribute.max) {
-      context.addIssue({
-        code: "custom",
-        path: ["max"],
-        message: "max must be greater than or equal to min",
-      });
-    }
-
-    if (attribute.initial < attribute.min || attribute.initial > attribute.max) {
-      context.addIssue({
-        code: "custom",
-        path: ["initial"],
-        message: "initial must be within the configured range",
-      });
-    }
-  });
-
-export type AttributeDefinition = z.infer<typeof AttributeDefinitionSchema>;
 
 export const InitialGameDefinitionSchema = z.strictObject({
   caseIds: z.array(IdSchema),
@@ -211,42 +133,6 @@ export const StoryRuleSchema = z.strictObject({
 
 export type StoryRule = z.infer<typeof StoryRuleSchema>;
 
-export const EndingDefinitionSchema = z.strictObject({
-  title: TextSchema,
-  priority: IntegerSchema,
-  when: ConditionSchema,
-  storyId: IdSchema,
-});
-
-export type EndingDefinition = z.infer<typeof EndingDefinitionSchema>;
-
-export const StoryStepSchema = z.discriminatedUnion("type", [
-  z.strictObject({
-    type: z.literal("text"),
-    blocks: z.array(TextBlockSchema),
-  }),
-  z.strictObject({
-    type: z.literal("video"),
-    assetId: IdSchema,
-    fallbackBlocks: z.array(TextBlockSchema).min(1),
-  }),
-  z.strictObject({
-    type: z.literal("effect"),
-    effect: z.enum(["blood", "fade"]),
-    durationMs: IntegerSchema.positive(),
-  }),
-]);
-
-export type StoryStep = z.infer<typeof StoryStepSchema>;
-
-export const StoryDefinitionSchema = z.strictObject({
-  title: TextSchema,
-  skippable: z.boolean(),
-  steps: z.array(StoryStepSchema).min(1),
-});
-
-export type StoryDefinition = z.infer<typeof StoryDefinitionSchema>;
-
 export const AssetDefinitionSchema = z.strictObject({
   kind: z.enum(["image", "video", "audio"]),
   path: TextSchema,
@@ -254,20 +140,165 @@ export const AssetDefinitionSchema = z.strictObject({
 
 export type AssetDefinition = z.infer<typeof AssetDefinitionSchema>;
 
-/**
- * 内容目录的唯一结构入口。此 Schema 只检查字段形状与局部值域；
- * 节点、案件、属性和剧情之间的完整引用图校验由后续阶段的 Validator 负责。
- */
-export const ContentCatalogSchema = z.strictObject({
-  manifest: ContentManifestSchema,
-  attributes: z.record(IdSchema, AttributeDefinitionSchema),
+const AppLocaleSchema = z.enum(SUPPORTED_LOCALES);
+
+export const GameContentManifestSchema = z
+  .strictObject({
+    packageId: IdSchema,
+    version: IdSchema,
+    contentSchemaVersion: z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION),
+    defaultLocale: AppLocaleSchema.default(DEFAULT_LOCALE),
+    supportedLocales: z.array(AppLocaleSchema).min(1),
+  })
+  .superRefine((manifest, context) => {
+    if (new Set(manifest.supportedLocales).size !== manifest.supportedLocales.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["supportedLocales"],
+        message: "locales must be unique",
+      });
+    }
+    if (!manifest.supportedLocales.includes(manifest.defaultLocale)) {
+      context.addIssue({
+        code: "custom",
+        path: ["defaultLocale"],
+        message: "defaultLocale must be listed in supportedLocales",
+      });
+    }
+  });
+
+export type GameContentManifest = z.infer<typeof GameContentManifestSchema>;
+
+export const GameAttributeDefinitionSchema = z
+  .strictObject({
+    initial: IntegerSchema,
+    min: IntegerSchema,
+    max: IntegerSchema,
+  })
+  .superRefine((attribute, context) => {
+    if (attribute.min > attribute.max) {
+      context.addIssue({ code: "custom", path: ["max"], message: "max must be >= min" });
+    }
+    if (attribute.initial < attribute.min || attribute.initial > attribute.max) {
+      context.addIssue({ code: "custom", path: ["initial"], message: "initial must be in range" });
+    }
+  });
+
+export const GameCharacterDefinitionSchema = z.strictObject({ id: IdSchema });
+export type GameCharacterDefinition = z.infer<typeof GameCharacterDefinitionSchema>;
+
+export const GameChoiceDefinitionSchema = z.strictObject({
+  id: IdSchema,
+  hasAnnotation: z.boolean(),
+  target: ChoiceTargetSchema,
+});
+export type GameChoiceDefinition = z.infer<typeof GameChoiceDefinitionSchema>;
+
+export const GameDecisionNodeSchema = z.strictObject({
+  choices: z.array(GameChoiceDefinitionSchema).min(1),
+});
+export type GameDecisionNode = z.infer<typeof GameDecisionNodeSchema>;
+
+export const GameResolutionDefinitionSchema = z.strictObject({
+  effects: ResolutionEffectsSchema,
+});
+export type GameResolutionDefinition = z.infer<typeof GameResolutionDefinitionSchema>;
+
+export const GameCaseDefinitionSchema = z.strictObject({
+  id: IdSchema,
+  order: IntegerSchema,
+  characters: z.array(GameCharacterDefinitionSchema),
+  startNodeId: IdSchema,
+  nodes: z.record(IdSchema, GameDecisionNodeSchema),
+  resolutions: z.record(IdSchema, GameResolutionDefinitionSchema),
+});
+export type GameCaseDefinition = z.infer<typeof GameCaseDefinitionSchema>;
+
+export const GameStoryStepSchema = z.discriminatedUnion("type", [
+  z.strictObject({ id: IdSchema, type: z.literal("text") }),
+  z.strictObject({ id: IdSchema, type: z.literal("video"), assetId: IdSchema }),
+  z.strictObject({
+    id: IdSchema,
+    type: z.literal("effect"),
+    effect: z.enum(["blood", "fade"]),
+    durationMs: IntegerSchema.positive(),
+  }),
+]);
+export type GameStoryStep = z.infer<typeof GameStoryStepSchema>;
+
+export const GameStoryDefinitionSchema = z.strictObject({
+  skippable: z.boolean(),
+  steps: z.array(GameStoryStepSchema).min(1),
+});
+export type GameStoryDefinition = z.infer<typeof GameStoryDefinitionSchema>;
+
+export const GameEndingDefinitionSchema = z.strictObject({
+  priority: IntegerSchema,
+  when: ConditionSchema,
+  storyId: IdSchema,
+});
+export type GameEndingDefinition = z.infer<typeof GameEndingDefinitionSchema>;
+
+export const GameContentCatalogSchema = z.strictObject({
+  manifest: GameContentManifestSchema,
+  attributes: z.record(IdSchema, GameAttributeDefinitionSchema),
   initial: InitialGameDefinitionSchema,
-  cases: z.record(IdSchema, CaseDefinitionSchema),
+  cases: z.record(IdSchema, GameCaseDefinitionSchema),
   unlockRules: z.array(UnlockRuleSchema),
   storyRules: z.array(StoryRuleSchema),
-  stories: z.record(IdSchema, StoryDefinitionSchema),
-  endings: z.record(IdSchema, EndingDefinitionSchema),
+  stories: z.record(IdSchema, GameStoryDefinitionSchema),
+  endings: z.record(IdSchema, GameEndingDefinitionSchema),
   assets: z.record(IdSchema, AssetDefinitionSchema),
 });
 
-export type ContentCatalog = z.infer<typeof ContentCatalogSchema>;
+export type GameContentCatalog = z.infer<typeof GameContentCatalogSchema>;
+
+export const LocalizedCharacterSchema = z.strictObject({
+  name: TextSchema,
+  description: z.array(TextBlockSchema),
+});
+
+export const LocalizedChoiceSchema = z.strictObject({
+  text: TextSchema,
+  annotation: ChoiceAnnotationSchema.optional(),
+});
+
+export const LocalizedNodeSchema = z.strictObject({ prompt: TextSchema });
+
+export const LocalizedResolutionSchema = z.strictObject({
+  verdict: z.array(TextBlockSchema),
+  result: z.array(TextBlockSchema),
+});
+
+export const LocalizedCaseSchema = z.strictObject({
+  title: TextSchema,
+  characters: z.record(IdSchema, LocalizedCharacterSchema),
+  summary: z.array(TextBlockSchema),
+  body: z.array(TextBlockSchema),
+  nodes: z.record(IdSchema, LocalizedNodeSchema),
+  choices: z.record(IdSchema, LocalizedChoiceSchema),
+  resolutions: z.record(IdSchema, LocalizedResolutionSchema),
+});
+
+export const LocalizedStoryStepSchema = z.strictObject({
+  blocks: z.array(TextBlockSchema).min(1),
+});
+
+export const LocalizedStorySchema = z.strictObject({
+  title: TextSchema,
+  steps: z.record(IdSchema, LocalizedStoryStepSchema),
+});
+
+export const LocalizedContentCatalogSchema = z.strictObject({
+  packageId: IdSchema,
+  version: IdSchema,
+  locale: AppLocaleSchema,
+  manifest: z.strictObject({ title: TextSchema }),
+  attributes: z.record(IdSchema, z.strictObject({ label: TextSchema })),
+  cases: z.record(IdSchema, LocalizedCaseSchema),
+  stories: z.record(IdSchema, LocalizedStorySchema),
+  endings: z.record(IdSchema, z.strictObject({ title: TextSchema })),
+});
+
+export type LocalizedContentCatalog = z.infer<typeof LocalizedContentCatalogSchema>;
+export type ContentLocale = AppLocale;
