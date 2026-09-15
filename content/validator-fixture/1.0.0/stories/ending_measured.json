@@ -1,0 +1,15 @@
+{
+  "title": "审慎的余波",
+  "skippable": false,
+  "steps": [
+    {
+      "type": "text",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "三份裁定留下了更谨慎、仍待讨论的秩序。"
+        }
+      ]
+    }
+  ]
+}

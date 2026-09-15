@@ -1,0 +1,6 @@
+{
+  "packageId": "validator-fixture",
+  "version": "1.0.0",
+  "contentSchemaVersion": 1,
+  "title": "Content Validator 三案回归包"
+}

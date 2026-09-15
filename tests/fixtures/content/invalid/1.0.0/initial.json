@@ -1,0 +1,7 @@
+{
+  "caseIds": ["missing_case", "missing_case"],
+  "storyIds": ["ending_story"],
+  "flags": {
+    "known_flag": false
+  }
+}

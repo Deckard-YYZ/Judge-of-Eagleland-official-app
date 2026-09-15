@@ -1,0 +1,55 @@
+{
+  "id": "case_001",
+  "title": "第 001 案：公开记录",
+  "order": 10,
+  "characters": [
+    {
+      "id": "registrar",
+      "name": "登记官",
+      "description": [{ "type": "paragraph", "text": "负责保管公开记录。" }]
+    }
+  ],
+  "summary": [{ "type": "paragraph", "text": "决定一份记录是否立即公开。" }],
+  "body": [
+    {
+      "type": "paragraph",
+      "text": "记录内容完整，但当事人请求短暂延后公开。"
+    }
+  ],
+  "startNodeId": "decision",
+  "nodes": {
+    "decision": {
+      "prompt": "如何处理公开请求？",
+      "choices": [
+        {
+          "id": "publish_now",
+          "text": "立即公开",
+          "target": { "type": "resolution", "resolutionId": "published" }
+        },
+        {
+          "id": "allow_delay",
+          "text": "允许短暂延后",
+          "target": { "type": "resolution", "resolutionId": "delayed" }
+        }
+      ]
+    }
+  },
+  "resolutions": {
+    "published": {
+      "verdict": [{ "type": "paragraph", "text": "记录立即公开。" }],
+      "result": [{ "type": "paragraph", "text": "公开程序按时完成。" }],
+      "effects": {
+        "attributeDeltas": { "authority": 4, "restraint": -1 },
+        "setFlags": { "case_001_done": true }
+      }
+    },
+    "delayed": {
+      "verdict": [{ "type": "paragraph", "text": "批准短暂延后。" }],
+      "result": [{ "type": "paragraph", "text": "记录在复核后公开。" }],
+      "effects": {
+        "attributeDeltas": { "authority": -4, "restraint": 2 },
+        "setFlags": { "case_001_done": true }
+      }
+    }
+  }
+}

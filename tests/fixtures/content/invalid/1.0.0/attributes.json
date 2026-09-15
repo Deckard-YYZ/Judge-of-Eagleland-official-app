@@ -1,0 +1,8 @@
+{
+  "authority": {
+    "label": "权威",
+    "initial": 50,
+    "min": 0,
+    "max": 100
+  }
+}

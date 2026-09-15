@@ -1,0 +1,18 @@
+{
+  "first": {
+    "title": "第一个错误结局",
+    "priority": 10,
+    "when": {
+      "all": [{ "type": "resolvedCountAtLeast", "count": 1 }]
+    },
+    "storyId": "ending_story"
+  },
+  "second": {
+    "title": "第二个错误结局",
+    "priority": 10,
+    "when": {
+      "all": [{ "type": "resolvedCountAtLeast", "count": 1 }]
+    },
+    "storyId": "ending_story"
+  }
+}

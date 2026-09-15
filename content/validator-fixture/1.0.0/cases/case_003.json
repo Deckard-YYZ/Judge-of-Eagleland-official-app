@@ -1,0 +1,55 @@
+{
+  "id": "case_003",
+  "title": "第 003 案：最终报告",
+  "order": 30,
+  "characters": [
+    {
+      "id": "auditor",
+      "name": "审计员",
+      "description": [{ "type": "paragraph", "text": "提交本轮审理的最终报告。" }]
+    }
+  ],
+  "summary": [{ "type": "paragraph", "text": "决定最终报告的披露范围。" }],
+  "body": [
+    {
+      "type": "paragraph",
+      "text": "报告包含完整程序记录，也包含需要保护的个人细节。"
+    }
+  ],
+  "startNodeId": "decision",
+  "nodes": {
+    "decision": {
+      "prompt": "如何发布最终报告？",
+      "choices": [
+        {
+          "id": "full_report",
+          "text": "发布完整报告",
+          "target": { "type": "resolution", "resolutionId": "full" }
+        },
+        {
+          "id": "redacted_report",
+          "text": "发布删节报告",
+          "target": { "type": "resolution", "resolutionId": "redacted" }
+        }
+      ]
+    }
+  },
+  "resolutions": {
+    "full": {
+      "verdict": [{ "type": "paragraph", "text": "完整报告获准发布。" }],
+      "result": [{ "type": "paragraph", "text": "全部程序记录进入公开档案。" }],
+      "effects": {
+        "attributeDeltas": { "authority": 2, "restraint": -2 },
+        "setFlags": { "case_003_done": true }
+      }
+    },
+    "redacted": {
+      "verdict": [{ "type": "paragraph", "text": "删节报告获准发布。" }],
+      "result": [{ "type": "paragraph", "text": "个人细节被保护，程序结论保持公开。" }],
+      "effects": {
+        "attributeDeltas": { "authority": -2, "restraint": 2 },
+        "setFlags": { "case_003_done": true }
+      }
+    }
+  }
+}

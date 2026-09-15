@@ -1,0 +1,25 @@
+{
+  "high_authority": {
+    "title": "公开的秩序",
+    "priority": 100,
+    "when": {
+      "all": [
+        { "type": "resolvedCountAtLeast", "count": 3 },
+        {
+          "type": "attributeAtLeast",
+          "attributeId": "authority",
+          "value": 50
+        }
+      ]
+    },
+    "storyId": "ending_high_authority"
+  },
+  "measured": {
+    "title": "审慎的余波",
+    "priority": 10,
+    "when": {
+      "all": [{ "type": "resolvedCountAtLeast", "count": 3 }]
+    },
+    "storyId": "ending_measured"
+  }
+}

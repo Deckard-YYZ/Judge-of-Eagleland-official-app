@@ -1,0 +1,9 @@
+{
+  "caseIds": ["case_001"],
+  "storyIds": [],
+  "flags": {
+    "case_001_done": false,
+    "case_002_done": false,
+    "case_003_done": false
+  }
+}

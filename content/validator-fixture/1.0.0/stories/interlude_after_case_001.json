@@ -1,0 +1,15 @@
+{
+  "title": "记录室来信",
+  "skippable": true,
+  "steps": [
+    {
+      "type": "text",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "记录室确认收到裁定，并开始整理下一案材料。"
+        }
+      ]
+    }
+  ]
+}

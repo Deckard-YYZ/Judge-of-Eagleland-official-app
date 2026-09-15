@@ -1,0 +1,6 @@
+{
+  "packageId": "invalid",
+  "version": "1.0.0",
+  "contentSchemaVersion": 1,
+  "title": "静态多错误反例"
+}

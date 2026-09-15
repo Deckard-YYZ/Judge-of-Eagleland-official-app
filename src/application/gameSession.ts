@@ -1,5 +1,6 @@
-import { ContentCatalogSchema, type ContentCatalog } from "../content/schema";
-import type { ContentRepository } from "../content/repository";
+import type { ContentCatalog } from "../content/schema";
+import { isContentRepositoryError, type ContentRepository } from "../content/repository";
+import { validateContentCatalog } from "../content/validate";
 import {
   GameCommandSchema,
   TransitionContextSchema,
@@ -207,10 +208,8 @@ const freezeEnvelope = (value: SaveEnvelope): Readonly<SaveEnvelope> => {
   return deepFreeze(parsed) as Readonly<SaveEnvelope>;
 };
 
-const freezeContent = (value: ContentCatalog): Readonly<ContentCatalog> => {
-  const parsed = ContentCatalogSchema.parse(value);
-  return deepFreeze(parsed) as Readonly<ContentCatalog>;
-};
+const freezeContent = (value: Readonly<ContentCatalog>): Readonly<ContentCatalog> =>
+  deepFreeze(value) as Readonly<ContentCatalog>;
 
 const emptySnapshot = (): GameSessionIdleSnapshot =>
   Object.freeze({
@@ -403,6 +402,9 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         // 使用存档精确 contentRef，不能改成默认或最新版内容。
         loadedContent = await dependencies.contentRepository.load(parsedSave.contentRef);
       } catch (error) {
+        if (isContentRepositoryError(error) && error.code === "INVALID_CONTENT") {
+          return loadFailure(createError("CONTENT_INVALID", error.message));
+        }
         return loadFailure(
           createError(
             "CONTENT_LOAD_FAILED",
@@ -411,17 +413,18 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         );
       }
 
-      let parsedContent: ContentCatalog;
-      try {
-        parsedContent = ContentCatalogSchema.parse(loadedContent);
-      } catch (error) {
+      // ContentRepository is an extension boundary. A custom implementation cannot bypass the
+      // same structural, reference, graph, progression, and asset checks used by built-in content.
+      const contentValidation = validateContentCatalog(loadedContent);
+      if (!contentValidation.ok) {
         return loadFailure(
           createError(
             "CONTENT_INVALID",
-            zodMessage(error, "The loaded content does not satisfy the content schema."),
+            `The loaded content is invalid (${contentValidation.issues.length} content issue(s)).`,
           ),
         );
       }
+      const parsedContent = contentValidation.catalog;
 
       if (
         parsedContent.manifest.packageId !== parsedSave.contentRef.packageId ||

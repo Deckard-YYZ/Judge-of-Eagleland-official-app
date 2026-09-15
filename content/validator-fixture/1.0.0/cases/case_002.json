@@ -1,0 +1,55 @@
+{
+  "id": "case_002",
+  "title": "第 002 案：临时通行",
+  "order": 20,
+  "characters": [
+    {
+      "id": "courier",
+      "name": "信使",
+      "description": [{ "type": "paragraph", "text": "请求临时通过封闭区域。" }]
+    }
+  ],
+  "summary": [{ "type": "paragraph", "text": "审查一份临时通行申请。" }],
+  "body": [
+    {
+      "type": "paragraph",
+      "text": "申请理由真实，但常规许可尚未完成。"
+    }
+  ],
+  "startNodeId": "decision",
+  "nodes": {
+    "decision": {
+      "prompt": "是否批准临时通行？",
+      "choices": [
+        {
+          "id": "deny_passage",
+          "text": "拒绝通行",
+          "target": { "type": "resolution", "resolutionId": "denied" }
+        },
+        {
+          "id": "grant_passage",
+          "text": "批准通行",
+          "target": { "type": "resolution", "resolutionId": "granted" }
+        }
+      ]
+    }
+  },
+  "resolutions": {
+    "denied": {
+      "verdict": [{ "type": "paragraph", "text": "申请被拒绝。" }],
+      "result": [{ "type": "paragraph", "text": "信使改走常规许可流程。" }],
+      "effects": {
+        "attributeDeltas": { "authority": 3, "restraint": 1 },
+        "setFlags": { "case_002_done": true }
+      }
+    },
+    "granted": {
+      "verdict": [{ "type": "paragraph", "text": "批准一次临时通行。" }],
+      "result": [{ "type": "paragraph", "text": "信使在监督下完成任务。" }],
+      "effects": {
+        "attributeDeltas": { "authority": -3, "restraint": -1 },
+        "setFlags": { "case_002_done": true }
+      }
+    }
+  }
+}

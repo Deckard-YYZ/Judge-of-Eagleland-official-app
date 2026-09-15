@@ -1,0 +1,2 @@
+This is a validator fixture placeholder, not playable media.
+The validator checks manifest kind, safe package path, and file existence; it does not decode media.

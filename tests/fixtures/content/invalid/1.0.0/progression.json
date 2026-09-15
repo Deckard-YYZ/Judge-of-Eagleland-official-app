@@ -1,0 +1,42 @@
+{
+  "unlockRules": [
+    {
+      "id": "duplicate_unlock",
+      "when": {
+        "all": [
+          {
+            "type": "attributeAtLeast",
+            "attributeId": "missing_attribute",
+            "value": 1
+          }
+        ]
+      },
+      "caseIds": ["missing_unlock_target"]
+    },
+    {
+      "id": "duplicate_unlock",
+      "when": {
+        "all": [{ "type": "resolvedCountAtLeast", "count": 1 }]
+      },
+      "caseIds": []
+    }
+  ],
+  "storyRules": [
+    {
+      "id": "ending_as_ordinary",
+      "when": {
+        "all": [{ "type": "resolvedCountAtLeast", "count": 1 }]
+      },
+      "storyId": "ending_story",
+      "order": 10
+    },
+    {
+      "id": "missing_story_target",
+      "when": {
+        "all": [{ "type": "resolvedCountAtLeast", "count": 1 }]
+      },
+      "storyId": "missing_story",
+      "order": 20
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "unlockRules": [
+    {
+      "id": "unlock_case_002",
+      "when": {
+        "all": [{ "type": "caseResolved", "caseId": "case_001" }]
+      },
+      "caseIds": ["case_002"]
+    },
+    {
+      "id": "unlock_case_003",
+      "when": {
+        "all": [{ "type": "caseResolved", "caseId": "case_002" }]
+      },
+      "caseIds": ["case_003"]
+    }
+  ],
+  "storyRules": [
+    {
+      "id": "story_after_case_001",
+      "when": {
+        "all": [{ "type": "caseResolved", "caseId": "case_001" }]
+      },
+      "storyId": "interlude_after_case_001",
+      "order": 10
+    }
+  ]
+}

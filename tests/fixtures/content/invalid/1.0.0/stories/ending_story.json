@@ -1,0 +1,11 @@
+{
+  "title": "错误结局剧情",
+  "skippable": false,
+  "steps": [
+    {
+      "type": "video",
+      "assetId": "missing_asset",
+      "fallbackBlocks": [{ "type": "paragraph", "text": "即使资源错误，Schema 仍然完整。" }]
+    }
+  ]
+}

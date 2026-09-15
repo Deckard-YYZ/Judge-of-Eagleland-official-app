@@ -1,0 +1,10 @@
+{
+  "bad_path": {
+    "kind": "video",
+    "path": "../outside.mp4"
+  },
+  "missing_file": {
+    "kind": "image",
+    "path": "media/images/missing.bin"
+  }
+}

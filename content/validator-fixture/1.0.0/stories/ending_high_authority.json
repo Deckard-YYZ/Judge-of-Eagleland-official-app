@@ -1,0 +1,25 @@
+{
+  "title": "公开的秩序",
+  "skippable": false,
+  "steps": [
+    {
+      "type": "video",
+      "assetId": "ending_video",
+      "fallbackBlocks": [
+        {
+          "type": "paragraph",
+          "text": "终局影像不可播放时，以此文本完成结局。"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "三份裁定建立了清晰而公开的秩序。"
+        }
+      ]
+    }
+  ]
+}

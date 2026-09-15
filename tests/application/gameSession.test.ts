@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ContentCatalog, ContentRef } from "../../src/content/schema";
 import { MINIMAL_CATALOG } from "../../src/content/fixtures/minimalCatalog";
-import type { ContentRepository } from "../../src/content/repository";
+import { ContentRepositoryError, type ContentRepository } from "../../src/content/repository";
 import {
   createGameSession,
   type GameSession,
@@ -132,6 +132,52 @@ const makeSession = (
 };
 
 const command: GameCommand = { type: "startCase", caseId: "case_001" };
+
+const semanticallyInvalidContent: readonly {
+  readonly name: string;
+  readonly mutate: (catalog: ContentCatalog) => void;
+}[] = [
+  {
+    name: "missing start",
+    mutate: (catalog) => {
+      catalog.cases.case_001.startNodeId = "missing_start";
+    },
+  },
+  {
+    name: "missing target",
+    mutate: (catalog) => {
+      catalog.cases.case_001.nodes.assessment.choices[0].target = {
+        type: "resolution",
+        resolutionId: "missing_resolution",
+      };
+    },
+  },
+  {
+    name: "invalid progression",
+    mutate: (catalog) => {
+      catalog.unlockRules[0].caseIds = ["missing_case"];
+    },
+  },
+  {
+    name: "graph cycle",
+    mutate: (catalog) => {
+      catalog.cases.case_001.nodes.assessment.choices[1].target = {
+        type: "node",
+        nodeId: "assessment",
+      };
+    },
+  },
+  {
+    name: "missing asset",
+    mutate: (catalog) => {
+      const step = catalog.stories.ending_balanced.steps[0];
+      if (step.type !== "video") {
+        throw new Error("Expected fixture video step.");
+      }
+      step.assetId = "missing_asset";
+    },
+  },
+];
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
@@ -272,6 +318,53 @@ describe("GameSession", () => {
     const mismatch = await mismatchSession.load("save-1", "profile-1");
     expect(mismatch).toMatchObject({ ok: false, code: "CONTENT_MISMATCH" });
     expect(mismatchSession.getSnapshot().status).toBe("error");
+  });
+
+  it.each(semanticallyInvalidContent)(
+    "rejects $name returned by an arbitrary ContentRepository",
+    async ({ mutate }) => {
+      const contentRepository = new TestContentRepository();
+      contentRepository.catalog = clone(MINIMAL_CATALOG);
+      mutate(contentRepository.catalog);
+      const { session, saveRepository } = makeSession(new TestSaveRepository(), contentRepository);
+
+      const result = await session.load("save-1", "profile-1");
+
+      expect(result).toMatchObject({ ok: false, code: "CONTENT_INVALID" });
+      if (result.ok) {
+        throw new Error("Expected invalid content to be rejected.");
+      }
+      expect(result.message).toMatch(/loaded content is invalid \(\d+ content issue\(s\)\)/u);
+      expect(session.getSnapshot()).toMatchObject({
+        status: "error",
+        envelope: null,
+        state: null,
+        content: null,
+        error: { code: "CONTENT_INVALID" },
+      });
+      expect(saveRepository.commitCalls).toHaveLength(0);
+    },
+  );
+
+  it("preserves INVALID_CONTENT classification from a validating repository", async () => {
+    const contentRepository = new TestContentRepository();
+    contentRepository.loadImpl = async () => {
+      throw new ContentRepositoryError(
+        "INVALID_CONTENT",
+        "The stored content catalog is invalid (1 content issue(s)).",
+        Object.freeze([]),
+      );
+    };
+    const { session } = makeSession(new TestSaveRepository(), contentRepository);
+
+    const result = await session.load("save-1", "profile-1");
+
+    expect(result).toEqual({
+      ok: false,
+      code: "CONTENT_INVALID",
+      message: "The stored content catalog is invalid (1 content issue(s)).",
+    });
+    expect(session.getSnapshot().status).toBe("error");
   });
 
   it("does not write or publish when the pure transition rejects a command", async () => {

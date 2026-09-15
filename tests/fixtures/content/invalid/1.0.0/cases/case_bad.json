@@ -1,0 +1,33 @@
+{
+  "id": "wrong_internal_id",
+  "title": "错误案件",
+  "order": 10,
+  "characters": [],
+  "summary": [{ "type": "paragraph", "text": "用于 CLI 多错误输出测试。" }],
+  "body": [{ "type": "paragraph", "text": "该文件故意包含多项语义错误。" }],
+  "startNodeId": "missing_start",
+  "nodes": {
+    "only": {
+      "choices": [
+        {
+          "id": "missing_resolution_choice",
+          "text": "选择不存在的结果",
+          "target": {
+            "type": "resolution",
+            "resolutionId": "missing_resolution"
+          }
+        }
+      ]
+    }
+  },
+  "resolutions": {
+    "unused_bad_effect": {
+      "verdict": [{ "type": "paragraph", "text": "无效效果。" }],
+      "result": [{ "type": "paragraph", "text": "无效效果。" }],
+      "effects": {
+        "attributeDeltas": { "missing_effect_attribute": 1 },
+        "setFlags": { "missing_effect_flag": true }
+      }
+    }
+  }
+}

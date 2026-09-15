@@ -1,9 +1,5 @@
-import {
-  ContentCatalogSchema,
-  ContentRefSchema,
-  type ContentCatalog,
-  type ContentRef,
-} from "./schema";
+import { ContentRefSchema, type ContentCatalog, type ContentRef } from "./schema";
+import { validateContentCatalog, type ContentValidationIssue } from "./validate";
 
 export type ContentRepositoryErrorCode =
   "INVALID_REF" | "INVALID_CONTENT" | "CONTENT_ALREADY_EXISTS" | "CONTENT_NOT_FOUND";
@@ -28,8 +24,6 @@ export interface ContentRepository {
   load(ref: ContentRef): Promise<Readonly<ContentCatalog>>;
 }
 
-const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-
 const keyFor = (ref: ContentRef): string => JSON.stringify([ref.packageId, ref.version]);
 
 const parseRef = (ref: ContentRef): ContentRef => {
@@ -44,20 +38,30 @@ const parseRef = (ref: ContentRef): ContentRef => {
   }
 };
 
-const parseCatalog = (catalog: ContentCatalog): ContentCatalog => {
-  try {
-    return ContentCatalogSchema.parse(catalog);
-  } catch (error) {
+const readonlyIssues = (
+  issues: readonly ContentValidationIssue[],
+): readonly ContentValidationIssue[] =>
+  Object.freeze(
+    issues.map((issue) =>
+      Object.freeze({
+        ...issue,
+        path: Object.freeze([...issue.path]),
+      }),
+    ),
+  );
+
+const validateCatalog = (catalog: unknown, context: "supplied" | "stored"): ContentCatalog => {
+  const result = validateContentCatalog(catalog);
+  if (!result.ok) {
+    const issues = readonlyIssues(result.issues);
     throw new ContentRepositoryError(
       "INVALID_CONTENT",
-      "The supplied content catalog does not satisfy the content contract.",
-      error,
+      `The ${context} content catalog is invalid (${issues.length} content issue(s)).`,
+      issues,
     );
   }
+  return result.catalog as ContentCatalog;
 };
-
-const cloneCatalog = (catalog: ContentCatalog): ContentCatalog =>
-  ContentCatalogSchema.parse(cloneJson(catalog));
 
 /**
  * 内置内容的轻量替身。注册时和读取时均复制并解析，避免 fake 暴露其内部可变对象。
@@ -73,7 +77,7 @@ export class FakeContentRepository implements ContentRepository {
   }
 
   register(catalog: ContentCatalog): void {
-    const parsed = parseCatalog(catalog);
+    const parsed = validateCatalog(catalog, "supplied");
     const ref = parseRef({
       packageId: parsed.manifest.packageId,
       version: parsed.manifest.version,
@@ -87,7 +91,7 @@ export class FakeContentRepository implements ContentRepository {
       );
     }
 
-    this.catalogs.set(key, cloneCatalog(parsed));
+    this.catalogs.set(key, parsed);
   }
 
   async load(ref: ContentRef): Promise<Readonly<ContentCatalog>> {
@@ -101,6 +105,7 @@ export class FakeContentRepository implements ContentRepository {
       );
     }
 
-    return cloneCatalog(stored);
+    // Revalidate at the read boundary as a defense against corrupted adapters or test stores.
+    return validateCatalog(stored, "stored");
   }
 }
