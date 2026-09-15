@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "最小桌面窗口能力与 SQLite 探针权限。",
+  "windows": ["main"],
+  "permissions": ["core:default", "sql:default", "sql:allow-execute"]
+}

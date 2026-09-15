@@ -1,0 +1,4 @@
+node_modules
+dist
+src-tauri/target
+Desktop_Case_Game_Architecture_v1.0.md

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+src-tauri/target/
+src-tauri/gen/
+*.local
+*.log
+
+# npm / Cargo lockfiles are intentionally tracked.

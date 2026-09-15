@@ -1,0 +1,20 @@
+[package]
+name = "eagle-judge"
+version = "0.1.0"
+description = "本地案件模拟游戏桌面容器"
+authors = ["Eagle Judge"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "eagle_judge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.5", features = [] }
+tauri-plugin-sql = { version = "=2.4.1", features = ["sqlite"] }
+# generate_context! expands to serde_json calls for plugin configuration.
+serde_json = "1"
