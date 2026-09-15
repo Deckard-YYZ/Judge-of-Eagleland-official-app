@@ -1,10 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
-import { createDemoSession } from "./app/demoSession";
-import { detectRuntime } from "./platform/runtime";
-import { probeDatabase } from "./storage/database";
-import { App, type AppProps } from "./ui/App";
+import { createDemoProfileEntry } from "./app/demoProfiles";
+import { App } from "./ui/App";
+import { ThemeLabPage } from "./ui/theme-lab";
 import "./ui/app.css";
 
 const rootElement = document.getElementById("root");
@@ -12,35 +10,12 @@ if (!rootElement) {
   throw new Error("The application root element is missing.");
 }
 
-const runtime = detectRuntime();
-const demo = createDemoSession();
-const root = createRoot(rootElement);
+const profileEntry = createDemoProfileEntry();
+const themeLabEnabled = new URLSearchParams(window.location.search).get("themeLab") === "1";
 
-function render(databaseProbe: AppProps["databaseProbe"]): void {
-  root.render(
-    <StrictMode>
-      <App
-        runtimeStatus={{
-          kind: runtime.kind,
-          supportsSqlite: runtime.supportsSqlite,
-        }}
-        databaseProbe={databaseProbe}
-        session={demo.session}
-        reloadSession={demo.reload}
-      />
-    </StrictMode>,
-  );
-}
-
-render({
-  status: "checking",
-  databaseUrl: "sqlite:judge.db",
-  message: "正在检查桌面运行环境…",
-});
-
-async function bootstrap(): Promise<void> {
-  const [probe] = await Promise.all([probeDatabase(runtime), demo.reload()]);
-  render(probe);
-}
-
-void bootstrap();
+createRoot(rootElement).render(
+  <StrictMode>
+    {/* Composition-root preview gate: Theme Lab never enters the production App tree. */}
+    {themeLabEnabled ? <ThemeLabPage /> : <App profileEntry={profileEntry} />}
+  </StrictMode>,
+);

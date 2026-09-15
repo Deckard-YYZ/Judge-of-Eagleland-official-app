@@ -1,0 +1,110 @@
+.feedback-layer {
+  position: fixed;
+  z-index: 30;
+  top: 5.8rem;
+  right: clamp(0.75rem, 2vw, 1.5rem);
+  width: min(20rem, calc(100vw - 1.5rem));
+  pointer-events: none;
+}
+
+.feedback-notice {
+  overflow: hidden;
+  padding: 1rem 1.05rem;
+  border-top: 3px solid var(--ui-emphasis);
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-ink);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
+  animation: feedback-notice-enter 160ms ease-out both;
+}
+
+.feedback-notice__title {
+  margin: 0 0 0.65rem;
+  color: var(--ui-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.feedback-notice__changes {
+  display: grid;
+  margin: 0;
+  gap: 0.5rem;
+}
+
+.feedback-notice__change {
+  display: grid;
+  padding-top: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--ui-line);
+}
+
+.feedback-notice__change dt {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-notice__change dd {
+  display: flex;
+  margin: 0;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.feedback-notice__after {
+  color: var(--ui-muted);
+  font-size: 0.68rem;
+}
+
+.feedback-notice__delta {
+  min-width: 2.6rem;
+  color: var(--ui-ink);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.feedback-notice__delta--positive,
+.feedback-notice__delta--negative {
+  color: var(--ui-inverse);
+  background: var(--ui-emphasis);
+}
+
+.feedback-notice__delta--neutral {
+  color: var(--ui-muted);
+}
+
+@keyframes feedback-notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.45rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 32rem) {
+  .feedback-layer {
+    top: 4.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-notice {
+    animation: none;
+  }
+}
