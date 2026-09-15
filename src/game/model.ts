@@ -17,7 +17,7 @@ const TextSchema = z.string().min(1);
 const IntegerSchema = z.number().int().finite();
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
-/** 当前骨架支持的存档 Schema 版本。改变存档形状时必须提供迁移路径。 */
+/** 当前支持的存档 Schema 版本。改变存档形状时必须提供迁移路径。 */
 export const SUPPORTED_SAVE_SCHEMA_VERSION = 1;
 
 export const ChoiceRecordSchema = z.strictObject({

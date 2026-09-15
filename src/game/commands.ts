@@ -78,10 +78,7 @@ export const TransitionContextSchema = z.strictObject({
 
 export type TransitionContext = z.infer<typeof TransitionContextSchema>;
 
-/**
- * 规则函数的公共签名。骨架阶段只固定同步纯函数的输入输出边界，
- * 不在此处预先实现完整的案件推进、结算和解锁算法。
- */
+/** 正式同步纯规则入口的公共签名；实现不得读写存储、系统时间或 UI 状态。 */
 export type Transition = (
   state: Readonly<GameState>,
   command: GameCommand,
