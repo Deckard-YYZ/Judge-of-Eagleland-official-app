@@ -18,7 +18,7 @@ const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const cloneSave = (save: SaveEnvelope): SaveEnvelope => SaveEnvelopeSchema.parse(cloneJson(save));
 
 const validateIdentity = (value: string, field: string): void => {
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new SaveRepositoryError("INVALID_INPUT", `${field} must be a non-empty string.`);
   }
 };
@@ -28,6 +28,12 @@ const validateRevision = (revision: number): void => {
     throw new SaveRepositoryError(
       "INVALID_INPUT",
       "expectedRevision must be a non-negative safe integer.",
+    );
+  }
+  if (revision >= Number.MAX_SAFE_INTEGER) {
+    throw new SaveRepositoryError(
+      "INVALID_INPUT",
+      "expectedRevision is too large to increment safely.",
     );
   }
 };
@@ -65,6 +71,11 @@ export class InMemorySaveRepository implements SaveRepository {
     return cloneSave(stored);
   }
 
+  async listByProfile(profileId: string): Promise<readonly SaveEnvelope[]> {
+    validateIdentity(profileId, "profileId");
+    return [...this.saves.values()].filter((save) => save.profileId === profileId).map(cloneSave);
+  }
+
   async create(save: SaveEnvelope): Promise<void> {
     const parsed = parseSaveEnvelopeForStorage(save);
     if (this.saves.has(parsed.saveId)) {
@@ -78,6 +89,9 @@ export class InMemorySaveRepository implements SaveRepository {
   }
 
   async commit(input: SaveCommitInput): Promise<SaveCommitResult> {
+    if (!input || typeof input !== "object") {
+      throw new SaveRepositoryError("INVALID_INPUT", "commit input must be an object.");
+    }
     const { saveId, profileId, expectedRevision, nextState, updatedAt } = input;
     validateIdentity(saveId, "saveId");
     validateIdentity(profileId, "profileId");

@@ -67,6 +67,21 @@ const CONTROL_CHARACTER_PATTERN = /[\p{Cc}\p{Cf}]/u;
 const WINDOWS_FORBIDDEN_CHARACTER_PATTERN = /[<>:"|?*]/u;
 const WINDOWS_RESERVED_NAME_PATTERN = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\..*)?$/iu;
 
+/** `encodeURIComponent` rejects lone UTF-16 surrogates; reject them at the path boundary. */
+const hasUnpairedSurrogate = (value: string): boolean => {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (nextCodeUnit < 0xdc00 || nextCodeUnit > 0xdfff) return true;
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const invalidRef = (field: string): AssetResolverError =>
   new AssetResolverError("INVALID_REF", `Content reference ${field} must be a safe path segment.`);
 
@@ -80,6 +95,7 @@ function assertSafeRefSegment(value: unknown, field: string): asserts value is s
     value.includes("\\") ||
     value.includes("%") ||
     value.includes("#") ||
+    hasUnpairedSurrogate(value) ||
     WINDOWS_FORBIDDEN_CHARACTER_PATTERN.test(value) ||
     CONTROL_CHARACTER_PATTERN.test(value) ||
     WINDOWS_RESERVED_NAME_PATTERN.test(value) ||
@@ -99,6 +115,7 @@ const assertSafePathSegment = (path: string, segment: string): void => {
     segment === "." ||
     segment === ".." ||
     segment.includes("%") ||
+    hasUnpairedSurrogate(segment) ||
     WINDOWS_FORBIDDEN_CHARACTER_PATTERN.test(segment) ||
     WINDOWS_RESERVED_NAME_PATTERN.test(segment) ||
     CONTROL_CHARACTER_PATTERN.test(segment) ||
@@ -127,6 +144,9 @@ function assertSafeAssetPath(value: unknown): asserts value is string {
   if (value.includes("%")) {
     throw invalidAssetPath(value, "must not contain percent-encoded path data");
   }
+  if (hasUnpairedSurrogate(value)) {
+    throw invalidAssetPath(value, "must contain well-formed Unicode");
+  }
   if (value.includes("?") || value.includes("#")) {
     throw invalidAssetPath(value, "must not contain a query or fragment");
   }
@@ -145,7 +165,12 @@ function assertAssetKind(value: unknown): asserts value is AssetKind {
 }
 
 function assertAssetId(value: unknown): asserts value is string {
-  if (typeof value !== "string" || value.length === 0 || CONTROL_CHARACTER_PATTERN.test(value)) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    CONTROL_CHARACTER_PATTERN.test(value) ||
+    hasUnpairedSurrogate(value)
+  ) {
     throw new AssetResolverError("INVALID_ASSET_ID", "Asset ID must be a non-empty string.");
   }
 }
@@ -183,7 +208,8 @@ function assertBrowserBase(value: unknown): string {
     value.includes("?") ||
     value.includes("#") ||
     value.includes(":") ||
-    CONTROL_CHARACTER_PATTERN.test(value)
+    CONTROL_CHARACTER_PATTERN.test(value) ||
+    hasUnpairedSurrogate(value)
   ) {
     throw invalidBrowserBase();
   }

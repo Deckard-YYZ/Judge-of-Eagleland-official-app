@@ -15,14 +15,14 @@ npm run build         # 前端生产构建
 npm run tauri:build   # 桌面可执行文件；目前关闭安装器打包
 ```
 
-两个开发启动命令择一运行，它们都使用 1420 端口。当前机器默认 Node 18 不满足要求；已使用随工作环境提供的 Node 24 验证。若尚未切换终端的 Node，可在当前 PowerShell 会话执行以下命令，不修改系统全局配置：
+两个开发启动命令择一运行，它们都使用 1420 端口。项目要求 Node 22.12+；当前工作区使用 Node 22 验证。若本机终端仍指向旧版 Node，请先切换到满足 `engines.node` 的版本，不修改系统全局配置：
 
 ```powershell
 $env:Path = "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;" + $env:Path
 node --version
 ```
 
-注意：本机旧 `npm.cmd` 会优先使用其同目录的 Node 18。若检查仍报告旧版本，应使用与 Node 24 配套的 npm，或用 Node 24 的绝对路径直接执行项目的 `node_modules/vitest/vitest.mjs`、`node_modules/typescript/bin/tsc`。不要删除锁文件来绕过运行时版本问题。
+不要删除锁文件来绕过运行时版本问题。
 
 代码由 Prettier 统一格式；修改后运行 `npm run format`。Rust 代码使用 `cargo fmt --manifest-path src-tauri/Cargo.toml`。
 
@@ -69,7 +69,7 @@ node --version
 
 启动后应看到内容版本 `1.0.0`、两案件、revision `0` 和首案 `pending`。点击“验证开始案件”后显示 revision `1`、`active`，再次开始按钮禁用。点击“重新读取样本”仍保持 `1 / active`；刷新页面恢复 `0 / pending`。
 
-最初骨架的浏览器与桌面均使用内存替身，并另设 SQLite 参数化探针。以下表格保留该阶段的验证记录，不代表当前 Storage / Tauri 完成情况。SQL 插件注册、迁移与显式写权限采用 [Tauri 官方接入方式](https://v2.tauri.app/plugin/sql/)。
+浏览器预览明确使用内存替身，桌面运行时使用 SQLite；SQL 插件注册、迁移与显式写权限采用 [Tauri 官方接入方式](https://v2.tauri.app/plugin/sql/)。Storage / Tauri 当前自动化验收已完成，实际安装包与媒体仍需发布前人工验收。
 
 ## 阶段检查记录
 
@@ -77,11 +77,11 @@ node --version
 
 | 阶段 | 检查结果 |
 | --- | --- |
-| 契约与替身 | 人工审查通过，11 项 Schema / 内容仓储 / 存档仓储测试通过 |
-| 工程与桌面 | 前端构建、Tauri debug 可执行文件构建通过；未启动 Vite 时原生窗口独立运行，SQLite 探针写入后从真实数据库读回，完整性检查为 `ok` |
-| 会话与分线联调 | 人工审查通过，12 项会话测试通过；浏览器开始 / 重读 / 刷新行为符合约定 |
+| Storage / Tauri | 真实 `node:sqlite` 执行 Rust 注册的 `001_initial.sql`；Profile、Save、Settings、v1→v2、CAS 并发、备份、资源解析与 capability 均有回归覆盖 |
+| 桌面装配 | 浏览器只走内存预览；桌面初始化失败可见且不回退内存；Profile 装配失败会关闭数据库连接 |
+| 全量自动化 | 34 个测试文件、287 项测试通过；typecheck、依赖边界、Prettier、生产 build 与 Rust check/fmt 通过 |
 
-全套 `npm run check` 通过（23 项测试、类型、依赖方向、格式）；Rust 格式检查通过。Tauri 与 SQL 插件的 JS / Rust 依赖已对齐，npm 和 Cargo 锁文件均已生成。
+全套 `npm run check` 通过；Tauri 与 SQL 插件的 JS / Rust 依赖已对齐，npm 和 Cargo 锁文件均已生成。详细 slice、决策和后期 TODO 见 [Storage / Tauri 实施记录](Desktop_Case_Game_Storage_Tauri_Implementation.md)。
 
 已验证构建命令：`npm run tauri:build -- --debug --no-bundle`。输出为 `src-tauri/target/debug/eagle-judge.exe`。这验证开发可执行文件，不包含 release 优化构建或安装器验收。
 

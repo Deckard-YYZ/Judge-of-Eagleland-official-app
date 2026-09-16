@@ -33,25 +33,19 @@ interface SaveIdentityRow extends Record<string, unknown> {
 }
 
 const validateIdentity = (value: string, field: string): void => {
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new SaveRepositoryError("INVALID_INPUT", `${field} must be a non-empty string.`);
   }
-}
+};
 
 const validateRevision = (revision: number, field: string): void => {
   if (!Number.isSafeInteger(revision) || revision < 0) {
-    throw new SaveRepositoryError(
-      "INVALID_INPUT",
-      `${field} must be a non-negative safe integer.`,
-    );
+    throw new SaveRepositoryError("INVALID_INPUT", `${field} must be a non-negative safe integer.`);
   }
   // SQLite INTEGER is signed 64-bit, but JavaScript must still be able to
   // represent the next revision exactly when it is returned to the caller.
   if (revision >= Number.MAX_SAFE_INTEGER) {
-    throw new SaveRepositoryError(
-      "INVALID_INPUT",
-      `${field} is too large to increment safely.`,
-    );
+    throw new SaveRepositoryError("INVALID_INPUT", `${field} is too large to increment safely.`);
   }
 };
 
@@ -120,6 +114,19 @@ export class SqliteSaveRepository implements SaveRepository {
     return rowToEnvelope(row);
   }
 
+  async listByProfile(profileId: string): Promise<readonly SaveEnvelope[]> {
+    validateIdentity(profileId, "profileId");
+    const rows = await this.database.select<SaveRow>(
+      `SELECT save_id, profile_id, revision, save_schema_version,
+              content_package_id, content_version, state_json, created_at, updated_at
+         FROM saves
+        WHERE profile_id = $1
+        ORDER BY updated_at DESC, save_id ASC`,
+      [profileId],
+    );
+    return rows.map(rowToEnvelope);
+  }
+
   async create(save: SaveEnvelope): Promise<void> {
     const parsed = parseSaveEnvelopeForStorage(save);
     const stateJson = JSON.stringify(parsed.state);
@@ -170,6 +177,9 @@ export class SqliteSaveRepository implements SaveRepository {
   }
 
   async commit(input: SaveCommitInput): Promise<SaveCommitResult> {
+    if (!input || typeof input !== "object") {
+      throw new SaveRepositoryError("INVALID_INPUT", "commit input must be an object.");
+    }
     // Freeze every scalar reference before the first await. Callers may reuse
     // or mutate their input object while a SQL request is in flight.
     const { saveId, profileId, expectedRevision, nextState, updatedAt: rawUpdatedAt } = input;

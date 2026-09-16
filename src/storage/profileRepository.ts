@@ -22,9 +22,7 @@ export interface ProfileRepository {
 }
 
 export type ProfileRepositoryErrorCode =
-  | "INVALID_INPUT"
-  | "INVALID_PROFILE"
-  | "PROFILE_ALREADY_EXISTS";
+  "INVALID_INPUT" | "INVALID_PROFILE" | "PROFILE_ALREADY_EXISTS";
 
 export class ProfileRepositoryError extends Error {
   readonly code: ProfileRepositoryErrorCode;
@@ -38,9 +36,8 @@ export class ProfileRepositoryError extends Error {
   }
 }
 
-export const isProfileRepositoryError = (
-  error: unknown,
-): error is ProfileRepositoryError => error instanceof ProfileRepositoryError;
+export const isProfileRepositoryError = (error: unknown): error is ProfileRepositoryError =>
+  error instanceof ProfileRepositoryError;
 
 interface ProfileRow extends Record<string, unknown> {
   profile_id: string;
@@ -85,6 +82,21 @@ const validateLoginName = (loginName: string): string => {
     throw new ProfileRepositoryError("INVALID_INPUT", "loginName must be a non-empty string.");
   }
   return normalized;
+};
+
+const normalizeProfileForCreate = (profile: unknown): ProfileRecord => {
+  const source = parseProfile(profile);
+  validateProfileId(source.profileId);
+  const loginName = validateLoginName(source.loginName);
+  const displayName = normalizeProfileDisplayName(source.displayName);
+  if (displayName.length === 0) {
+    throw new ProfileRepositoryError(
+      "INVALID_PROFILE",
+      "displayName must contain at least one non-whitespace character.",
+    );
+  }
+
+  return parseProfile({ ...source, loginName, displayName });
 };
 
 const rowToProfile = (row: ProfileRow): ProfileRecord => {
@@ -141,13 +153,7 @@ export class SqliteProfileRepository implements ProfileRepository {
   async create(profile: ProfileRecord): Promise<void> {
     // Parse first so malformed runtime values are reported as repository
     // errors before the shared normalizer is called.
-    const source = parseProfile(profile);
-    const parsed = parseProfile({
-      ...source,
-      loginName: normalizeProfileLoginName(source.loginName),
-      displayName: normalizeProfileDisplayName(source.displayName),
-    });
-    validateProfileId(parsed.profileId);
+    const parsed = normalizeProfileForCreate(profile);
 
     // A no-op conflict is an unambiguous duplicate result. An IPC or database
     // exception is allowed through as-is because it may represent an unknown
@@ -169,7 +175,6 @@ export class SqliteProfileRepository implements ProfileRepository {
       throw new Error(`Profile insert affected ${result.rowsAffected} rows; expected exactly one.`);
     }
   }
-
 }
 
 export { ProfileRecordSchema };

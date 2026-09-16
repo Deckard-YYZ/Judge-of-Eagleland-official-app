@@ -21,10 +21,7 @@ export interface SettingsRepository {
   list(scope: SettingsScope): Promise<readonly SettingRecord[]>;
 }
 
-export type SettingsRepositoryErrorCode =
-  | "INVALID_INPUT"
-  | "INVALID_SETTING"
-  | "INVALID_VALUE";
+export type SettingsRepositoryErrorCode = "INVALID_INPUT" | "INVALID_SETTING" | "INVALID_VALUE";
 
 export class SettingsRepositoryError extends Error {
   readonly code: SettingsRepositoryErrorCode;
@@ -38,9 +35,8 @@ export class SettingsRepositoryError extends Error {
   }
 }
 
-export const isSettingsRepositoryError = (
-  error: unknown,
-): error is SettingsRepositoryError => error instanceof SettingsRepositoryError;
+export const isSettingsRepositoryError = (error: unknown): error is SettingsRepositoryError =>
+  error instanceof SettingsRepositoryError;
 
 interface SettingRow extends Record<string, unknown> {
   scope: string;
@@ -50,7 +46,9 @@ interface SettingRow extends Record<string, unknown> {
 
 const validateScope = (scope: string): SettingsScope => {
   if (scope === "app") return scope;
-  if (typeof scope === "string" && /^profile:.+/u.test(scope)) return scope as SettingsScope;
+  if (typeof scope === "string" && scope.startsWith("profile:") && scope.slice(8).trim()) {
+    return scope as SettingsScope;
+  }
   throw new SettingsRepositoryError(
     "INVALID_INPUT",
     'scope must be "app" or a profile scope such as "profile:profile-1".',

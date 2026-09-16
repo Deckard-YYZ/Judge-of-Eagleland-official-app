@@ -79,7 +79,9 @@ export async function bootstrapApplication(
   } catch (error) {
     // Profile loading is part of this attempt. Close only the connection opened
     // by this failed composition; a successful application owns it for life.
-    await storage.database.close().catch(() => undefined);
+    if (storage.database.close) {
+      await storage.database.close().catch(() => undefined);
+    }
     throw error;
   }
   return Object.freeze({

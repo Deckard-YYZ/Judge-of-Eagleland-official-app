@@ -14,10 +14,7 @@ import type { GameContentCatalog } from "../content/schema";
 import type { Transition } from "../game/commands";
 import { createInitialGameState } from "../game/initialization";
 import type { SaveEnvelope } from "../game/model";
-import {
-  normalizeProfileLoginName,
-  type ProfileRecord,
-} from "../storage/profileRepository";
+import { normalizeProfileLoginName, type ProfileRecord } from "../storage/profileRepository";
 import type { SaveRepository } from "../storage/saveRepository";
 import type { StorageRepositories } from "../storage";
 import { demoTransition } from "./demoTransition";

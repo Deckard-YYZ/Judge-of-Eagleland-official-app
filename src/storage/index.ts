@@ -25,9 +25,7 @@ export {
   type SettingsRepositoryErrorCode,
   type SettingsScope,
 } from "./settingsRepository";
-export {
-  SqliteSaveRepository,
-} from "./sqliteSaveRepository";
+export { SqliteSaveRepository } from "./sqliteSaveRepository";
 export {
   SaveRepositoryError,
   isSaveRepositoryError,
@@ -38,11 +36,7 @@ export {
   type SaveCommitResult,
   type SaveRepository,
 } from "./saveRepository";
-export {
-  exportSaveBackup,
-  importSaveBackup,
-  type SaveBackupDestination,
-} from "./saveBackup";
+export { exportSaveBackup, importSaveBackup, type SaveBackupDestination } from "./saveBackup";
 export {
   STORAGE_SCHEMA_TABLES,
   STORAGE_SCHEMA_VERSION,

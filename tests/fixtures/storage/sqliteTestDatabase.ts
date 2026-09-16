@@ -13,10 +13,7 @@ export class NodeSqliteTestDatabase implements SqlDatabase {
     this.native = native;
   }
 
-  async execute(
-    query: string,
-    bindValues: readonly unknown[] = [],
-  ): Promise<SqlExecuteResult> {
+  async execute(query: string, bindValues: readonly unknown[] = []): Promise<SqlExecuteResult> {
     const statement = this.native.prepare(query);
     const bindings = toNamedBindings(bindValues);
     const result = bindings.length === 0 ? statement.run() : statement.run(bindings[0]);

@@ -54,6 +54,8 @@ export const isSaveRepositoryError = (error: unknown): error is SaveRepositoryEr
  */
 export interface SaveRepository {
   load(saveId: string, profileId: string): Promise<SaveEnvelope | null>;
+  /** List only rows owned by this Profile; corrupt rows fail closed. */
+  listByProfile?(profileId: string): Promise<readonly SaveEnvelope[]>;
   create(save: SaveEnvelope): Promise<void>;
   commit(input: SaveCommitInput): Promise<SaveCommitResult>;
 }

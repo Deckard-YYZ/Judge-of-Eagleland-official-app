@@ -90,9 +90,7 @@ export async function verifyStorageSchema(database: SqlDatabase): Promise<void> 
 
     // Table names come exclusively from the static migration definition above;
     // interpolation is safe here and avoids a PRAGMA parameter limitation.
-    const columns = await database.select<SchemaColumnRow>(
-      `PRAGMA table_info("${table.name}")`,
-    );
+    const columns = await database.select<SchemaColumnRow>(`PRAGMA table_info("${table.name}")`);
     const columnNames = new Set(columns.map((row) => row.name));
     for (const column of table.columns) {
       if (!columnNames.has(column)) {
@@ -121,7 +119,15 @@ export async function initializeDatabase(
     await verifyStorageSchema(database);
     return database;
   } catch (error) {
-    await database?.close?.().catch(() => undefined);
+    // Do not let cleanup mask the initialization error, including the case
+    // where the loader failed before returning a database connection.
+    if (database?.close) {
+      try {
+        await database.close();
+      } catch {
+        // The original initialization or schema error is the useful diagnostic.
+      }
+    }
     if (error instanceof DatabaseInitializationError) {
       throw error;
     }

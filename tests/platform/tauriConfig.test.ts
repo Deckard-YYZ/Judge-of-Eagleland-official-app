@@ -86,4 +86,18 @@ describe("Tauri resource and permission configuration", () => {
 
     expect(cargoToml).toMatch(/tauri\s*=\s*\{[^\n]*features\s*=\s*\["protocol-asset"\]/u);
   });
+
+  it("registers the same SQLite migration path used by the database plugin", async () => {
+    const libRs = await readFile(new URL("../../src-tauri/src/lib.rs", import.meta.url), "utf8");
+    const migrationSql = await readFile(
+      new URL("../../src-tauri/migrations/001_initial.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(libRs).toContain('include_str!("../migrations/001_initial.sql")');
+    expect(libRs).toContain('.add_migrations("sqlite:judge.db", migrations)');
+    expect(migrationSql).toContain("CREATE TABLE IF NOT EXISTS profiles");
+    expect(migrationSql).toContain("CREATE TABLE IF NOT EXISTS saves");
+    expect(migrationSql).toContain("CREATE TABLE IF NOT EXISTS settings");
+  });
 });

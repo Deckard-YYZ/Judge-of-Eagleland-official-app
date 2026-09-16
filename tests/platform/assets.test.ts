@@ -20,6 +20,14 @@ describe("asset resolver", () => {
     );
   });
 
+  it("URL-encodes Unicode and spaces without changing package separators", async () => {
+    const resolver = createAssetResolver({ runtime: "browser", browserBaseUrl: "/preview/" });
+
+    await expect(resolver.resolve(catalogFor("media/人物 portrait.mp4"), "ending")).resolves.toBe(
+      "/preview/base-story/1.0.0/media/%E4%BA%BA%E7%89%A9%20portrait.mp4",
+    );
+  });
+
   it("uses Tauri's resource path and asset protocol at the platform boundary", async () => {
     const resolveResource = vi.fn(async (resourcePath: string) => `C:\\app\\${resourcePath}`);
     const convertFileSrc = vi.fn((filePath: string) => `asset://localhost/${filePath}`);
@@ -89,11 +97,24 @@ describe("asset resolver", () => {
     ["fragment", "media/video.mp4#clip"],
     ["wildcard", "media/*/video.mp4"],
     ["control character", "media/\u0000video.mp4"],
+    ["Windows reserved device name", "media/CON/video.mp4"],
+    ["Windows reserved device name with extension", "media/com1.txt/video.mp4"],
   ])("rejects %s asset paths before resolving", async (_label, path) => {
     const resolveResource = vi.fn(async (resourcePath: string) => resourcePath);
     const resolver = createAssetResolver({ runtime: "tauri", resolveResource });
 
     await expect(resolver.resolve(catalogFor(path), "ending")).rejects.toMatchObject({
+      code: "ASSET_PATH_INVALID",
+    });
+    expect(resolveResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unpaired UTF-16 surrogate before URL encoding or native resolution", async () => {
+    const resolveResource = vi.fn(async (resourcePath: string) => resourcePath);
+    const resolver = createAssetResolver({ runtime: "tauri", resolveResource });
+    const malformedPath = `media/${String.fromCharCode(0xd800)}.mp4`;
+
+    await expect(resolver.resolve(catalogFor(malformedPath), "ending")).rejects.toMatchObject({
       code: "ASSET_PATH_INVALID",
     });
     expect(resolveResource).not.toHaveBeenCalled();
@@ -142,6 +163,25 @@ describe("asset resolver", () => {
     });
 
     await expect(resolver.resolve(catalogFor(), "ending")).rejects.toMatchObject({
+      code: "ASSET_RESOLUTION_FAILED",
+    });
+  });
+
+  it("wraps empty native resolver and converter results", async () => {
+    const emptyResourceResolver = createAssetResolver({
+      runtime: "tauri",
+      resolveResource: vi.fn(async () => ""),
+    });
+    await expect(emptyResourceResolver.resolve(catalogFor(), "ending")).rejects.toMatchObject({
+      code: "ASSET_RESOLUTION_FAILED",
+    });
+
+    const emptyUrlConverter = createAssetResolver({
+      runtime: "tauri",
+      resolveResource: vi.fn(async () => "C:\\app\\asset.mp4"),
+      convertFileSrc: vi.fn(() => ""),
+    });
+    await expect(emptyUrlConverter.resolve(catalogFor(), "ending")).rejects.toMatchObject({
       code: "ASSET_RESOLUTION_FAILED",
     });
   });
