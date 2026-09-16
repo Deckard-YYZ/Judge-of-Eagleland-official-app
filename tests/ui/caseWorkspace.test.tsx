@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDemoSession } from "../../src/app/demoSession";
 import {
@@ -33,9 +33,16 @@ afterEach(() => {
 describe("CaseWorkspace document handoff", () => {
   it("shows the empty guide before a document is selected", async () => {
     const snapshot = await createPendingAndResolvedSnapshot();
-    render(<CaseWorkspace snapshot={{ ...snapshot, selectedCaseId: null }} dispatch={vi.fn()} />, {
-      wrapper: TestI18nProvider,
-    });
+    render(
+      <CaseWorkspace
+        snapshot={{ ...snapshot, selectedCaseId: null }}
+        dispatch={vi.fn()}
+        reload={vi.fn()}
+      />,
+      {
+        wrapper: TestI18nProvider,
+      },
+    );
 
     expect(screen.getByRole("heading", { level: 1, name: "等待调取案卷" })).toBeTruthy();
     expect(screen.getByText(/选择一份未处理或已处理文档/)).toBeTruthy();
@@ -48,6 +55,7 @@ describe("CaseWorkspace document handoff", () => {
       <CaseWorkspace
         snapshot={{ ...snapshot, selectedCaseId: "case_002" }}
         dispatch={vi.fn()}
+        reload={vi.fn()}
         caseOpenDelayMs={1_500}
       />,
       { wrapper: TestI18nProvider },
@@ -63,6 +71,7 @@ describe("CaseWorkspace document handoff", () => {
       <CaseWorkspace
         snapshot={{ ...snapshot, selectedCaseId: "case_001" }}
         dispatch={vi.fn()}
+        reload={vi.fn()}
         caseOpenDelayMs={1_500}
       />,
     );
@@ -80,6 +89,7 @@ describe("CaseWorkspace document handoff", () => {
       <CaseWorkspace
         snapshot={{ ...snapshot, selectedCaseId: "case_001" }}
         dispatch={vi.fn()}
+        reload={vi.fn()}
         caseOpenDelayMs={1_500}
       />,
       { wrapper: TestI18nProvider },
@@ -90,6 +100,7 @@ describe("CaseWorkspace document handoff", () => {
       <CaseWorkspace
         snapshot={{ ...snapshot, selectedCaseId: "case_002" }}
         dispatch={vi.fn()}
+        reload={vi.fn()}
         caseOpenDelayMs={1_500}
       />,
     );
@@ -103,3 +114,26 @@ describe("CaseWorkspace document handoff", () => {
     expect(screen.queryByRole("heading", { name: "第 001 号：夜间档案室事件" })).toBeNull();
   });
 });
+
+it.each(["needsReload", "error"] as const)(
+  "offers identity-free recovery in %s without case selection",
+  async (status) => {
+    const snapshot = await createPendingAndResolvedSnapshot();
+    const reload = vi.fn().mockResolvedValue({ ok: false, code: "SAVE_LOAD_FAILED" });
+    render(
+      <CaseWorkspace
+        snapshot={{
+          ...snapshot,
+          status,
+          selectedCaseId: null,
+          error: { code: "RELOAD_REQUIRED", message: "reload" },
+        }}
+        dispatch={vi.fn()}
+        reload={reload}
+      />,
+      { wrapper: TestI18nProvider },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "重新载入档案" }));
+    expect(reload).toHaveBeenCalledWith();
+  },
+);

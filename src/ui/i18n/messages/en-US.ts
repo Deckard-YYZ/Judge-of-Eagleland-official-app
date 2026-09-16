@@ -91,6 +91,7 @@ export const EN_US_MESSAGES = {
   "case.status.active": "In review",
   "case.status.resolved": "Archived",
   "case.savingNotice": "The current action is being archived. This case is temporarily read-only.",
+  "case.reload": "Reload archive",
   "case.reloadNotice": "The archive must be reloaded.",
   "case.regionAria": "{title} body and ruling",
   "case.people": "People involved",

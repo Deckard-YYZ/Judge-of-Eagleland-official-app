@@ -45,9 +45,13 @@ function AuthenticatedWorkspace({
   const endingOpen =
     endingId !== null &&
     !(dismissedEnding?.session === session && dismissedEnding.endingId === endingId);
-  const overlayActive = Boolean(
-    snapshot.state?.pendingStoryIds[0] || snapshot.state?.phase.type === "ending" || endingOpen,
-  );
+  // Recovery takes precedence over modal stories so its action remains focusable.
+  const recovering = snapshot.status === "needsReload" || snapshot.status === "error";
+  const overlayActive =
+    !recovering &&
+    Boolean(
+      snapshot.state?.pendingStoryIds[0] || snapshot.state?.phase.type === "ending" || endingOpen,
+    );
   const previousOverlayActive = useRef(overlayActive);
 
   useEffect(() => {
@@ -73,23 +77,26 @@ function AuthenticatedWorkspace({
         <CaseWorkspace
           snapshot={snapshot}
           dispatch={session.dispatch}
+          reload={session.reload}
           caseOpenDelayMs={caseOpenDelayMs}
           decisionRevealDelayMs={decisionRevealDelayMs}
         />
       </AppShell>
       <FeedbackLayer sessionView={session} />
-      <StoryOverlay
-        sessionView={session}
-        snapshot={snapshot}
-        endingOpen={endingOpen}
-        onCloseEnding={() => {
-          // Closing the final presentation is local navigation only. The ended
-          // GameState stays authoritative and all case commands remain blocked.
-          if (endingId) {
-            setDismissedEnding({ session, endingId });
-          }
-        }}
-      />
+      {!recovering && (
+        <StoryOverlay
+          sessionView={session}
+          snapshot={snapshot}
+          endingOpen={endingOpen}
+          onCloseEnding={() => {
+            // Closing the final presentation is local navigation only. The ended
+            // GameState stays authoritative and all case commands remain blocked.
+            if (endingId) {
+              setDismissedEnding({ session, endingId });
+            }
+          }}
+        />
+      )}
     </>
   );
 }

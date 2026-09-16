@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
 import { translateSessionError, useI18n } from "../i18n";
 import { DecisionPanel } from "./DecisionPanel";
@@ -9,10 +9,11 @@ import "./case.css";
 export interface CaseReaderProps {
   snapshot: GameSessionViewSnapshot;
   dispatch: GameSessionView["dispatch"];
+  reload: GameSessionView["reload"];
   decisionRevealDelayMs?: number;
 }
 
-export function CaseReader({ snapshot, dispatch, decisionRevealDelayMs }: CaseReaderProps) {
+export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }: CaseReaderProps) {
   const { t } = useI18n();
   const titleId = useId();
   const panelHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -88,15 +89,19 @@ export function CaseReader({ snapshot, dispatch, decisionRevealDelayMs }: CaseRe
     return <CaseReaderState title={t("case.loadingTitle")} detail={t("case.loadingDetail")} busy />;
   }
 
-  if (snapshot.status === "error") {
+  if (snapshot.status === "error" || snapshot.status === "needsReload") {
     return (
       <CaseReaderState
-        title={t("case.errorTitle")}
+        title={t(snapshot.status === "needsReload" ? "case.reloadNotice" : "case.errorTitle")}
         detail={
           snapshot.error ? translateSessionError(t, snapshot.error.code) : t("case.invalidDetail")
         }
         tone="error"
-      />
+      >
+        <button className="button button--primary" type="button" onClick={() => void reload()}>
+          {t("case.reload")}
+        </button>
+      </CaseReaderState>
     );
   }
 
@@ -149,11 +154,6 @@ export function CaseReader({ snapshot, dispatch, decisionRevealDelayMs }: CaseRe
       {snapshot.status === "saving" ? (
         <div className="case-reader__notice" role="status" aria-live="polite">
           {t("case.savingNotice")}
-        </div>
-      ) : snapshot.status === "needsReload" ? (
-        <div className="case-reader__notice case-reader__notice--error" role="alert">
-          <strong>{t("case.reloadNotice")}</strong>{" "}
-          {snapshot.error ? translateSessionError(t, snapshot.error.code) : t("case.invalidDetail")}
         </div>
       ) : commandError ? (
         <div className="case-reader__notice case-reader__notice--error" role="alert">
@@ -249,9 +249,16 @@ interface CaseReaderStateProps {
   detail: string;
   busy?: boolean;
   tone?: "neutral" | "error";
+  children?: ReactNode;
 }
 
-function CaseReaderState({ title, detail, busy = false, tone = "neutral" }: CaseReaderStateProps) {
+function CaseReaderState({
+  title,
+  detail,
+  busy = false,
+  tone = "neutral",
+  children,
+}: CaseReaderStateProps) {
   const { t } = useI18n();
 
   return (
@@ -263,6 +270,7 @@ function CaseReaderState({ title, detail, busy = false, tone = "neutral" }: Case
       <p className="kicker">{t("case.stateKicker")}</p>
       <h1>{title}</h1>
       <p>{detail}</p>
+      {children}
     </section>
   );
 }

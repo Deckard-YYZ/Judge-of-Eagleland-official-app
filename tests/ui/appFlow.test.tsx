@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDemoProfileEntry } from "../../src/app/demoProfiles";
+import { InMemorySaveRepository } from "../../src/storage/inMemorySaveRepository";
 import { App } from "../../src/ui/App";
 
 let nextObjectUrl = 1;
@@ -238,4 +239,39 @@ describe("App mock workspace flow", () => {
       "blob:profile-avatar-2",
     );
   });
+});
+
+it("makes recovery reachable after a story commit failure and permits retry after a failed reload", async () => {
+  const user = userEvent.setup();
+  render(
+    <App profileEntry={createDemoProfileEntry()} caseOpenDelayMs={0} decisionRevealDelayMs={0} />,
+  );
+  await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
+  await user.click(screen.getByRole("button", { name: "登录" }));
+  await user.click(
+    await screen.findByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }),
+  );
+  await user.click(await screen.findByRole("button", { name: "开始案件" }));
+  await user.click(await screen.findByRole("button", { name: /现有材料不足/ }));
+  const dialog = await screen.findByRole("dialog", { name: "重要剧情" });
+  const commit = vi
+    .spyOn(InMemorySaveRepository.prototype, "commit")
+    .mockRejectedValueOnce(new Error("uncertain commit"));
+  const load = vi
+    .spyOn(InMemorySaveRepository.prototype, "load")
+    .mockRejectedValueOnce(new Error("temporarily offline"));
+  try {
+    await user.click(within(dialog).getByRole("button", { name: "完成剧情" }));
+    const recovery = await screen.findByRole("button", { name: "重新载入档案" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(recovery.closest("[inert]")).toBeNull();
+    await user.click(recovery);
+    const retry = await screen.findByRole("button", { name: "重新载入档案" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(retry);
+    expect(await screen.findByRole("dialog", { name: "重要剧情" })).toBeTruthy();
+  } finally {
+    commit.mockRestore();
+    load.mockRestore();
+  }
 });

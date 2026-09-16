@@ -7,6 +7,7 @@ import type {
   GameSession,
   GameSessionDispatchResult,
   GameSessionError,
+  GameSessionLoadResult,
   GameSessionSnapshot,
 } from "./gameSession";
 
@@ -34,6 +35,7 @@ export interface GameSessionView {
   subscribeFeedback(listener: (feedback: readonly FeedbackRequest[]) => void): () => void;
   selectCase(caseId: CaseId | null): void;
   setLocale(locale: ContentLocale): Promise<void>;
+  reload(): Promise<GameSessionLoadResult>;
   dispatch(command: GameCommand): Promise<GameSessionDispatchResult>;
 }
 
@@ -192,6 +194,7 @@ export const createGameSessionView = (
       requestedLocale = locale;
       await refreshLocalization();
     },
+    reload: () => session.reload(),
     dispatch: (command) => session.dispatch(command),
   };
 };

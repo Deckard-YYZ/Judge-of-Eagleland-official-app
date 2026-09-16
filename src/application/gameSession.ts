@@ -21,6 +21,7 @@ import {
   type SaveRepository,
   type SaveRepositoryErrorCode,
 } from "../storage/saveRepository";
+import { checkGameStateInvariants } from "../game/invariants";
 import type { ZodError } from "zod";
 
 /** 会话时钟在规则计算和一次存档提交中提供同一个时间值。 */
@@ -137,6 +138,9 @@ export interface GameSessionDependencies {
 export interface GameSession {
   /** 读取一个已存在的存档，并按其 contentRef 加载精确内容版本。 */
   load(saveId: string, profileId: string): Promise<GameSessionLoadResult>;
+
+  /** Reload the last accepted load identity without exposing it to presentation. */
+  reload(): Promise<GameSessionLoadResult>;
 
   /** 对当前已提交状态执行一次规则计算和条件版本提交。 */
   dispatch(command: GameCommand): Promise<GameSessionDispatchResult>;
@@ -281,6 +285,7 @@ const isSafeRevision = (revision: unknown): revision is number =>
 export const createGameSession = (dependencies: GameSessionDependencies): GameSession => {
   let snapshot: GameSessionSnapshot = emptySnapshot();
   let busy = false;
+  let loadIdentity: { saveId: string; profileId: string } | null = null;
   const listeners = new Set<() => void>();
   const feedbackListeners = new Set<(feedback: readonly FeedbackRequest[]) => void>();
 
@@ -348,6 +353,8 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
 
     busy = true;
     // 加载切换上下文时先离开 ready；失败后不会继续使用旧 Profile/存档。
+    // Failed accepted loads replace identity too: recovery must never restore an old profile.
+    loadIdentity = { saveId, profileId };
     publish(loadingSnapshot());
     const loadFailure = (error: GameSessionError): GameSessionFailure => {
       publish(errorSnapshot(error));
@@ -438,6 +445,17 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         );
       }
 
+      // Schema-valid saves may still contain stale nodes, broken paths, or mismatched attributes.
+      // Check their semantics only after the exact content version has passed validation.
+      const stateValidation = checkGameStateInvariants(parsedSave.state, parsedContent);
+      if (!stateValidation.ok) {
+        return loadFailure(
+          createError(
+            "INVALID_SAVE",
+            `The loaded state is inconsistent with its content (${stateValidation.issues.length} invariant issue(s)).`,
+          ),
+        );
+      }
       const frozenEnvelope = freezeEnvelope(parsedSave);
       const frozenContent = freezeContent(parsedContent);
       const nextSnapshot = readySnapshot(frozenEnvelope, frozenContent);
@@ -628,6 +646,15 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
 
   return {
     load,
+    reload: () => {
+      if (busy) return Promise.resolve(busyFailure());
+      if (!loadIdentity) {
+        return Promise.resolve(
+          failure(createError("NOT_LOADED", "Load an existing save before reloading.")),
+        );
+      }
+      return load(loadIdentity.saveId, loadIdentity.profileId);
+    },
     dispatch,
     getSnapshot: () => snapshot,
     subscribe: (listener: () => void): (() => void) => {

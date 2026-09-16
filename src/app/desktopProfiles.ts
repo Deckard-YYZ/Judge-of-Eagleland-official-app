@@ -8,8 +8,11 @@ import type {
   ProfileEntrySnapshot,
 } from "../application/profileEntry";
 import { normalizeProfileDisplayName } from "../application/profileEntry";
-import { MINIMAL_GAME_CONTENT, MINIMAL_LOCALIZATIONS } from "../content/fixtures/minimalCatalog";
-import { FakeSplitContentRepository, type SplitContentRepository } from "../content/repository";
+import {
+  BundledSplitContentRepository,
+  DEFAULT_BUNDLED_CONTENT_REF,
+} from "../content/bundledRepository";
+import type { SplitContentRepository } from "../content/repository";
 import type { GameContentCatalog } from "../content/schema";
 import type { Transition } from "../game/commands";
 import { createInitialGameState } from "../game/initialization";
@@ -17,7 +20,7 @@ import type { SaveEnvelope } from "../game/model";
 import { normalizeProfileLoginName, type ProfileRecord } from "../storage/profileRepository";
 import type { SaveRepository } from "../storage/saveRepository";
 import type { StorageRepositories } from "../storage";
-import { demoTransition } from "./demoTransition";
+import { transition as gameTransition } from "../game/transition";
 
 /** Profile-scoped setting used to select a save when a profile has more than one. */
 export const CURRENT_SAVE_ID_SETTING_KEY = "currentSaveId";
@@ -148,13 +151,11 @@ export async function createDesktopProfileEntry(
   options: DesktopProfileEntryOptions = {},
 ): Promise<ProfileEntry> {
   const clock = options.clock ?? defaultClock;
-  const content = options.content ?? MINIMAL_GAME_CONTENT;
-  const contentRepository =
-    options.contentRepository ??
-    new FakeSplitContentRepository([
-      { gameContent: content, localizations: MINIMAL_LOCALIZATIONS },
-    ]);
-  const transition = options.transition ?? demoTransition;
+  const contentRepository = options.contentRepository ?? new BundledSplitContentRepository();
+  // Bootstrap must fail visibly if installed content is missing or invalid.
+  const content =
+    options.content ?? (await contentRepository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF));
+  const transition = options.transition ?? gameTransition;
   const makeProfileId = options.createProfileId ?? (() => defaultProfileId());
   const makeSaveId = options.createSaveId ?? defaultSaveIdForProfile;
   const saveRepository = repositories.saves as ListableSaveRepository;

@@ -9,6 +9,7 @@ export const CASE_OPEN_DELAY_MS = 1_500;
 export interface CaseWorkspaceProps {
   snapshot: GameSessionViewSnapshot;
   dispatch: GameSessionView["dispatch"];
+  reload: GameSessionView["reload"];
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
 }
@@ -17,6 +18,7 @@ export interface CaseWorkspaceProps {
 export function CaseWorkspace({
   snapshot,
   dispatch,
+  reload,
   caseOpenDelayMs = CASE_OPEN_DELAY_MS,
   decisionRevealDelayMs,
 }: CaseWorkspaceProps) {
@@ -59,7 +61,7 @@ export function CaseWorkspace({
     [snapshot, visibleCaseId],
   );
 
-  if (loadingCaseId) {
+  if (loadingCaseId && snapshot.status !== "needsReload" && snapshot.status !== "error") {
     const title = snapshot.content?.cases[loadingCaseId]?.title;
     return (
       <section className="case-loading-state" role="status" aria-live="polite" aria-busy="true">
@@ -75,6 +77,7 @@ export function CaseWorkspace({
     <CaseReader
       snapshot={presentedSnapshot}
       dispatch={dispatch}
+      reload={reload}
       decisionRevealDelayMs={decisionRevealDelayMs}
     />
   );

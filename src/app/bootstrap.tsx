@@ -130,17 +130,17 @@ export function StorageStartupScreen({
     <main className="startup-screen" aria-labelledby="startup-title">
       <section className="startup-screen__panel">
         <p className="kicker">司法档案处 · 00</p>
-        <h1 id="startup-title">{isError ? "本地存储无法初始化" : "正在准备本地档案"}</h1>
+        <h1 id="startup-title">{isError ? "本地档案无法初始化" : "正在准备本地档案"}</h1>
         <p role={isError ? "alert" : "status"} aria-live="polite">
           {isError
-            ? "SQLite 尚未完成初始化。为保护已有存档，应用不会切换到内存模式。"
-            : "正在打开本机数据库并读取存储结构，请稍候。"}
+            ? "本地存档或内容包尚未完成初始化。为保护已有存档，应用不会切换到内存模式。"
+            : "正在打开本机数据库并校验内容包，请稍候。"}
         </p>
         {isError ? (
           <>
             <p className="startup-screen__detail">{describeBootstrapError(error)}</p>
             <button className="button button--primary" type="button" onClick={onRetry}>
-              重试本地存储
+              重试本地档案
             </button>
           </>
         ) : null}

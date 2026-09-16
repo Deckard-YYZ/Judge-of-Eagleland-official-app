@@ -1,4 +1,5 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
+mod content_resources;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,6 +11,9 @@ pub fn run() {
     }];
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            content_resources::read_bundled_content_package
+        ])
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:judge.db", migrations)

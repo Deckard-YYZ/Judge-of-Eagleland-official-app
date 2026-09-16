@@ -28,8 +28,8 @@ const NOW = "2026-09-14T12:00:00.000Z";
 
 const initialState = (): GameState => ({
   phase: { type: "playing" },
-  attributes: { restraint: 50 },
-  flags: {},
+  attributes: { restraint: 50, authority: 50 },
+  flags: { first_case_closed: false, second_case_reviewed: false },
   cases: {},
   pendingStoryIds: [],
   completedStoryIds: [],
@@ -277,7 +277,7 @@ describe("GameSession", () => {
     expect(session.getSnapshot().state?.attributes.restraint).toBe(55);
   });
 
-  it("enters needsReload after an unknown commit failure and recovers only on explicit load", async () => {
+  it("enters needsReload after an unknown commit failure and recovers on explicit identity-free reload", async () => {
     const { session, saveRepository } = makeSession();
     await session.load("save-1", "profile-1");
     saveRepository.commitImpl = async () => {
@@ -292,7 +292,7 @@ describe("GameSession", () => {
       code: "RELOAD_REQUIRED",
     });
 
-    const loaded = await session.load("save-1", "profile-1");
+    const loaded = await session.reload();
     expect(loaded.ok).toBe(true);
     expect(session.getSnapshot().status).toBe("ready");
   });
@@ -485,5 +485,65 @@ describe("GameSession", () => {
       code: "TRANSITION_ERROR",
     });
     expect(session.getSnapshot().status).toBe("ready");
+  });
+});
+
+describe("GameSession load invariants and recovery identity", () => {
+  it.each(["attributes", "node", "history"])(
+    "rejects schema-valid invalid %s before ready",
+    async (kind) => {
+      const save = makeSave();
+      if (kind === "attributes") delete save.state.attributes.authority;
+      else
+        save.state.cases.case_001 = {
+          status: "active",
+          currentNodeId: kind === "node" ? "missing_node" : "disposition",
+          history: [],
+        };
+      const { session, saveRepository } = makeSession(new TestSaveRepository(save));
+      const statuses: string[] = [];
+      session.subscribe(() => statuses.push(session.getSnapshot().status));
+      expect(await session.load("save-1", "profile-1")).toMatchObject({
+        ok: false,
+        code: "INVALID_SAVE",
+      });
+      expect(statuses).toEqual(["loading", "error"]);
+      expect(session.getSnapshot().state).toBeNull();
+      expect(saveRepository.commitCalls).toEqual([]);
+    },
+  );
+
+  it("retries the latest failed identity and never falls back to an old profile", async () => {
+    const { session, saveRepository } = makeSession();
+    expect(await session.reload()).toMatchObject({ ok: false, code: "NOT_LOADED" });
+    await session.load("save-1", "profile-1");
+    await session.load("save-2", "profile-2");
+    expect(await session.reload()).toMatchObject({ ok: false, code: "SAVE_NOT_FOUND" });
+    saveRepository.save = makeSave({ saveId: "save-2", profileId: "profile-2", revision: 7 });
+    expect(await session.reload()).toMatchObject({
+      ok: true,
+      snapshot: { envelope: { saveId: "save-2", profileId: "profile-2", revision: 7 } },
+    });
+  });
+
+  it("shares the operation lock and does not let rejected loads change recovery identity", async () => {
+    const { session, saveRepository } = makeSession();
+    const pending = deferred<SaveEnvelope | null>();
+    const load = vi.spyOn(saveRepository, "load").mockReturnValueOnce(pending.promise);
+    const loading = session.load("save-1", "profile-1");
+    expect(await session.reload()).toMatchObject({ ok: false, code: "BUSY" });
+    expect(await session.load("other", "other")).toMatchObject({ ok: false, code: "BUSY" });
+    pending.resolve(makeSave());
+    await loading;
+    await session.reload();
+    expect(load).toHaveBeenLastCalledWith("save-1", "profile-1");
+    const commit = deferred<SaveCommitResult>();
+    saveRepository.commitImpl = () => commit.promise;
+    const saving = session.dispatch(command);
+    expect(await session.reload()).toMatchObject({ ok: false, code: "BUSY" });
+    commit.resolve({ revision: 1 });
+    await saving;
+    await session.reload();
+    expect(session.getSnapshot().envelope?.revision).toBe(1);
   });
 });

@@ -88,6 +88,7 @@ export const DEFAULT_MESSAGES = {
   "case.status.active": "审理中",
   "case.status.resolved": "已归档",
   "case.savingNotice": "正在归档当前操作，本案暂时只读。",
+  "case.reload": "重新载入档案",
   "case.reloadNotice": "需要重新载入档案。",
   "case.regionAria": "{title}正文与裁定",
   "case.people": "相关人员",

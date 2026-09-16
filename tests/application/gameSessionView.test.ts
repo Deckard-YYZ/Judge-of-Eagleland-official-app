@@ -212,3 +212,32 @@ describe("GameSessionView", () => {
     });
   });
 });
+
+it("reloads through the presentation boundary without an identity", async () => {
+  const demo = createDemoSession();
+  const view = createGameSessionView(demo.session, demo.contentRepository);
+  await demo.reload();
+  const reload = vi.spyOn(demo.session, "reload");
+  expect((await view.reload()).ok).toBe(true);
+  expect(reload).toHaveBeenCalledWith();
+});
+
+it("ignores a localization completion from before reload", async () => {
+  const demo = createDemoSession();
+  const view = createGameSessionView(demo.session, demo.contentRepository);
+  await demo.reload();
+  await view.setLocale("zh-CN");
+  let finish!: (value: (typeof MINIMAL_LOCALIZATIONS)["en-US"]) => void;
+  const stale = new Promise<(typeof MINIMAL_LOCALIZATIONS)["en-US"]>((resolve) => {
+    finish = resolve;
+  });
+  vi.spyOn(demo.contentRepository, "loadLocalization").mockReturnValueOnce(stale);
+  const switching = view.setLocale("en-US");
+  await view.reload();
+  await view.setLocale("en-US");
+  const committed = view.getSnapshot().content;
+  finish(MINIMAL_LOCALIZATIONS["zh-CN"]);
+  await switching;
+  expect(view.getSnapshot().content).toBe(committed);
+  expect(view.getSnapshot().content?.locale).toBe("en-US");
+});
