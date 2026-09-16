@@ -8,7 +8,7 @@ import type {
   ProfileEntrySnapshot,
 } from "../application/profileEntry";
 import { normalizeProfileDisplayName } from "../application/profileEntry";
-import { MINIMAL_GAME_CONTENT, MINIMAL_LOCALIZATIONS } from "../content/fixtures/minimalCatalog";
+import { ACTION_INPUT_GAME_CONTENT, ACTION_INPUT_LOCALIZATIONS } from "./actionInputContent";
 import { FakeSplitContentRepository } from "../content/repository";
 import { InMemorySaveRepository } from "../storage/inMemorySaveRepository";
 import { createDemoSave } from "./demoSession";
@@ -20,7 +20,7 @@ interface DemoProfile extends LocalProfileSummary {
 
 /** In-memory Profile entry for frontend work. Refreshing the app resets all profiles. */
 export const createDemoProfileEntry = (): ProfileEntry => {
-  const content = MINIMAL_GAME_CONTENT;
+  const content = ACTION_INPUT_GAME_CONTENT;
   const clock = () => new Date().toISOString();
   const initialProfile: DemoProfile = {
     profileId: "demo-profile",
@@ -32,7 +32,7 @@ export const createDemoProfileEntry = (): ProfileEntry => {
     createDemoSave(initialProfile.profileId, initialProfile.saveId, content, clock()),
   ]);
   const contentRepository = new FakeSplitContentRepository([
-    { gameContent: content, localizations: MINIMAL_LOCALIZATIONS },
+    { gameContent: content, localizations: ACTION_INPUT_LOCALIZATIONS },
   ]);
   const listeners = new Set<() => void>();
   let nextProfileNumber = 1;

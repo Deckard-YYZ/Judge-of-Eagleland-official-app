@@ -41,6 +41,7 @@ export type ContentValidationIssueCode =
   | "MANIFEST_VERSION_MISMATCH"
   | "GAME_CONTENT_SCHEMA_INVALID"
   | "STORY_STEP_ID_DUPLICATE"
+  | "STORY_INPUT_SKIPPABLE"
   | "LOCALIZATION_SCHEMA_INVALID"
   | "LOCALIZATION_PACKAGE_ID_MISMATCH"
   | "LOCALIZATION_VERSION_MISMATCH"
@@ -676,7 +677,36 @@ export const validateGameContentCatalog = (
 
   for (const [storyId, story] of Object.entries(content.stories)) {
     const firstIndexById = new Map<string, number>();
+    if (story.skippable && story.steps.some((step) => step.type === "actionInput")) {
+      addIssue(
+        "STORY_INPUT_SKIPPABLE",
+        storyId,
+        ["stories", storyId, "skippable"],
+        "Stories with action inputs cannot be skippable.",
+      );
+    }
     story.steps.forEach((step, index) => {
+      if (step.type === "actionInput") {
+        const base = ["stories", storyId, "steps", index] as const;
+        for (const id of Object.keys(step.wrongEffects?.attributeDeltas ?? {})) {
+          if (!Object.hasOwn(content.attributes, id))
+            addIssue(
+              "ATTRIBUTE_REFERENCE_INVALID",
+              storyId,
+              [...base, "wrongEffects", "attributeDeltas", id],
+              `Unknown attribute "${id}".`,
+            );
+        }
+        for (const id of Object.keys(step.wrongEffects?.setFlags ?? {})) {
+          if (!Object.hasOwn(content.initial.flags, id))
+            addIssue(
+              "FLAG_REFERENCE_INVALID",
+              storyId,
+              [...base, "wrongEffects", "setFlags", id],
+              `Unknown flag "${id}".`,
+            );
+        }
+      }
       const firstIndex = firstIndexById.get(step.id);
       if (firstIndex === undefined) {
         firstIndexById.set(step.id, index);

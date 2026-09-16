@@ -33,13 +33,14 @@ const initialState = (): GameState => ({
   cases: {},
   pendingStoryIds: [],
   completedStoryIds: [],
+  storyCheckpoint: null,
 });
 
 const makeSave = (overrides: Partial<SaveEnvelope> = {}): SaveEnvelope => ({
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 2,
+  saveSchemaVersion: 3,
   contentRef: {
     packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
     version: MINIMAL_GAME_CONTENT.manifest.version,
@@ -252,7 +253,7 @@ describe("GameSession", () => {
       feedback: [
         {
           type: "attributeFeedback",
-          caseId: "case_001",
+          source: { type: "case", caseId: "case_001" },
           changes: [
             {
               attributeId: "restraint",

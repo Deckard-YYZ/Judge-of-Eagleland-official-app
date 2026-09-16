@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACTION_IDS } from "../shared/action";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "../shared/locale";
 import type { AppLocale } from "../shared/locale";
 
@@ -22,7 +23,7 @@ export type EndingId = z.infer<typeof IdSchema>;
 export type AssetId = z.infer<typeof IdSchema>;
 
 /** 当前骨架支持的内容 Schema 版本。升级时需显式增加迁移或兼容策略。 */
-export const SUPPORTED_CONTENT_SCHEMA_VERSION = 2;
+export const SUPPORTED_CONTENT_SCHEMA_VERSION = 3;
 
 export const TextBlockSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -68,10 +69,13 @@ export const ChoiceTargetSchema = z.discriminatedUnion("type", [
 
 export type ChoiceTarget = z.infer<typeof ChoiceTargetSchema>;
 
-export const ResolutionEffectsSchema = z.strictObject({
+export const GameEffectsSchema = z.strictObject({
   attributeDeltas: z.record(IdSchema, IntegerSchema),
   setFlags: z.record(IdSchema, z.boolean()),
 });
+
+export type GameEffects = z.infer<typeof GameEffectsSchema>;
+export const ResolutionEffectsSchema = GameEffectsSchema;
 
 export const InitialGameDefinitionSchema = z.strictObject({
   caseIds: z.array(IdSchema),
@@ -146,7 +150,7 @@ export const GameContentManifestSchema = z
   .strictObject({
     packageId: IdSchema,
     version: IdSchema,
-    contentSchemaVersion: z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION),
+    contentSchemaVersion: z.union([z.literal(2), z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION)]),
     defaultLocale: AppLocaleSchema.default(DEFAULT_LOCALE),
     supportedLocales: z.array(AppLocaleSchema).min(1),
   })
@@ -214,7 +218,16 @@ export const GameCaseDefinitionSchema = z.strictObject({
 });
 export type GameCaseDefinition = z.infer<typeof GameCaseDefinitionSchema>;
 
+export const ActionInputStepSchema = z.strictObject({
+  id: IdSchema,
+  type: z.literal("actionInput"),
+  targetActionId: z.enum(ACTION_IDS),
+  wrongEffects: GameEffectsSchema.optional(),
+});
+export type ActionInputStep = z.infer<typeof ActionInputStepSchema>;
+
 export const GameStoryStepSchema = z.discriminatedUnion("type", [
+  ActionInputStepSchema,
   z.strictObject({ id: IdSchema, type: z.literal("text") }),
   z.strictObject({ id: IdSchema, type: z.literal("video"), assetId: IdSchema }),
   z.strictObject({
@@ -239,17 +252,32 @@ export const GameEndingDefinitionSchema = z.strictObject({
 });
 export type GameEndingDefinition = z.infer<typeof GameEndingDefinitionSchema>;
 
-export const GameContentCatalogSchema = z.strictObject({
-  manifest: GameContentManifestSchema,
-  attributes: z.record(IdSchema, GameAttributeDefinitionSchema),
-  initial: InitialGameDefinitionSchema,
-  cases: z.record(IdSchema, GameCaseDefinitionSchema),
-  unlockRules: z.array(UnlockRuleSchema),
-  storyRules: z.array(StoryRuleSchema),
-  stories: z.record(IdSchema, GameStoryDefinitionSchema),
-  endings: z.record(IdSchema, GameEndingDefinitionSchema),
-  assets: z.record(IdSchema, AssetDefinitionSchema),
-});
+export const GameContentCatalogSchema = z
+  .strictObject({
+    manifest: GameContentManifestSchema,
+    attributes: z.record(IdSchema, GameAttributeDefinitionSchema),
+    initial: InitialGameDefinitionSchema,
+    cases: z.record(IdSchema, GameCaseDefinitionSchema),
+    unlockRules: z.array(UnlockRuleSchema),
+    storyRules: z.array(StoryRuleSchema),
+    stories: z.record(IdSchema, GameStoryDefinitionSchema),
+    endings: z.record(IdSchema, GameEndingDefinitionSchema),
+    assets: z.record(IdSchema, AssetDefinitionSchema),
+  })
+  .superRefine((content, context) => {
+    if (content.manifest.contentSchemaVersion === 2) {
+      for (const [storyId, story] of Object.entries(content.stories)) {
+        story.steps.forEach((step, index) => {
+          if (step.type === "actionInput")
+            context.addIssue({
+              code: "custom",
+              path: ["stories", storyId, "steps", index],
+              message: "actionInput requires content schema v3.",
+            });
+        });
+      }
+    }
+  });
 
 export type GameContentCatalog = z.infer<typeof GameContentCatalogSchema>;
 

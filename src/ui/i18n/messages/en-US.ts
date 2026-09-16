@@ -1,6 +1,14 @@
 import type { MessageCatalog } from "../translator";
 
 export const EN_US_MESSAGES = {
+  "story.inputLabel": "Enter an action",
+  "story.inputHint":
+    "Use an action word or short phrase in the selected language. Input with several different actions cannot be confirmed.",
+  "story.inputSubmit": "Confirm action",
+  "story.inputUnknown":
+    "No single action was recognized. Try again. Your game record has not changed.",
+  "story.inputWrong": "That action does not meet the requirement. The result is saved; try again.",
+  "story.inputAttributeChange": "{attribute} {delta}",
   "brand.name": "Judge of Eagleland",
   "brand.office": "Office of Judicial Records",
   "brand.seal": "J",
@@ -197,6 +205,8 @@ export const EN_US_MESSAGES = {
   "sessionError.CASE_ALREADY_STARTED": "This case is already in review.",
   "sessionError.STALE_CHOICE": "The decision node changed. Choose again.",
   "sessionError.INVALID_CHOICE": "This decision option is invalid.",
+  "sessionError.STORY_INPUT_REQUIRED": "Complete the required action before continuing.",
+  "sessionError.STALE_STORY_INPUT": "This input is no longer current. Please try again.",
   "sessionError.STORY_BLOCKING": "Complete the current story first.",
   "sessionError.INVALID_STORY_COMPLETION": "This story cannot be completed now.",
   "sessionError.RUN_FINISHED": "This run has ended. Case actions are disabled.",

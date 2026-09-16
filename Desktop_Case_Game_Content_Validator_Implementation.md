@@ -1,7 +1,7 @@
 # Content / Validator 线实施记录
 
 **基线：** `Desktop_Case_Game_Architecture_v1.0.md`  
-**当前状态：** Schema v2 校验、物理包 production Repository、GameSession 恢复入口和真实 SQLite vertical slice 已完成；Windows Tauri 实际 UI 与进程重启联调通过，详见本轮记录。  
+**当前状态：** 既有 Schema v2 / production Repository / GameSession / SQLite 主链路已完成；本轮 ActionInput A1 事实模型与 A2 恢复 fixture 已审核，A3 文字 UI 实施中。历史 Windows 验收与本轮证据分节记录。  
 **更新日期：** 2026-09-16
 
 ## 目标与边界
@@ -10,7 +10,7 @@ Content / Validator 线负责把 `content/<packageId>/<version>/` 下的规则�
 变成只读、精确版本绑定的内容目录，并在发布/加载边界提供稳定诊断。它不负责案件如何判决，
 不负责保存 GameState，也不负责 React、SQLite、Tauri 或媒体播放。
 
-当前正式格式是 Schema v2：
+当前内容读取兼容 Schema v2 / v3；v3 在相同文件布局上增加 actionInput，v2 拒绝新步骤。当前 writer 使用 save schema v3（与内容 Schema 独立）：
 
 | 文件 | 职责 |
 | --- | --- |
@@ -19,7 +19,7 @@ Content / Validator 线负责把 `content/<packageId>/<version>/` 下的规则�
 | `media/**` | `game.json` 中 asset path 指向的包内资源 |
 
 同一 `packageId + version` 发布后视为不可变。旧 Schema v1 分文件格式只保留在历史 fixture
-和 git 历史中，不再由正式 loader 或 CLI 接受；旧存档 v1→v2 是 Storage 线的独立迁移。
+和 git 历史中，不再由正式 loader 或 CLI 接受；旧存档 v1/v2→v3 由 Storage 读取边界迁移。
 
 ## Slice 计划与进度
 
@@ -208,3 +208,63 @@ Rust 2 个资源读取测试、Rust fmt、git diff 检查通过；Tauri debug bu
   不是安装器验收（现有 `bundle.active=false` 未改动）。
 - 替换54字节MP4占位资源并完成真实媒体播放验收。
 - 观察包规模后再决定是否缓存，当前按精确版本完整读取校验、失败可重试。
+
+## ActionInput 文字闭环实施（2026-09-16）
+
+### 目标与 slice 审核顺序
+
+本轮在既有 Game Core → GameSession → CAS Save → publish 链路中加入有副作用的 Story Step，
+先冻结事实模型，再验证恢复语义，最后接文字 UI。以下记录只覆盖本轮增量，不替代上方历史验收。
+
+| Slice | 范围 | 状态 | 主审门槛 |
+| --- | --- | --- | --- |
+| A1 | ActionId、content v3/v2 兼容、GameEffects、checkpoint、命令/反馈、纯规则、save v3/迁移/SQLite | 已审核通过 | 输入位置防跳过、防过期，旧包旧档兼容，保存先于发布，专项回归通过 |
+| A2 | 固定 A→B(salute)→C→D(salute)→E 包、真实 SQLite 恢复及提交故障回归 | 已审核通过 | B 成功不重做；D 错误恢复于 D；尾部不逐步保存；原子完成及 CAS 行为可复验 |
+| A3 | 按语种 Matcher/词典校验、StoryPlayer/ActionInputPanel、最小文字提交控制 | 实施中（A3a 已审核） | unknown 不 dispatch；known 统一提交；IME/重复提交/语言/恢复/失败路径通过 |
+| A4 | 总体审核、内容 CLI、构建/边界/格式、实施记录收口 | 待前序审核 | 记录真实验证证据、剩余限制与 TODO |
+
+每片由承担 efficient_worker 职责的子代理实现，主代理审核 diff 和验证结果，修正后才继续下一片。
+当前工具没有 custom agent 配置参数，custom_explorer / efficient_worker 是任务职责名称，
+不表示加载了自定义代理配置。探索代理只读总结骨架，不与实施代理争用文件。
+
+### 重要决策
+
+- 动作只交付 `salute / wave`；通过的是 Story 内 Step 位置，不记录全局动作完成 Flag。
+- checkpoint 保存最近一次输入提交后的恢复位置；普通文字/视频/特效播放位置仍属于 UI。
+- known wrong 是合法提交，即使未配置处罚也增加 revision；unknown 仅本地提示。
+- 最后一步输入正确与完成 Story 在一次 transition / CAS 中提交。
+- Save schema 升为 v3；v1→v2→v3 保持旧事实、身份、revision 与绑定内容版本。
+- Content schema v3 才允许 actionInput，继续读取 v2；不覆盖已发布 `minimal-test-package@1.0.0`。
+- 固定 fixture 使用两个 `salute` 目标和不同 step ID，错误效果分别 -2 / -1。
+- 错误效果不进入 UI 内容投影；实际 delta 和输入反馈仅在保存成功后发布。
+- 先交付简单 `matchTextAction(text, locale)`，不引入 FakeRecognizer 框架或多媒体生命周期抽象。
+
+### 明确不做
+
+本轮不实现语音、视觉、摄像头/麦克风权限、模型下载、永久尝试历史、分布式恰好一次、
+新挑战会话/仓储、成功奖励、通用事件引擎、普通步骤逐步存档、旧包就地插入输入点。
+不把自动化 SQLite 连接关闭重开称为真实 Tauri 进程或安装器验收。
+
+### 后期 TODO
+
+- 文字闭环稳定后单独考察语音/视觉 I/O，保留 unknown 与每轮一次提交边界。
+- 新增动作时同步 Schema、词典、文字可达性与回归，不只新增字符串 ID。
+- 真实 Windows 进程重启、安装包/断网与媒体验证另记证据；既有 V8 等 TODO 保持原状态。
+
+### 验证与审核日志
+
+- 起始工作区仅有用户新增未跟踪 ActionInput 架构文档；保留原文。
+- 用户给出的嵌套路径不存在，读取仓库根目录下同名下划线版架构文档。
+- 未在当前仓库发现 AGENTS.md 或 Mistakes.md；不将其他项目的约定套入本仓库。
+
+- 基线复验：`npm test`，37 文件 / 305 tests 全部通过。
+- A1 初审：要求 v2 对 actionInput 的拒绝同时落实到实际 Zod Schema，不能只有语义 Validator 检查；worker 修正中。
+- A3a 纯 Matcher 与词典校验可独立并行实施，UI 接线仍等待 A1/A2 验收；CLI 装配层检查当前包所用动作在每个交付语种中可唯一匹配，避免 Content 核心反向依赖 input。
+- 固定包决定：新增 `minimal-test-package@1.1.0`；两次检查分别在 case_001 / case_002 之后入队，保留已有原剧情。第二次在 ending 阶段、最终结局演出之前验证同模板位置独立性。新桌面局与 browser preview 切换新包；旧存档保持精确版本。
+- A3a 主审通过：纯 Matcher/词典与 CLI 能力门禁 diff 已审；独立复跑 `tests/input + tests/content/cli.test.ts`，4 文件 / 42 tests 通过。涵盖中英隔离、NFKC、英文 Unicode 单词边界、同动作多别名、多动作歧义、否定句字面包含、非法/空/冲突词典、每语种目标可达性。尚未接入 UI，不将此标为整个 A3 完成。
+- A1 主审通过：核对 effects 抽取、position checkpoint、source 联合、最后输入原子完成、v2 strict 拒绝、v1/v2/v3 迁移与 SQLite 版本条件。主审复跑 Core/Storage/Contracts/Application 16 文件 / 156 tests 通过；补充后的输入/内容/迁移/SQLite 专项 4 文件 / 25 tests 通过；TypeScript、依赖边界、diff 检查通过。worker 全量回归 42 文件 / 353 tests 与格式检查通过。
+- A2 开始；新包与 app 静态装配桥先落盘，默认新局版本切换延至 A3 UI 接线，避免中间版本把玩家送入尚无控件的输入步骤。
+- A2 主审通过：审核物理 v3 包及 app 装配桥；旧 cases/assets/stories 定义保持一致。主审独立复跑 `tests/app/storyInputVerticalSlice.test.ts`，6 tests 通过；内容 CLI 同时验证 1.0.0 / 1.1.0 通过。真实磁盘关闭重开证明 B→C 与 D 错误恢复于 D；同模板第二 Story 独立；尾部重载不写；无效果错误仍提交；末步输入原子完成；两连接 CAS、已写丢回执进入 needsReload、坏 checkpoint 拒绝且原记录不改。这里只把 unknown 测试称作文字桥接证据，真实 UI 无 dispatch 证据由 A3 补齐。
+- A3b 开始：接入文本控件和已提交 checkpoint，并把默认新局切至 1.1.0；保持旧 fixture 专项回归与旧档版本加载。
+- A3 装配子片主审通过：新默认 1.1.0 / browser 静态包、旧精确版本回归 diff 已审；主审复跑 bundledRepository、原 desktopVerticalSlice 与 GameSessionView 3 文件 / 15 tests 通过。
+- 真实桌面首次启动发现资源回归：`tauri build --debug --no-bundle` 编译成功，但运行时无法读取新 1.1.0 包。已关闭测试进程并交回 worker 排查增量资源构建，未把“构建通过”记为桌面验收通过，也未手工复制 target 文件掩盖问题。

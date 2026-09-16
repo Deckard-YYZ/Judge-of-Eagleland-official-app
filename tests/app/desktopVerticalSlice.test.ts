@@ -14,7 +14,7 @@ import {
   type SqliteTestDatabase,
 } from "../fixtures/storage/sqliteTestDatabase";
 
-// Replace only the native resource transport: the installed schema-v2 files pass
+// Replace only the native resource transport: the installed schema-v3 files pass
 // through the same full package loader and production repository as the desktop.
 const readInstalledPackage: BundledPackageReader = async ({ packageId, version }) => {
   const root = new URL(`../../content/${packageId}/${version}/`, import.meta.url);
@@ -154,7 +154,7 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
       state: {
         attributes: { restraint: 51, authority: 51 },
         flags: { first_case_closed: true, second_case_reviewed: false },
-        pendingStoryIds: ["story_after_case_001"],
+        pendingStoryIds: ["story_after_case_001", "inspection_after_case_001"],
         cases: {
           case_001: {
             status: "resolved",

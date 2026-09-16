@@ -90,7 +90,7 @@ describe("final choice settlement", () => {
     expect(result.feedback).toEqual([
       {
         type: "attributeFeedback",
-        caseId: "case_001",
+        source: { type: "case", caseId: "case_001" },
         changes: [
           { attributeId: "authority", before: 50, after: 48, actualDelta: -2 },
           { attributeId: "restraint", before: 50, after: 53, actualDelta: 3 },
@@ -159,7 +159,9 @@ describe("final choice settlement", () => {
       throw new Error("Expected resolved progress.");
     }
     expect(progress.history).not.toBe(priorHistory.history);
-    expect(progress.snapshot.attributeChanges).not.toBe(result.feedback[0].changes);
+    expect(progress.snapshot.attributeChanges).not.toBe(
+      result.feedback[0].type === "attributeFeedback" ? result.feedback[0].changes : [],
+    );
     expect(progress.snapshot).not.toHaveProperty("verdict");
     expect(progress.snapshot).not.toHaveProperty("result");
   });

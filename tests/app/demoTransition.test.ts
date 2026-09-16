@@ -153,7 +153,9 @@ describe("demoTransition", () => {
       },
     });
     expect(
-      result.ok && result.feedback[0]?.changes.find((change) => change.attributeId === "restraint"),
+      result.ok &&
+        result.feedback[0]?.type === "attributeFeedback" &&
+        result.feedback[0].changes.find((change) => change.attributeId === "restraint"),
     ).toMatchObject({
       attributeId: "restraint",
       actualDelta: 1,

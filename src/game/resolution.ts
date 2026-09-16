@@ -1,3 +1,4 @@
+import { applyGameEffects } from "./effects";
 import type { GameContentCatalog } from "../content/schema";
 import type { TransitionContext } from "./commands";
 import type { AttributeChangeSnapshot, GameState } from "./model";
@@ -32,9 +33,6 @@ export interface ResolutionChoiceInput {
   readonly nodeId: string;
   readonly choiceId: string;
 }
-
-const compareIds = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
 
 const fail = (issues: readonly ResolutionIssue[]): ResolutionResult => ({ ok: false, issues });
 
@@ -105,59 +103,15 @@ export const resolveFinalChoice = (
     ]);
   }
 
-  const attributeIds = Object.keys(resolution.effects.attributeDeltas).sort(compareIds);
-  const flagIds = Object.keys(resolution.effects.setFlags).sort(compareIds);
-  const referenceIssues: ResolutionIssue[] = [];
-
-  for (const attributeId of attributeIds) {
-    if (!content.attributes[attributeId] || !Object.hasOwn(state.attributes, attributeId)) {
-      referenceIssues.push({
-        code: "ATTRIBUTE_REFERENCE_INVALID",
-        path: [
-          "cases",
-          input.caseId,
-          "resolutions",
-          resolutionId,
-          "effects",
-          "attributeDeltas",
-          attributeId,
-        ],
-        message: `Resolution "${resolutionId}" references unavailable attribute "${attributeId}".`,
-      });
-    }
-  }
-  for (const flagId of flagIds) {
-    if (!Object.hasOwn(content.initial.flags, flagId) || !Object.hasOwn(state.flags, flagId)) {
-      referenceIssues.push({
-        code: "FLAG_REFERENCE_INVALID",
-        path: ["cases", input.caseId, "resolutions", resolutionId, "effects", "setFlags", flagId],
-        message: `Resolution "${resolutionId}" references unavailable flag "${flagId}".`,
-      });
-    }
-  }
-  if (referenceIssues.length > 0) {
-    return fail(referenceIssues);
-  }
-
-  const attributes = { ...state.attributes };
-  const changes: AttributeChangeSnapshot[] = attributeIds.map((attributeId) => {
-    const attribute = content.attributes[attributeId];
-    const before = state.attributes[attributeId];
-    const requestedDelta = resolution.effects.attributeDeltas[attributeId];
-    const after = Math.min(attribute.max, Math.max(attribute.min, before + requestedDelta));
-    attributes[attributeId] = after;
-    return {
-      attributeId,
-      before,
-      after,
-      actualDelta: after - before,
-    };
-  });
-
-  const flags = { ...state.flags };
-  for (const flagId of flagIds) {
-    flags[flagId] = resolution.effects.setFlags[flagId];
-  }
+  const applied = applyGameEffects(state, resolution.effects, content, [
+    "cases",
+    input.caseId,
+    "resolutions",
+    resolutionId,
+    "effects",
+  ]);
+  if (!applied.ok) return fail(applied.issues);
+  const { attributes, flags, changes } = applied;
 
   const postResolutionState: GameState = {
     ...state,

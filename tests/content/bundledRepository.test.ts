@@ -7,9 +7,12 @@ import {
   DEFAULT_BUNDLED_CONTENT_REF,
 } from "../../src/content/bundledRepository";
 import type { BundledPackageFiles } from "../../src/platform/contentResources";
+import type { ContentRef } from "../../src/content/schema";
 
-async function installedFiles(): Promise<BundledPackageFiles> {
-  const root = new URL("../../content/minimal-test-package/1.0.0/", import.meta.url);
+async function installedFiles(
+  ref: ContentRef = DEFAULT_BUNDLED_CONTENT_REF,
+): Promise<BundledPackageFiles> {
+  const root = new URL(`../../content/${ref.packageId}/${ref.version}/`, import.meta.url);
   const fileInventory = (await readdir(root, { recursive: true, withFileTypes: true }))
     .filter((entry) => entry.isFile())
     .map((entry) =>
@@ -25,8 +28,7 @@ async function installedFiles(): Promise<BundledPackageFiles> {
 
 describe("bundled content repository", () => {
   it("loads installed game and both locales using the exact ref", async () => {
-    const files = await installedFiles();
-    const reader = vi.fn(async () => files);
+    const reader = vi.fn(installedFiles);
     const repository = new BundledSplitContentRepository(reader);
     expect((await repository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF)).manifest).toMatchObject(
       DEFAULT_BUNDLED_CONTENT_REF,
@@ -37,6 +39,26 @@ describe("bundled content repository", () => {
       );
     }
     expect(reader).toHaveBeenCalledWith(DEFAULT_BUNDLED_CONTENT_REF);
+    expect(DEFAULT_BUNDLED_CONTENT_REF.version).toBe("1.1.0");
+    expect((await repository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF)).stories).toHaveProperty(
+      "inspection_after_case_001",
+    );
+  });
+
+  it("keeps an old save's exact 1.0.0 package available without injecting new story inputs", async () => {
+    const oldRef = { packageId: "minimal-test-package", version: "1.0.0" };
+    const reader = vi.fn(installedFiles);
+    const repository = new BundledSplitContentRepository(reader);
+    const content = await repository.loadGameContent(oldRef);
+    expect(content.manifest).toMatchObject({ ...oldRef, contentSchemaVersion: 2 });
+    expect(content.stories).not.toHaveProperty("inspection_after_case_001");
+    for (const locale of ["en-US", "zh-CN"] as const) {
+      expect(await repository.loadLocalization(oldRef, locale)).toMatchObject({
+        ...oldRef,
+        locale,
+      });
+    }
+    expect(reader).toHaveBeenCalledWith(oldRef);
   });
 
   it("rejects an installed version mismatch, missing asset, or missing locale before returning game content", async () => {

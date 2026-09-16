@@ -76,6 +76,7 @@ const resolvedStateWithPendingStory = (): GameState => ({
   },
   pendingStoryIds: ["story_after_case_001"],
   completedStoryIds: [],
+  storyCheckpoint: null,
 });
 
 describe("transition startCase", () => {

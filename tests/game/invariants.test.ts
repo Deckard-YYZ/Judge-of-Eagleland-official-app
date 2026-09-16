@@ -56,6 +56,7 @@ const resolvedCaseState = (): GameState => ({
   },
   pendingStoryIds: [],
   completedStoryIds: [],
+  storyCheckpoint: null,
 });
 
 describe("checkGameStateInvariants", () => {

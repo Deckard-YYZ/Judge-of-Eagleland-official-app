@@ -34,7 +34,8 @@ node --version
 | `src/content` | 内容 Schema、精确版本读取、固定样本 | content、资源读取用的 platform |
 | `src/storage` | 存档契约、内存替身、SQLite 接入 | storage、game、content |
 | `src/application` | 会话加载、提交锁、保存后发布 | application、game、content、storage |
-| `src/ui` | 展示和用户交互 | ui、application、content 类型 |
+| `src/input` | 双语动作词典、纯文字匹配与能力校验 | input、shared |
+| `src/ui` | 展示和用户交互 | ui、application、content 类型、input、shared |
 | `src/platform` | Tauri 环境与平台能力 | platform、必要的 Tauri API |
 
 `src/main.tsx` 是装配入口：在这里选择实现并传给会话或页面。后续装配代码增多时可以移至 `src/app`。UI 不导入 SQL、具体案件文件或规则实现；规则不依赖 React、DOM 或 Tauri。目录中只保留实际使用的模块。
@@ -103,3 +104,21 @@ node --version
 第一案结算应同时解锁 `case_002` 并排入 `story_after_case_001`；确认该剧情完成前不得处理第二案。`confirm_violation` 是用于中途恢复测试的中间选项，不应改变属性。
 
 各分线已在骨架之后继续实施，最新范围以对应 `Desktop_Case_Game_*_Implementation.md` 为准。Storage / Tauri 不包含联网账号、远程内容下载或实际安装包人工验收。
+
+## ActionInput 固定架构样本
+
+`minimal-test-package@1.1.0` 使用 content schema v3，保留两案，并在每案后安排一次检查：
+文字 A → 敬礼输入 B → 文字 C → 敬礼输入 D → 文字 E。B、D 均要求 `salute`，输入
+`wave` 分别使 authority 减少 2、1；它们按 Story/Step 位置独立完成。
+
+中文输入「敬礼／行礼」或「挥手」，英文输入 `salute` 或 `wave`。匹配使用当前选择语言；
+空白、不匹配和多个不同动作均为 unknown，不写存档。采用字面包含规则，不理解否定语义。
+目前交付文字入口；语音、摄像头留待后续接入。
+
+Save schema v3 增加 `storyCheckpoint`：正确后从下一步恢复，错误后从当前输入恢复。
+普通内容的继续不写存档；最后一步是输入时，通过与完成 Story 原子保存。
+旧 v1/v2 存档在读取边界迁移，revision 和精确 contentRef 保持不变；原 `1.0.0` v2 包继续保留。
+
+运行 `npm run validate:content` 同时检查新旧包及所有发布语言的文字完成路径。
+恢复、失败与 CAS 的固定回归见 `tests/app/storyInputVerticalSlice.test.ts`；
+进度、审核证据与后期 TODO 见 [Content / Validator 实施记录](Desktop_Case_Game_Content_Validator_Implementation.md)。

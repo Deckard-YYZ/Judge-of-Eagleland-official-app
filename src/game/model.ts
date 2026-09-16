@@ -16,7 +16,7 @@ const IntegerSchema = z.number().int().finite();
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
 /** 当前支持的存档 Schema 版本。改变存档形状时必须提供迁移路径。 */
-export const SUPPORTED_SAVE_SCHEMA_VERSION = 2;
+export const SUPPORTED_SAVE_SCHEMA_VERSION = 3;
 
 export const ChoiceRecordSchema = z.strictObject({
   nodeId: IdSchema,
@@ -92,6 +92,13 @@ export type RunPhase = z.infer<typeof RunPhaseSchema>;
 
 const uniqueIds = (ids: readonly string[]): boolean => new Set(ids).size === ids.length;
 
+/** 最近一次输入提交的恢复位置；不是普通内容的实时播放游标。 */
+export const StoryCheckpointSchema = z.strictObject({
+  storyId: IdSchema,
+  resumeStepId: IdSchema,
+});
+export type StoryCheckpoint = z.infer<typeof StoryCheckpointSchema>;
+
 /**
  * 一局运行时的唯一业务状态。Schema 只负责可序列化结构和局部不变量；
  * 内容引用图（案件、节点和剧情是否存在）由绑定内容包的校验阶段负责。
@@ -102,6 +109,7 @@ export const GameStateSchema = z
     attributes: z.record(IdSchema, IntegerSchema),
     flags: z.record(IdSchema, z.boolean()),
     cases: z.record(IdSchema, CaseProgressSchema),
+    storyCheckpoint: StoryCheckpointSchema.nullable(),
     pendingStoryIds: z.array(IdSchema),
     completedStoryIds: z.array(IdSchema),
   })

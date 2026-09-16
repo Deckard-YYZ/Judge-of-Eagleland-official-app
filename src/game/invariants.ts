@@ -2,6 +2,7 @@ import type { GameCaseDefinition, GameContentCatalog } from "../content/schema";
 import { GameStateSchema, type GameState } from "./model";
 
 export type GameStateInvariantIssueCode =
+  | "STORY_CHECKPOINT_INVALID"
   | "STATE_SHAPE_INVALID"
   | "ATTRIBUTE_SET_INVALID"
   | "ATTRIBUTE_OUT_OF_RANGE"
@@ -309,6 +310,23 @@ export const checkGameStateInvariants = (
         );
       }
     });
+  }
+
+  const checkpoint = state.storyCheckpoint;
+  if (
+    checkpoint !== null &&
+    (state.phase.type === "ended" ||
+      checkpoint.storyId !== state.pendingStoryIds[0] ||
+      state.completedStoryIds.includes(checkpoint.storyId) ||
+      !content.stories[checkpoint.storyId]?.steps.some(
+        (step) => step.id === checkpoint.resumeStepId,
+      ))
+  ) {
+    addIssue(
+      "STORY_CHECKPOINT_INVALID",
+      ["storyCheckpoint"],
+      "Checkpoint must name an existing step in the current pending story of a live run.",
+    );
   }
 
   const endingStoryIds = new Set(Object.values(content.endings).map((ending) => ending.storyId));

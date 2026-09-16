@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACTION_IDS } from "../shared/action";
 import {
   AttributeChangeSnapshotSchema,
   GameStateSchema,
@@ -13,6 +14,12 @@ const IdSchema = z.string().min(1);
  * 所有玩家操作从这里进入规则层。命令只携带稳定 ID，不携带 UI 或存储对象。
  */
 export const GameCommandSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("submitStoryInput"),
+    storyId: IdSchema,
+    stepId: IdSchema,
+    actionId: z.enum(ACTION_IDS),
+  }),
   z.strictObject({
     type: z.literal("startCase"),
     caseId: IdSchema,
@@ -31,11 +38,28 @@ export const GameCommandSchema = z.discriminatedUnion("type", [
 
 export type GameCommand = z.infer<typeof GameCommandSchema>;
 
-export const FeedbackRequestSchema = z.strictObject({
-  type: z.literal("attributeFeedback"),
-  caseId: IdSchema,
-  changes: z.array(AttributeChangeSnapshotSchema),
+export const StoryInputFeedbackSourceSchema = z.strictObject({
+  type: z.literal("storyInput"),
+  storyId: IdSchema,
+  stepId: IdSchema,
 });
+export const FeedbackSourceSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("case"), caseId: IdSchema }),
+  StoryInputFeedbackSourceSchema,
+]);
+export type FeedbackSource = z.infer<typeof FeedbackSourceSchema>;
+export const FeedbackRequestSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("attributeFeedback"),
+    source: FeedbackSourceSchema,
+    changes: z.array(AttributeChangeSnapshotSchema),
+  }),
+  z.strictObject({
+    type: z.literal("inputFeedback"),
+    source: StoryInputFeedbackSourceSchema,
+    outcome: z.literal("wrongAction"),
+  }),
+]);
 
 export type FeedbackRequest = z.infer<typeof FeedbackRequestSchema>;
 
@@ -46,6 +70,8 @@ export const TransitionErrorCodeSchema = z.enum([
   "STALE_CHOICE",
   "INVALID_CHOICE",
   "STORY_BLOCKING",
+  "STORY_INPUT_REQUIRED",
+  "STALE_STORY_INPUT",
   "INVALID_STORY_COMPLETION",
   "RUN_FINISHED",
   "CONTENT_INVALID",

@@ -7,7 +7,7 @@ const fixture = (): SaveEnvelope => ({
   saveId: "source",
   profileId: "profile-a",
   revision: 3,
-  saveSchemaVersion: 2,
+  saveSchemaVersion: 3,
   contentRef: { packageId: "storage-fixture", version: "1.0.0" },
   createdAt: "2026-09-15T10:00:00.000Z",
   updatedAt: "2026-09-15T11:00:00.000Z",
@@ -18,6 +18,7 @@ const fixture = (): SaveEnvelope => ({
     cases: { case_a: { status: "active", currentNodeId: "review", history: [] } },
     pendingStoryIds: ["story-a"],
     completedStoryIds: [],
+    storyCheckpoint: null,
   },
 });
 

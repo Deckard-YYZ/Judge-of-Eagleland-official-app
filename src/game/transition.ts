@@ -1,3 +1,4 @@
+import { finishCurrentStory, getNextRequiredInput, submitStoryInput } from "./storyInput";
 import type { GameContentCatalog } from "../content/schema";
 import type {
   GameCommand,
@@ -130,7 +131,13 @@ const handleResolutionChoice: ResolutionChoiceHandler = (state, command, content
 
   const feedback: FeedbackRequest[] =
     result.changes.length > 0
-      ? [{ type: "attributeFeedback", caseId: command.caseId, changes: [...result.changes] }]
+      ? [
+          {
+            type: "attributeFeedback",
+            source: { type: "case", caseId: command.caseId },
+            changes: [...result.changes],
+          },
+        ]
       : [];
   return accept(result.nextState, content, feedback);
 };
@@ -233,21 +240,19 @@ const completeStory = (
     );
   }
 
-  const pendingStoryIds = state.pendingStoryIds.slice(1);
-  const phase =
-    state.phase.type === "ending" && pendingStoryIds.length === 0
-      ? { type: "ended" as const, endingId: state.phase.endingId }
-      : state.phase;
-
-  return accept(
-    {
-      ...state,
-      phase,
-      pendingStoryIds,
-      completedStoryIds: [...state.completedStoryIds, command.storyId],
-    },
-    content,
-  );
+  if (
+    getNextRequiredInput(
+      command.storyId,
+      content.stories[command.storyId].steps,
+      state.storyCheckpoint,
+    )
+  ) {
+    return reject(
+      "STORY_INPUT_REQUIRED",
+      "Complete the required story input before finishing this story.",
+    );
+  }
+  return accept(finishCurrentStory(state, command.storyId), content);
 };
 
 export const transition: Transition = (state, command, content, context) => {
@@ -260,6 +265,10 @@ export const transition: Transition = (state, command, content, context) => {
   }
 
   switch (command.type) {
+    case "submitStoryInput": {
+      const result = submitStoryInput(state, command, content);
+      return result.ok ? accept(result.nextState, content, result.feedback) : result;
+    }
     case "startCase":
       return startCase(state, command, content);
     case "chooseOption":

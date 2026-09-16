@@ -6,6 +6,8 @@ import {
   type ContentPackageSource,
 } from "../src/content/localizedPackageFormat";
 import type { ContentValidationPath } from "../src/content/validate";
+import { actionLexicons } from "../src/input/actionLexicons";
+import { validateActionLexicons } from "../src/input/validateActionLexicons";
 
 const DEFAULT_CONTENT_ROOT = "content";
 const PACKAGE_MARKERS = new Set(["game.json"]);
@@ -128,6 +130,23 @@ const validatePackageDirectory = async (packageDirectory: string): Promise<boole
 
   if (result.ok) {
     const catalog = result.gameContent;
+    // Capability checks belong to assembly, so content validation stays independent of input.
+    const targetActions = Object.values(catalog.stories).flatMap((story) =>
+      story.steps.flatMap((step) => (step.type === "actionInput" ? [step.targetActionId] : [])),
+    );
+    const lexiconIssues = validateActionLexicons(
+      actionLexicons,
+      targetActions,
+      catalog.manifest.supportedLocales,
+    );
+    if (lexiconIssues.length > 0) {
+      for (const issue of lexiconIssues) {
+        console.error(
+          `${displayPath(packageDirectory)} | src/input/actionLexicons.ts | locale=${issue.locale} | action=${issue.actionId ?? "<dictionary>"} | ${issue.code}${issue.alias ? ` | alias=${JSON.stringify(issue.alias)}` : ""}`,
+        );
+      }
+      return false;
+    }
     console.log(
       `VALID ${displayPath(packageDirectory)} (${catalog.manifest.packageId}@${catalog.manifest.version}, ${Object.keys(catalog.cases).length} cases)`,
     );

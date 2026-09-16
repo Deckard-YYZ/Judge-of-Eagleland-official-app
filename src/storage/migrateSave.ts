@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ContentRefSchema, TextBlockSchema } from "../content/schema";
 import {
   ActiveCaseProgressSchema,
+  CaseProgressSchema,
   GameStateSchema,
   PendingCaseProgressSchema,
   RunPhaseSchema,
@@ -65,6 +66,11 @@ const LegacySaveEnvelopeSchema = z.strictObject({
   state: LegacyGameStateSchema,
 });
 
+const V2SaveEnvelopeSchema = LegacySaveEnvelopeSchema.extend({
+  saveSchemaVersion: z.literal(2),
+  state: LegacyGameStateSchema.extend({ cases: z.record(IdSchema, CaseProgressSchema) }),
+});
+
 export class SaveMigrationError extends Error {
   readonly code = "SAVE_MIGRATION_FAILED";
   readonly path: readonly (string | number)[];
@@ -79,18 +85,31 @@ export class SaveMigrationError extends Error {
 }
 
 /**
- * Reads persisted v1 or v2 data and always returns the public v2 shape. Legacy
+ * Reads persisted v1/v2/v3 data and always returns the strict public v3 shape. Legacy
  * localized strings are discarded; saved IDs, deltas, timestamps and order survive.
  */
 export function migrateStoredSaveEnvelope(value: unknown): SaveEnvelope {
   const current = SaveEnvelopeSchema.safeParse(value);
   if (current.success) return current.data;
 
+  const v2 = V2SaveEnvelopeSchema.safeParse(value);
+  if (v2.success) {
+    try {
+      return SaveEnvelopeSchema.parse({
+        ...v2.data,
+        saveSchemaVersion: 3,
+        state: { ...v2.data.state, storyCheckpoint: null },
+      });
+    } catch (error) {
+      throw new SaveMigrationError("Migrated v2 save violates the v3 contract.", [], error);
+    }
+  }
   const legacy = LegacySaveEnvelopeSchema.safeParse(value);
   if (!legacy.success) {
-    throw new SaveMigrationError("Stored save is neither a valid v1 nor v2 envelope.", [], {
+    throw new SaveMigrationError("Stored save is not a valid v1, v2, or v3 envelope.", [], {
       v1: legacy.error,
-      v2: current.error,
+      v2: v2.error,
+      v3: current.error,
     });
   }
 
@@ -133,12 +152,12 @@ export function migrateStoredSaveEnvelope(value: unknown): SaveEnvelope {
   try {
     return SaveEnvelopeSchema.parse({
       ...legacy.data,
-      saveSchemaVersion: 2,
-      state: GameStateSchema.parse({ ...legacy.data.state, cases }),
+      saveSchemaVersion: 3,
+      state: GameStateSchema.parse({ ...legacy.data.state, cases, storyCheckpoint: null }),
     });
   } catch (error) {
     throw new SaveMigrationError(
-      "The migrated v1 save does not satisfy the v2 contract.",
+      "The migrated v1 save does not satisfy the v3 contract.",
       [],
       error,
     );

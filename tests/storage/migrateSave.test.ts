@@ -49,11 +49,11 @@ const legacySave = () => ({
   },
 });
 
-describe("save v1 to v2 migration", () => {
+describe("legacy save to v3 migration", () => {
   it("preserves facts while discarding every localized snapshot field", () => {
     const migrated = migrateStoredSaveEnvelope(legacySave());
     expect(migrated).toMatchObject({
-      saveSchemaVersion: 2,
+      saveSchemaVersion: 3,
       revision: 7,
       contentRef: { packageId: "minimal-test-package", version: "1.0.0" },
       state: {

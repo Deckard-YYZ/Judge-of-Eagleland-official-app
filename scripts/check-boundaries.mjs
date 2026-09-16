@@ -11,7 +11,8 @@ const allowedLayers = {
   content: new Set(["content", "platform", "shared"]),
   storage: new Set(["storage", "game", "content", "shared"]),
   application: new Set(["application", "game", "content", "storage", "shared"]),
-  ui: new Set(["ui", "application", "content", "shared"]),
+  ui: new Set(["ui", "application", "content", "input", "shared"]),
+  input: new Set(["input", "shared"]),
   platform: new Set(["platform"]),
   shared: new Set(["shared"]),
 };
@@ -22,6 +23,7 @@ const allowedPackages = {
   storage: new Set(["zod", "@tauri-apps/plugin-sql"]),
   application: new Set(["zod", "zustand"]),
   ui: new Set(["react", "react-dom"]),
+  input: new Set(),
   platform: new Set(["@tauri-apps/api"]),
   shared: new Set(),
 };

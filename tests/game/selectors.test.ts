@@ -22,6 +22,7 @@ const stateWithCases = (cases: GameState["cases"]): GameState => ({
   cases,
   pendingStoryIds: [],
   completedStoryIds: [],
+  storyCheckpoint: null,
 });
 
 describe("case list selectors", () => {

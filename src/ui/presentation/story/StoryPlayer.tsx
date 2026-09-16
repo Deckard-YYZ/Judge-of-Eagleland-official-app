@@ -1,8 +1,10 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import type { ContentStoryView } from "../../../application/gameContentView";
+import type { ContentAttributeView, ContentStoryView } from "../../../application/gameContentView";
+import type { GameSessionView } from "../../../application/gameSessionView";
 import type { StoryId } from "../../../content/schema";
 import { useI18n, type MessageKey } from "../../i18n";
 import { StoryBlocks } from "./StoryBlocks";
+import { ActionInputPanel } from "./ActionInputPanel";
 import "./story.css";
 
 export type StoryCompletionReason = "completed" | "skipped";
@@ -10,6 +12,9 @@ export type StoryCompletionReason = "completed" | "skipped";
 export interface StoryPlayerProps {
   storyId: StoryId;
   story: Readonly<ContentStoryView>;
+  sessionView: GameSessionView;
+  attributes: Readonly<Record<string, ContentAttributeView>>;
+  resumeStepId?: string | null;
   busy?: boolean;
   completionError?: string | null;
   onComplete(reason: StoryCompletionReason): void | Promise<void>;
@@ -21,18 +26,26 @@ const effectLabelKeys = {
 } as const satisfies Record<"blood" | "fade", MessageKey>;
 
 /**
- * Plays one persisted story unit. The step cursor is intentionally local: only
- * completing the whole StoryDefinition is allowed to cross the save boundary.
+ * Ordinary playback remains local. A committed input checkpoint is a lower bound,
+ * so localization and feedback updates cannot rewind already displayed text.
  */
 export function StoryPlayer({
   storyId,
   story,
+  sessionView,
+  attributes,
+  resumeStepId = null,
   busy = false,
   completionError = null,
   onComplete,
 }: StoryPlayerProps) {
   const { formatNumber, t } = useI18n();
-  const [stepIndex, setStepIndex] = useState(0);
+  const checkpointIndex = Math.max(
+    0,
+    story.steps.findIndex((entry) => entry.id === resumeStepId),
+  );
+  const [localStepIndex, setStepIndex] = useState(checkpointIndex);
+  const stepIndex = Math.max(localStepIndex, checkpointIndex);
   const [finishedEffectKey, setFinishedEffectKey] = useState<string | null>(null);
   const [videoRetryFailed, setVideoRetryFailed] = useState(false);
   const step = story.steps[stepIndex];
@@ -40,7 +53,7 @@ export function StoryPlayer({
   const effectFinished = finishedEffectKey === effectKey;
 
   useEffect(() => {
-    setStepIndex(0);
+    setStepIndex(checkpointIndex);
     setFinishedEffectKey(null);
     setVideoRetryFailed(false);
   }, [storyId]);
@@ -90,7 +103,7 @@ export function StoryPlayer({
       return;
     }
 
-    setStepIndex((current) => Math.min(current + 1, story.steps.length - 1));
+    setStepIndex(Math.min(stepIndex + 1, story.steps.length - 1));
   };
 
   const canAdvance = step.type !== "effect" || effectFinished;
@@ -121,6 +134,15 @@ export function StoryPlayer({
       </header>
 
       <div className="story-player__stage" key={stepIndex}>
+        {step.type === "actionInput" ? (
+          <ActionInputPanel
+            sessionView={sessionView}
+            storyId={storyId}
+            step={step}
+            attributes={attributes}
+            busy={busy}
+          />
+        ) : null}
         {step.type === "text" ? <StoryBlocks blocks={step.blocks} /> : null}
 
         {step.type === "video" ? (
@@ -176,7 +198,7 @@ export function StoryPlayer({
       ) : null}
 
       <footer className="story-player__actions">
-        {story.skippable ? (
+        {story.skippable && !story.steps.some((entry) => entry.type === "actionInput") ? (
           <button
             className="story-button story-button--quiet"
             type="button"
@@ -189,22 +211,24 @@ export function StoryPlayer({
           <span className="story-player__required">{t("story.required")}</span>
         )}
 
-        <button
-          className="story-button story-button--primary"
-          type="button"
-          disabled={busy || !canAdvance}
-          onClick={advance}
-        >
-          {t(
-            busy
-              ? "story.saving"
-              : step.type === "effect" && !effectFinished
-                ? "story.effectRunning"
-                : atLastStep
-                  ? "story.complete"
-                  : "story.continue",
-          )}
-        </button>
+        {step.type !== "actionInput" ? (
+          <button
+            className="story-button story-button--primary"
+            type="button"
+            disabled={busy || !canAdvance}
+            onClick={advance}
+          >
+            {t(
+              busy
+                ? "story.saving"
+                : step.type === "effect" && !effectFinished
+                  ? "story.effectRunning"
+                  : atLastStep
+                    ? "story.complete"
+                    : "story.continue",
+            )}
+          </button>
+        ) : null}
       </footer>
     </article>
   );

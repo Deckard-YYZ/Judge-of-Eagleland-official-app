@@ -120,8 +120,8 @@ function ModalFrame({ identity, onDismiss, children }: ModalFrameProps) {
 }
 
 /**
- * Session-aware presentation wall. It consumes all six snapshot variants but
- * sends only the head story ID back through the application command boundary.
+ * Session-aware presentation wall. Playback uses committed state; completion and
+ * action inputs always return through the application command boundary.
  */
 export function StoryOverlay({
   sessionView,
@@ -140,6 +140,7 @@ export function StoryOverlay({
   const content = snapshot.content;
   const currentStoryId = state?.pendingStoryIds[0] ?? null;
   const sessionKey = getSessionViewKey(sessionView);
+  const saveIdentity = `${snapshot.envelope?.profileId}:${snapshot.envelope?.saveId}`;
 
   useEffect(() => {
     operationVersion.current += 1;
@@ -151,7 +152,7 @@ export function StoryOverlay({
       // Invalidates any promise returned by the old Profile/session before it can update this UI.
       operationVersion.current += 1;
     };
-  }, [currentStoryId, sessionView]);
+  }, [currentStoryId, sessionView, saveIdentity]);
 
   const completeStory = useCallback(
     async (_reason: StoryCompletionReason): Promise<void> => {
@@ -213,7 +214,7 @@ export function StoryOverlay({
 
   if (currentStoryId) {
     const story = content.stories[currentStoryId];
-    const identity = `${sessionKey}:story:${currentStoryId}`;
+    const identity = `${sessionKey}:${saveIdentity}:story:${currentStoryId}`;
 
     return (
       <ModalFrame identity={identity}>
@@ -222,7 +223,14 @@ export function StoryOverlay({
             key={identity}
             storyId={currentStoryId}
             story={story}
-            busy={submitting || snapshot.status === "saving"}
+            sessionView={sessionView}
+            attributes={content.attributes}
+            resumeStepId={
+              state.storyCheckpoint?.storyId === currentStoryId
+                ? state.storyCheckpoint.resumeStepId
+                : null
+            }
+            busy={submitting || snapshot.status !== "ready"}
             completionError={completionErrorMessage}
             onComplete={completeStory}
           />

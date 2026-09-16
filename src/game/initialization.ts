@@ -93,6 +93,7 @@ export const createInitialGameState = (
     ),
     pendingStoryIds: [...content.initial.storyIds],
     completedStoryIds: [],
+    storyCheckpoint: null,
   };
 
   const invariantResult = checkGameStateInvariants(state, content);

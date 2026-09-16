@@ -1,3 +1,4 @@
+import type { ActionId } from "../shared/action";
 import type {
   ChoiceAnnotation,
   ContentLocale,
@@ -47,6 +48,12 @@ export interface ContentCaseView {
 }
 
 export type ContentStoryStepView =
+  | Readonly<{
+      id: string;
+      type: "actionInput";
+      targetActionId: ActionId;
+      blocks: readonly Readonly<TextBlock>[];
+    }>
   | Readonly<{ id: string; type: "text"; blocks: readonly Readonly<TextBlock>[] }>
   | Readonly<{
       id: string;
@@ -121,6 +128,15 @@ export function createGameContentView(
           title: copy.title,
           skippable: story.skippable,
           steps: story.steps.map((step): ContentStoryStepView => {
+            if (step.type === "actionInput") {
+              // Projection is a whitelist: penalties remain exclusively in the rules catalog.
+              return {
+                id: step.id,
+                type: step.type,
+                targetActionId: step.targetActionId,
+                blocks: copy.steps[step.id].blocks,
+              };
+            }
             if (step.type === "effect") return step;
             if (step.type === "video") {
               return { ...step, fallbackBlocks: copy.steps[step.id].blocks };

@@ -1,5 +1,5 @@
 import { createGameSession } from "../application/gameSession";
-import { MINIMAL_GAME_CONTENT, MINIMAL_LOCALIZATIONS } from "../content/fixtures/minimalCatalog";
+import { ACTION_INPUT_GAME_CONTENT, ACTION_INPUT_LOCALIZATIONS } from "./actionInputContent";
 import { FakeSplitContentRepository } from "../content/repository";
 import type { GameContentCatalog } from "../content/schema";
 import { createInitialGameState } from "../game/initialization";
@@ -25,7 +25,7 @@ export const createDemoSave = (
     saveId,
     profileId,
     revision: 0,
-    saveSchemaVersion: 2,
+    saveSchemaVersion: 3,
     contentRef: {
       packageId: content.manifest.packageId,
       version: content.manifest.version,
@@ -38,11 +38,11 @@ export const createDemoSave = (
 
 /** 页面生命周期内共享内存仓储；刷新页面会重置这份开发样本。 */
 export function createDemoSession() {
-  const content = MINIMAL_GAME_CONTENT;
+  const content = ACTION_INPUT_GAME_CONTENT;
   const now = new Date().toISOString();
   const seed = createDemoSave("demo-profile", "demo-save", content, now);
   const contentRepository = new FakeSplitContentRepository([
-    { gameContent: content, localizations: MINIMAL_LOCALIZATIONS },
+    { gameContent: content, localizations: ACTION_INPUT_LOCALIZATIONS },
   ]);
 
   const session = createGameSession({

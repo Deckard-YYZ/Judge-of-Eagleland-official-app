@@ -20,6 +20,15 @@ describe("GameSessionView", () => {
       const view = createGameSessionView(demo.session, demo.contentRepository, locale);
       await demo.reload();
       await view.setLocale(locale);
+      const completeInspection = async (storyId: string) => {
+        for (const stepId of ["salute_at_arrival", "salute_at_departure"]) {
+          expect(
+            (await view.dispatch({ type: "submitStoryInput", storyId, stepId, actionId: "salute" }))
+              .ok,
+          ).toBe(true);
+        }
+        expect((await view.dispatch({ type: "completeStory", storyId })).ok).toBe(true);
+      };
       await view.dispatch({ type: "startCase", caseId: "case_001" });
       await view.dispatch({
         type: "chooseOption",
@@ -34,6 +43,7 @@ describe("GameSessionView", () => {
         choiceId: "formal_warning",
       });
       await view.dispatch({ type: "completeStory", storyId: "story_after_case_001" });
+      await completeInspection("inspection_after_case_001");
       await view.dispatch({ type: "startCase", caseId: "case_002" });
       await view.dispatch({
         type: "chooseOption",
@@ -41,6 +51,7 @@ describe("GameSessionView", () => {
         nodeId: "assessment",
         choiceId: "request_review",
       });
+      await completeInspection("inspection_after_case_002");
       await view.dispatch({ type: "completeStory", storyId: "ending_balanced" });
       return view.getSnapshot();
     };

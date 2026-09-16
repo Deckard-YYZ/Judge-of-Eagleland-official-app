@@ -129,7 +129,7 @@ const createInitialSave = (
     saveId,
     profileId,
     revision: 0,
-    saveSchemaVersion: 2,
+    saveSchemaVersion: 3,
     contentRef: {
       packageId: content.manifest.packageId,
       version: content.manifest.version,

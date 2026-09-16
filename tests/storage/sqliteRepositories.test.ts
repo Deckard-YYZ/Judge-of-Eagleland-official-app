@@ -27,7 +27,12 @@ const makeProfile = (
   createdAt,
 });
 
-const makeV2Save = (): SaveEnvelope => parseSaveEnvelopeForStorage(cloneJson(saveV2Fixture));
+const makeV3Save = (): SaveEnvelope =>
+  parseSaveEnvelopeForStorage({
+    ...cloneJson(saveV2Fixture),
+    saveSchemaVersion: 3,
+    state: { ...cloneJson(saveV2Fixture.state), storyCheckpoint: null },
+  });
 
 interface RawSaveFixture {
   saveId: string;
@@ -191,10 +196,10 @@ describe("SQLite storage repositories", () => {
     expect(raw[0]?.value_json).toBe("{broken");
   });
 
-  it("creates v2 saves, isolates profiles, and lists only owned rows", async () => {
+  it("creates v3 saves, isolates profiles, and lists only owned rows", async () => {
     const profiles = new SqliteProfileRepository(testDatabase.database);
     const saves = new SqliteSaveRepository(testDatabase.database);
-    const save = makeV2Save();
+    const save = makeV3Save();
 
     await profiles.create(makeProfile("profile-alpha"));
     await profiles.create(makeProfile("profile-beta"));
@@ -220,7 +225,7 @@ describe("SQLite storage repositories", () => {
   it("commits with one atomic revision CAS and leaves stale input unchanged", async () => {
     const profiles = new SqliteProfileRepository(testDatabase.database);
     const saves = new SqliteSaveRepository(testDatabase.database);
-    const save = makeV2Save();
+    const save = makeV3Save();
     await profiles.create(makeProfile(save.profileId));
     await saves.create(save);
 
@@ -259,7 +264,7 @@ describe("SQLite storage repositories", () => {
     ]);
     expect(raw[0]).toEqual({
       revision: 4,
-      save_schema_version: 2,
+      save_schema_version: 3,
       updated_at: "2026-09-15T12:00:00.000Z",
     });
   });
@@ -269,7 +274,7 @@ describe("SQLite storage repositories", () => {
     const saves = new SqliteSaveRepository(testDatabase.database);
     const secondConnection = testDatabase.openConnection();
     const concurrentSaves = new SqliteSaveRepository(secondConnection);
-    const save = makeV2Save();
+    const save = makeV3Save();
     await profiles.create(makeProfile(save.profileId));
     await saves.create(save);
 
@@ -305,7 +310,7 @@ describe("SQLite storage repositories", () => {
     expect([61, 62]).toContain(loaded?.state.attributes.authority);
   });
 
-  it("migrates a v1 row on load, preserves the raw row, and writes v2 on commit", async () => {
+  it("migrates a v1 row on load, preserves the raw row, and writes v3 on commit", async () => {
     const profiles = new SqliteProfileRepository(testDatabase.database);
     const saves = new SqliteSaveRepository(testDatabase.database);
     const legacy = cloneJson(saveV1Fixture) as RawSaveFixture;
@@ -314,7 +319,7 @@ describe("SQLite storage repositories", () => {
 
     const loaded = await saves.load(legacy.saveId, legacy.profileId);
     if (!loaded) throw new Error("expected the v1 fixture to load");
-    expect(loaded.saveSchemaVersion).toBe(2);
+    expect(loaded.saveSchemaVersion).toBe(3);
     expect(loaded.state.cases["case-resolved"]).toMatchObject({
       status: "resolved",
       resolutionId: "warning",
@@ -360,14 +365,47 @@ describe("SQLite storage repositories", () => {
       legacy.saveId,
     ]);
     expect(rawAfter[0]?.revision).toBe(8);
-    expect(rawAfter[0]?.save_schema_version).toBe(2);
+    expect(rawAfter[0]?.save_schema_version).toBe(3);
     expect(rawAfter[0]?.state_json).toBe(JSON.stringify(nextState));
+  });
+
+  it("migrates v2 without writing on read and upgrades only the next CAS commit", async () => {
+    const profiles = new SqliteProfileRepository(testDatabase.database);
+    const saves = new SqliteSaveRepository(testDatabase.database);
+    const legacy = cloneJson(saveV2Fixture);
+    await profiles.create(makeProfile(legacy.profileId));
+    await insertRawSave(testDatabase.database, legacy);
+    const loaded = await saves.load(legacy.saveId, legacy.profileId);
+    expect(loaded).toEqual({
+      ...legacy,
+      saveSchemaVersion: 3,
+      state: { ...legacy.state, storyCheckpoint: null },
+    });
+    const readRaw = () =>
+      testDatabase.database.select<{ save_schema_version: number; state_json: string }>(
+        "SELECT save_schema_version, state_json FROM saves WHERE save_id = $1",
+        [legacy.saveId],
+      );
+    expect(await readRaw()).toEqual([
+      { save_schema_version: 2, state_json: JSON.stringify(legacy.state) },
+    ]);
+    if (!loaded) throw new Error("missing migrated v2 save");
+    await saves.commit({
+      saveId: legacy.saveId,
+      profileId: legacy.profileId,
+      expectedRevision: legacy.revision,
+      nextState: loaded.state,
+      updatedAt: legacy.updatedAt,
+    });
+    expect(await readRaw()).toEqual([
+      { save_schema_version: 3, state_json: JSON.stringify(loaded.state) },
+    ]);
   });
 
   it("rejects invalid or corrupt saves without overwriting the row", async () => {
     const profiles = new SqliteProfileRepository(testDatabase.database);
     const saves = new SqliteSaveRepository(testDatabase.database);
-    const save = makeV2Save();
+    const save = makeV3Save();
     await profiles.create(makeProfile(save.profileId));
     await saves.create(save);
 
@@ -441,7 +479,7 @@ describe("SQLite storage repositories", () => {
   it("does not expose an unsupported future save schema as a valid snapshot", async () => {
     const profiles = new SqliteProfileRepository(testDatabase.database);
     const saves = new SqliteSaveRepository(testDatabase.database);
-    const save = makeV2Save();
+    const save = makeV3Save();
     await profiles.create(makeProfile(save.profileId));
     await saves.create(save);
     await testDatabase.database.execute(

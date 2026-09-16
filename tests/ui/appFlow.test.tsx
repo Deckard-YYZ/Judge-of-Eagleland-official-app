@@ -11,6 +11,18 @@ let nextObjectUrl = 1;
 const createObjectURL = vi.fn(() => `blob:profile-avatar-${nextObjectUrl++}`);
 const revokeObjectURL = vi.fn();
 
+async function completeInspection(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole("dialog", { name: "重要剧情" });
+  await within(dialog).findByText("巡视员来到法庭，请准备迎接。");
+  await user.click(within(dialog).getByRole("button", { name: "继续" }));
+  for (let input = 0; input < 2; input += 1) {
+    await user.type(await within(dialog).findByRole("textbox", { name: "输入动作" }), "敬礼");
+    await user.click(within(dialog).getByRole("button", { name: "确认动作" }));
+    if (input === 0) await user.click(await within(dialog).findByRole("button", { name: "继续" }));
+  }
+  await user.click(await within(dialog).findByRole("button", { name: "完成剧情" }));
+}
+
 beforeEach(() => {
   nextObjectUrl = 1;
   createObjectURL.mockClear();
@@ -73,6 +85,7 @@ describe("App mock workspace flow", () => {
     dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     expect(within(dialog).getByRole("heading", { name: "档案室流程调整" })).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: "完成剧情" }));
+    await completeInspection(user);
 
     expect(await screen.findByText("保留程序违规记录，本次不追加处分。")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "切换为英语" }));
@@ -160,6 +173,7 @@ describe("App mock workspace flow", () => {
     let dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     expect(within(dialog).getByRole("heading", { name: "档案室流程调整" })).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: "完成剧情" }));
+    await completeInspection(user);
 
     const secondCase = await screen.findByRole("button", {
       name: "第 002 号：调阅权限申请，待开始",
@@ -167,6 +181,7 @@ describe("App mock workspace flow", () => {
     await user.click(secondCase);
     await user.click(await screen.findByRole("button", { name: "开始案件" }));
     await user.click(screen.getByRole("button", { name: /要求补充复核后再调阅/ }));
+    await completeInspection(user);
 
     dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     expect(within(dialog).getByRole("heading", { name: "平衡的裁定" })).toBeTruthy();

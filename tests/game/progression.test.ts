@@ -37,6 +37,7 @@ const progressedState = (): GameState => ({
   },
   pendingStoryIds: [],
   completedStoryIds: [],
+  storyCheckpoint: null,
 });
 
 const valueOf = <T>(result: ProgressionResult<T>): T => {

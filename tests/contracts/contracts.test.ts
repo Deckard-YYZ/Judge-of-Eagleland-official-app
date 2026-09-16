@@ -17,13 +17,14 @@ const baseState = {
   },
   pendingStoryIds: [],
   completedStoryIds: [],
+  storyCheckpoint: null,
 };
 
 const baseSave = {
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 2,
+  saveSchemaVersion: 3,
   contentRef: {
     packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
     version: MINIMAL_GAME_CONTENT.manifest.version,
@@ -45,7 +46,7 @@ describe("content and state contracts", () => {
       GameContentManifestSchema.parse({
         packageId: "pkg",
         version: "2.0.0",
-        contentSchemaVersion: 3,
+        contentSchemaVersion: 4,
         defaultLocale: "zh-CN",
         supportedLocales: ["zh-CN"],
       }),
@@ -96,6 +97,7 @@ describe("content and state contracts", () => {
         ...baseState,
         pendingStoryIds: ["story-1"],
         completedStoryIds: ["story-1"],
+        storyCheckpoint: null,
       }),
     ).toThrow();
 

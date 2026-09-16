@@ -21,6 +21,7 @@ describe("createInitialGameState", () => {
         cases: { case_001: { status: "pending" } },
         pendingStoryIds: ["story_after_case_001"],
         completedStoryIds: [],
+        storyCheckpoint: null,
       },
     });
   });
@@ -51,6 +52,7 @@ describe("createInitialGameState", () => {
       cases: { case_001: { status: "pending" } },
       pendingStoryIds: ["story_after_case_001"],
       completedStoryIds: [],
+      storyCheckpoint: null,
     });
   });
 
