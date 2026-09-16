@@ -1,4 +1,5 @@
 import type { SaveEnvelope } from "../game/model";
+import { parseStorageJson } from "./parseJson";
 import {
   parseSaveEnvelopeForStorage,
   parseStoredSaveEnvelope,
@@ -41,7 +42,7 @@ export async function importSaveBackup(
 ): Promise<SaveEnvelope> {
   let value: unknown;
   try {
-    value = JSON.parse(json);
+    value = parseStorageJson(json, "INVALID_BACKUP_JSON");
   } catch (error) {
     throw new SaveRepositoryError("INVALID_SAVE", "The backup is not valid JSON.", error);
   }

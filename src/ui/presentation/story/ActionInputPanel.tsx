@@ -8,6 +8,7 @@ import type { GameSessionView } from "../../../application/gameSessionView";
 import { matchTextAction } from "../../../input/matchTextAction";
 import { translateSessionError, useI18n } from "../../i18n";
 import { StoryBlocks } from "./StoryBlocks";
+import { getDiagnostics } from "../../../shared/diagnostics";
 
 interface ActionInputPanelProps {
   sessionView: GameSessionView;
@@ -38,6 +39,14 @@ export function ActionInputPanel({
   const composing = useRef(false);
   const inFlight = useRef(false);
   const operationVersion = useRef(0);
+  const lastChangeLog = useRef(0);
+  const inputDebug = (event: string, inputLength?: number): void =>
+    getDiagnostics().record({
+      source: "input",
+      event,
+      level: "debug",
+      data: { storyId, stepId: step.id, inputLength },
+    });
 
   useEffect(() => {
     inFlight.current = false;
@@ -61,14 +70,39 @@ export function ActionInputPanel({
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    const context = { operationId: getDiagnostics().operationId() };
+    getDiagnostics().record({
+      source: "input",
+      event: "input.submitted",
+      ...context,
+      data: { storyId, stepId: step.id, inputLength: text.length, locale },
+    });
     if (
       busy ||
       inFlight.current ||
       composing.current ||
       sessionView.getSnapshot().status !== "ready"
-    )
+    ) {
+      getDiagnostics().record({
+        source: "input",
+        event: "input.blocked",
+        ...context,
+        data: { storyId, stepId: step.id, reason: composing.current ? "composition" : "busy" },
+      });
       return;
+    }
     const recognized = matchTextAction(text, locale);
+    getDiagnostics().record({
+      source: "input",
+      event: "input.recognized",
+      ...context,
+      data: {
+        storyId,
+        stepId: step.id,
+        recognition: recognized.type,
+        actionId: recognized.type === "known" ? recognized.actionId : undefined,
+      },
+    });
     if (recognized.type === "unknown") {
       setNotice({ type: "unknown" });
       return;
@@ -80,12 +114,15 @@ export function ActionInputPanel({
     setSubmitting(true);
     setNotice(null);
     try {
-      const result = await sessionView.dispatch({
-        type: "submitStoryInput",
-        storyId,
-        stepId: step.id,
-        actionId: recognized.actionId,
-      });
+      const result = await sessionView.dispatch(
+        {
+          type: "submitStoryInput",
+          storyId,
+          stepId: step.id,
+          actionId: recognized.actionId,
+        },
+        context,
+      );
       if (operationVersion.current !== version) return;
       if (!result.ok) {
         setNotice({ type: "error", code: result.code });
@@ -107,7 +144,14 @@ export function ActionInputPanel({
         }
         // Correct input is reflected by the published checkpoint, never a UI target comparison.
       }
-    } catch {
+    } catch (error) {
+      getDiagnostics().record({
+        source: "input",
+        event: "input.dispatch_failed",
+        level: "error",
+        ...context,
+        error,
+      });
       if (operationVersion.current === version) setNotice({ type: "error", code: "unexpected" });
     } finally {
       if (operationVersion.current === version) {
@@ -133,12 +177,23 @@ export function ActionInputPanel({
           maxLength={500}
           autoComplete="off"
           disabled={busy || submitting}
-          onChange={(event) => setText(event.target.value)}
+          onFocus={() => inputDebug("input.focused")}
+          onBlur={() => inputDebug("input.blurred")}
+          onChange={(event) => {
+            setText(event.target.value);
+            const now = performance.now();
+            if (now - lastChangeLog.current >= 500) {
+              lastChangeLog.current = now;
+              inputDebug("input.changed", event.target.value.length);
+            }
+          }}
           onCompositionStart={() => {
             composing.current = true;
+            inputDebug("input.composition_started");
           }}
           onCompositionEnd={() => {
             composing.current = false;
+            inputDebug("input.composition_finished");
           }}
           onKeyDown={(event) => {
             if (

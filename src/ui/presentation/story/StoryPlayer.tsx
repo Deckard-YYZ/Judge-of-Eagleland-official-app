@@ -1,3 +1,4 @@
+import { getDiagnostics } from "../../../shared/diagnostics";
 import { useEffect, useState, type CSSProperties } from "react";
 import type { ContentAttributeView, ContentStoryView } from "../../../application/gameContentView";
 import type { GameSessionView } from "../../../application/gameSessionView";
@@ -158,7 +159,14 @@ export function StoryPlayer({
                 className="story-button story-button--secondary"
                 type="button"
                 disabled={busy}
-                onClick={() => setVideoRetryFailed(true)}
+                onClick={() => {
+                  getDiagnostics().record({
+                    source: "story",
+                    event: "video.placeholder_retry",
+                    data: { storyId, stepId: step.id, reason: "player_not_implemented" },
+                  });
+                  setVideoRetryFailed(true);
+                }}
               >
                 {t("story.videoRetry")}
               </button>

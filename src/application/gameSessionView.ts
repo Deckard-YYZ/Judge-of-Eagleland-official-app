@@ -1,3 +1,4 @@
+import { getDiagnostics, type DiagnosticContext } from "../shared/diagnostics";
 import type { CaseId, ContentLocale } from "../content/schema";
 import type { SplitContentRepository } from "../content/repository";
 import type { FeedbackRequest, GameCommand } from "../game/commands";
@@ -36,7 +37,10 @@ export interface GameSessionView {
   selectCase(caseId: CaseId | null): void;
   setLocale(locale: ContentLocale): Promise<void>;
   reload(): Promise<GameSessionLoadResult>;
-  dispatch(command: GameCommand): Promise<GameSessionDispatchResult>;
+  dispatch(
+    command: GameCommand,
+    diagnostics?: DiagnosticContext,
+  ): Promise<GameSessionDispatchResult>;
 }
 
 const availableCaseIds = (snapshot: GameSessionSnapshot): readonly CaseId[] => {
@@ -97,7 +101,13 @@ export const createGameSessionView = (
     for (const listener of [...listeners]) {
       try {
         listener();
-      } catch {
+      } catch (error) {
+        getDiagnostics().record({
+          source: "presentation",
+          event: "presentation.subscriber_failed",
+          level: "error",
+          error,
+        });
         // Rendering observers cannot alter session facts or localization ordering.
       }
     }
@@ -107,6 +117,7 @@ export const createGameSessionView = (
     const rules = sessionSnapshot.content;
     const ref = sessionSnapshot.envelope?.contentRef;
     const version = ++requestVersion;
+    const requestLocale = requestedLocale;
     const canKeepCommittedPresentation = content !== null && projectedRules === rules;
     if (!canKeepCommittedPresentation) {
       content = null;
@@ -119,22 +130,33 @@ export const createGameSessionView = (
 
     const load = async (locale: ContentLocale) => contentRepository.loadLocalization(ref, locale);
     try {
-      const localized = await load(requestedLocale);
+      const localized = await load(requestLocale);
       if (version !== requestVersion) return;
       content = deepFreeze(createGameContentView(rules, localized));
       projectedRules = rules;
       localizationStatus = "ready";
       publish();
     } catch (error) {
+      getDiagnostics().record({
+        source: "content",
+        event: "localization.requested_failed",
+        level: "warn",
+        data: {
+          locale: requestLocale,
+          contentPackageId: ref.packageId,
+          contentVersion: ref.version,
+        },
+        error,
+      });
       if (version !== requestVersion) return;
       const failure: LocalizationViewError = {
         code: "LOCALIZATION_LOAD_FAILED",
         message:
           error instanceof Error ? error.message : "The content language could not be loaded.",
-        requestedLocale,
+        requestedLocale: requestLocale,
       };
       const fallbackLocale = rules.manifest.defaultLocale;
-      if (fallbackLocale !== requestedLocale) {
+      if (fallbackLocale !== requestLocale) {
         try {
           const localized = await load(fallbackLocale);
           if (version !== requestVersion) return;
@@ -144,7 +166,14 @@ export const createGameSessionView = (
           localizationError = Object.freeze(failure);
           publish();
           return;
-        } catch {
+        } catch (error) {
+          getDiagnostics().record({
+            source: "content",
+            event: "localization.fallback_failed",
+            level: "error",
+            data: { locale: fallbackLocale },
+            error,
+          });
           // The typed error below represents both requested and fallback load failure.
         }
       }
@@ -195,6 +224,6 @@ export const createGameSessionView = (
       await refreshLocalization();
     },
     reload: () => session.reload(),
-    dispatch: (command) => session.dispatch(command),
+    dispatch: (command, diagnostics) => session.dispatch(command, diagnostics),
   };
 };

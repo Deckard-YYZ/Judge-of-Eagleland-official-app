@@ -22,7 +22,8 @@
     "validate:content": "tsx scripts/validate-content.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "diagnostics:archive": "node scripts/archive-diagnostics.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

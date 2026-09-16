@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SaveEnvelope } from "../../src/game/model";
 import { InMemorySaveRepository } from "../../src/storage/inMemorySaveRepository";
 import { exportSaveBackup, importSaveBackup } from "../../src/storage/saveBackup";
+import { sanitizeDiagnostic } from "../../src/platform/diagnostics";
 
 const fixture = (): SaveEnvelope => ({
   saveId: "source",
@@ -29,6 +30,19 @@ const destination = {
 };
 
 describe("save JSON backup", () => {
+  it("keeps malformed backup input out of error messages and nested stacks", async () => {
+    const repository = new InMemorySaveRepository();
+    const error = await importSaveBackup(repository, "PRIVATE_BACKUP_FRAGMENT", destination).catch(
+      (failure: unknown) => failure,
+    );
+    expect(error).toMatchObject({
+      code: "INVALID_SAVE",
+      cause: { code: "INVALID_BACKUP_JSON" },
+    });
+    expect(JSON.stringify(sanitizeDiagnostic(error))).not.toContain("PRIVATE");
+    expect(await repository.load(destination.saveId, destination.profileId)).toBeNull();
+  });
+
   it("exports committed data and restores an independent copy with the exact content version", async () => {
     const original = fixture();
     const repository = new InMemorySaveRepository([original]);

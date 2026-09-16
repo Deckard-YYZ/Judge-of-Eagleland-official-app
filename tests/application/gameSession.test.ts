@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { configureDiagnostics, type DiagnosticEvent } from "../../src/shared/diagnostics";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   ContentLocale,
   ContentRef,
@@ -537,7 +538,11 @@ describe("GameSession load invariants and recovery identity", () => {
     pending.resolve(makeSave());
     await loading;
     await session.reload();
-    expect(load).toHaveBeenLastCalledWith("save-1", "profile-1");
+    expect(load).toHaveBeenLastCalledWith(
+      "save-1",
+      "profile-1",
+      expect.objectContaining({ operationId: expect.any(String) }),
+    );
     const commit = deferred<SaveCommitResult>();
     saveRepository.commitImpl = () => commit.promise;
     const saving = session.dispatch(command);
@@ -545,6 +550,123 @@ describe("GameSession load invariants and recovery identity", () => {
     commit.resolve({ revision: 1 });
     await saving;
     await session.reload();
+    expect(session.getSnapshot().envelope?.revision).toBe(1);
+  });
+});
+
+describe("session diagnostics contract", () => {
+  afterEach(() => configureDiagnostics(() => undefined));
+  it("reports invalid transition schemas with bounded issues and no returned input", async () => {
+    const events: DiagnosticEvent[] = [];
+    configureDiagnostics((event) => events.push(event));
+    const invalidTransition = ((state: Readonly<GameState>) => ({
+      ok: true,
+      nextState: {
+        ...state,
+        attributes: Object.fromEntries(
+          Array.from({ length: 24 }, (_, index) => [`attribute_${index}`, "PRIVATE_RESULT_VALUE"]),
+        ),
+      },
+      feedback: [],
+    })) as unknown as Transition;
+    const { session, saveRepository } = makeSession(undefined, undefined, invalidTransition);
+    await session.load("save-1", "profile-1");
+    const before = session.getSnapshot();
+    await expect(session.dispatch(command)).resolves.toMatchObject({
+      ok: false,
+      code: "TRANSITION_ERROR",
+    });
+    const event = events.find((item) => item.event === "transition.invalid");
+    expect(event).toMatchObject({
+      level: "error",
+      data: { phase: "transition_schema", issueCount: 24 },
+    });
+    expect(event?.data?.issues).toHaveLength(16);
+    expect(event?.data?.issues).toEqual(
+      Array.from({ length: 16 }, (_, index) => ({
+        code: "invalid_type",
+        path: ["nextState", "attributes", `attribute_${index}`],
+      })),
+    );
+    expect(JSON.stringify(event)).not.toContain("PRIVATE");
+    expect(saveRepository.commitCalls).toHaveLength(0);
+    expect(session.getSnapshot()).toBe(before);
+  });
+
+  it("correlates transition, save and publication and isolates subscriber exceptions", async () => {
+    const events: DiagnosticEvent[] = [];
+    configureDiagnostics((event) => events.push(event));
+    const { session } = makeSession();
+    await session.load("save-1", "profile-1");
+    session.subscribe(() => {
+      throw new Error("render observer");
+    });
+    events.length = 0;
+    const result = await session.dispatch(command, { operationId: "input-42" });
+    expect(result.ok).toBe(true);
+    const stages = events.filter((event) =>
+      [
+        "command.started",
+        "transition.succeeded",
+        "save.commit.started",
+        "save.commit.succeeded",
+        "session.published",
+        "command.finished",
+      ].includes(event.event),
+    );
+    expect(stages.map((event) => event.event)).toEqual([
+      "command.started",
+      "transition.succeeded",
+      "save.commit.started",
+      "save.commit.succeeded",
+      "session.published",
+      "command.finished",
+    ]);
+    expect(stages.every((event) => event.operationId === "input-42")).toBe(true);
+    expect(new Set(stages.map((event) => event.sessionId)).size).toBe(1);
+    expect(events.some((event) => event.event === "subscriber.failed")).toBe(true);
+  });
+  it.each(["conflict", "lost-ack"] as const)(
+    "preserves %s semantics and original cause",
+    async (kind) => {
+      const events: DiagnosticEvent[] = [];
+      configureDiagnostics((event) => events.push(event));
+      const { session, saveRepository } = makeSession();
+      await session.load("save-1", "profile-1");
+      const error =
+        kind === "conflict"
+          ? new SaveRepositoryError("REVISION_CONFLICT", "conflict")
+          : new Error("reply lost");
+      saveRepository.commitImpl = (input) => {
+        if (kind === "lost-ack")
+          saveRepository.save = {
+            ...saveRepository.save,
+            revision: input.expectedRevision + 1,
+            state: input.nextState,
+          };
+        throw error;
+      };
+      expect((await session.dispatch(command)).ok).toBe(false);
+      expect(session.getSnapshot().status).toBe("needsReload");
+      expect(
+        events.find(
+          (event) =>
+            event.event === (kind === "conflict" ? "save.commit.failed" : "save.commit.uncertain"),
+        )?.error,
+      ).toBe(error);
+      expect(
+        [...events].reverse().find((event) => event.event === "command.finished")?.data?.outcome,
+      ).toBe(kind === "conflict" ? "needs_reload" : "uncertain");
+      if (kind === "lost-ack") expect(saveRepository.save.revision).toBe(1);
+    },
+  );
+  it("commits successfully even when every diagnostic observer throws", async () => {
+    configureDiagnostics(() => {
+      throw new Error("diagnostics broken");
+    });
+    const { session } = makeSession();
+    expect((await session.load("save-1", "profile-1")).ok).toBe(true);
+    expect((await session.dispatch(command)).ok).toBe(true);
     expect(session.getSnapshot().envelope?.revision).toBe(1);
   });
 });

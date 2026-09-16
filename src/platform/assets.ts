@@ -1,3 +1,4 @@
+import { getDiagnostics } from "../shared/diagnostics";
 import { convertFileSrc as tauriConvertFileSrc } from "@tauri-apps/api/core";
 import { resolveResource as tauriResolveResource } from "@tauri-apps/api/path";
 import { detectRuntime, type RuntimeInfo, type RuntimeKind } from "./runtime";
@@ -309,6 +310,17 @@ class RuntimeAssetResolver implements AssetResolver {
       }
       return url;
     } catch (error) {
+      getDiagnostics().record({
+        source: "assets",
+        event: "asset.resolution_failed",
+        level: "error",
+        data: {
+          resource: assetId,
+          contentPackageId: catalog.manifest.packageId,
+          contentVersion: catalog.manifest.version,
+        },
+        error,
+      });
       if (error instanceof AssetResolverError) throw error;
       throw new AssetResolverError(
         "ASSET_RESOLUTION_FAILED",

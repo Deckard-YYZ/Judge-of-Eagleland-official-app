@@ -1,3 +1,4 @@
+import type { DiagnosticContext } from "../shared/diagnostics";
 import {
   GameStateSchema,
   SaveEnvelopeSchema,
@@ -53,11 +54,15 @@ export const isSaveRepositoryError = (error: unknown): error is SaveRepositoryEr
  * 存档是整局状态的唯一持久化入口。实现必须让 commit 的 revision 条件与更新原子对应。
  */
 export interface SaveRepository {
-  load(saveId: string, profileId: string): Promise<SaveEnvelope | null>;
+  load(
+    saveId: string,
+    profileId: string,
+    diagnostics?: DiagnosticContext,
+  ): Promise<SaveEnvelope | null>;
   /** List only rows owned by this Profile; corrupt rows fail closed. */
   listByProfile?(profileId: string): Promise<readonly SaveEnvelope[]>;
   create(save: SaveEnvelope): Promise<void>;
-  commit(input: SaveCommitInput): Promise<SaveCommitResult>;
+  commit(input: SaveCommitInput, diagnostics?: DiagnosticContext): Promise<SaveCommitResult>;
 }
 
 /** 在 repository 边界把外部值解析成合法 GameState，并将 Schema 错误归一化。 */

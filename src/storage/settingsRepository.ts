@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseStorageJson } from "./parseJson";
 
 import type { SqlDatabase } from "./schema";
 
@@ -98,7 +99,7 @@ const encodeValue = (value: unknown): string => {
 
 const decodeValue = (valueJson: string): unknown => {
   try {
-    return JsonValueSchema.parse(JSON.parse(valueJson));
+    return JsonValueSchema.parse(parseStorageJson(valueJson, "INVALID_SETTING_JSON"));
   } catch (error) {
     // Corruption is reported while preserving the original database row; the
     // caller can decide whether to offer a recovery or reset path.

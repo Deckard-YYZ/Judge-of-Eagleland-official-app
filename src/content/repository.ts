@@ -1,3 +1,4 @@
+import type { DiagnosticContext } from "../shared/diagnostics";
 import {
   ContentRefSchema,
   type ContentLocale,
@@ -35,7 +36,10 @@ export const isContentRepositoryError = (error: unknown): error is ContentReposi
 
 /** Rules and language packs remain separately addressable at the repository boundary. */
 export interface SplitContentRepository {
-  loadGameContent(ref: ContentRef): Promise<Readonly<GameContentCatalog>>;
+  loadGameContent(
+    ref: ContentRef,
+    diagnostics?: DiagnosticContext,
+  ): Promise<Readonly<GameContentCatalog>>;
   loadLocalization(
     ref: ContentRef,
     locale: ContentLocale,
@@ -137,7 +141,10 @@ export class FakeSplitContentRepository implements SplitContentRepository {
     }
   }
 
-  async loadGameContent(ref: ContentRef): Promise<Readonly<GameContentCatalog>> {
+  async loadGameContent(
+    ref: ContentRef,
+    diagnostics?: DiagnosticContext,
+  ): Promise<Readonly<GameContentCatalog>> {
     const parsedRef = parseRef(ref);
     const stored = this.gameCatalogs.get(keyFor(parsedRef));
     if (!stored) {

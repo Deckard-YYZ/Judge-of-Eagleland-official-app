@@ -1,3 +1,4 @@
+import { getDiagnostics } from "../shared/diagnostics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createDemoProfileEntry } from "./demoProfiles";
 import { createDesktopProfileEntry, type DesktopProfileEntryOptions } from "./desktopProfiles";
@@ -49,7 +50,7 @@ export const detectApplicationRuntime = (): ApplicationRuntime =>
  * Compose the application once. Browser development explicitly uses the
  * in-memory sample; only the desktop branch opens the SQLite plugin.
  */
-export async function bootstrapApplication(
+async function bootstrapApplicationInternal(
   dependencies: BootstrapDependencies = {},
 ): Promise<ApplicationBootstrapResult> {
   const detectedRuntime = (dependencies.detectRuntime ?? detectApplicationRuntime)();
@@ -90,6 +91,37 @@ export async function bootstrapApplication(
     profileEntry,
     storage,
   });
+}
+
+export async function bootstrapApplication(
+  dependencies: BootstrapDependencies = {},
+): Promise<ApplicationBootstrapResult> {
+  const context = { operationId: getDiagnostics().operationId() };
+  const started = performance.now();
+  getDiagnostics().record({ source: "bootstrap", event: "bootstrap.started", ...context });
+  try {
+    const result = await bootstrapApplicationInternal(dependencies);
+    getDiagnostics().record({
+      source: "bootstrap",
+      event: "bootstrap.succeeded",
+      ...context,
+      data: {
+        runtime: result.runtime,
+        storageMode: result.storageMode,
+        durationMs: performance.now() - started,
+      },
+    });
+    return result;
+  } catch (error) {
+    getDiagnostics().record({
+      source: "bootstrap",
+      event: "bootstrap.failed",
+      level: "error",
+      ...context,
+      error,
+    });
+    throw error;
+  }
 }
 
 type BootstrapViewState =

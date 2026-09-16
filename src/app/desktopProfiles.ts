@@ -1,3 +1,4 @@
+import { getDiagnostics } from "../shared/diagnostics";
 import { createGameSession } from "../application/gameSession";
 import { createGameSessionView } from "../application/gameSessionView";
 import type {
@@ -84,8 +85,16 @@ const defaultProfileId = (): string => {
   return `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 };
 
-const describeError = (error: unknown, fallback: string): string =>
-  error instanceof Error && error.message.length > 0 ? error.message : fallback;
+const describeError = (error: unknown, fallback: string): string => {
+  getDiagnostics().record({
+    source: "profiles",
+    event: "profile.operation_failed",
+    level: "error",
+    data: { phase: fallback },
+    error,
+  });
+  return error instanceof Error && error.message.length > 0 ? error.message : fallback;
+};
 
 const makeFailure = (code: ProfileEntryError["code"], message: string): ProfileEntryResult =>
   Object.freeze({
@@ -197,7 +206,13 @@ export async function createDesktopProfileEntry(
     for (const listener of [...listeners]) {
       try {
         listener();
-      } catch {
+      } catch (error) {
+        getDiagnostics().record({
+          source: "profiles",
+          event: "profile.subscriber_failed",
+          level: "error",
+          error,
+        });
         // Presentation subscribers cannot change repository facts or results.
       }
     }

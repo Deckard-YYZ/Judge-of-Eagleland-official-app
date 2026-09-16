@@ -122,3 +122,31 @@ Save schema v3 增加 `storyCheckpoint`：正确后从下一步恢复，错误�
 运行 `npm run validate:content` 同时检查新旧包及所有发布语言的文字完成路径。
 恢复、失败与 CAS 的固定回归见 `tests/app/storyInputVerticalSlice.test.ts`；
 进度、审核证据与后期 TODO 见 [Content / Validator 实施记录](Desktop_Case_Game_Content_Validator_Implementation.md)。
+
+
+## 本地诊断与符号归档
+
+运行界面右下角“诊断 / Diagnostics”在启动失败和 React 错误后仍可打开。
+面板显示身份、writer/transport/heartbeat 状态和近期记录，可按级别、事件或 operation 筛选。
+“详细日志 5 分钟”采用单调时钟自动恢复默认级别（debug 构建默认 debug，发布默认 info），不会打开发布包 dump。
+心跳只表示观测点响应，不证明保存成功。
+
+桌面“导出报告”写入 `%LOCALAPPDATA%/com.eaglejudge.app/reports/report-*.json`，尽力保留最近 8 份（权限失败或并发可能超额）。
+报告最多 4 MiB，含当前和最近已退出运行（最多 4 个 run）的日志尾部、health/watchdog 摘要、缺失/截断/丢弃计数；
+不读游戏数据库，不默认附带原始输入、完整存档或 dump，不自动上传。
+异常文字做尽力脱敏，分享前应检查。浏览器预览下载内存窗口 JSON，无法包含上一次浏览器运行。
+诊断 IPC 超时后对应通道本轮停止重试；导出超时可能仍在后台完成，不代表文件必定未写入。
+
+```powershell
+npm run tauri -- build --debug --no-bundle
+npm run diagnostics:archive -- debug
+# 正式构建后使用 release
+npm run diagnostics:archive -- release
+```
+
+归档脚本先以 `--diagnostics-build-info` 读取实际 exe 的构建身份（不启动 UI），要求嵌入的 frontendBuildId
+与 dist/build-info.json 和支持文件一致，再读取 PE CodeView 与 PDB info-stream GUID/age 校验符号。
+Vite source map 只写入 `artifacts/build-support/<frontendBuildId>`，不会留在 dist 或被 Tauri 内嵌。
+exe、PDB、manifest、maps 及 SHA-256 清单归档到 `artifacts/diagnostic-archives`（均 gitignored）。
+重新单独运行 npm build 会使旧 exe 与 dist 不匹配，此时归档拒绝，须重新构建 native。
+详细接入约束与后续 Error Report 扩展见 [实施文档](Desktop_Log_Error_Report_Integration.md)。

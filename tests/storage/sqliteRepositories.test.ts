@@ -13,6 +13,8 @@ import {
   type SqliteTestDatabase,
 } from "../fixtures/storage/sqliteTestDatabase";
 import type { SaveEnvelope } from "../../src/game/model";
+import { configureDiagnostics } from "../../src/shared/diagnostics";
+import { sanitizeDiagnostic } from "../../src/platform/diagnostics";
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -86,6 +88,7 @@ describe("SQLite storage repositories", () => {
   });
 
   afterEach(async () => {
+    configureDiagnostics(() => undefined);
     await testDatabase.cleanup();
   });
 
@@ -180,20 +183,23 @@ describe("SQLite storage repositories", () => {
     await settings.set("app", "volume", 0.5);
     await testDatabase.database.execute(
       "UPDATE settings SET value_json = $1 WHERE scope = $2 AND setting_key = $3",
-      ["{broken", "app", "volume"],
+      ["PRIVATE_SETTING_FRAGMENT", "app", "volume"],
     );
 
     await expect(settings.get("app", "volume")).rejects.toMatchObject({
       code: "INVALID_SETTING",
+      cause: { code: "INVALID_SETTING_JSON" },
     });
     await expect(settings.list("app")).rejects.toMatchObject({
       code: "INVALID_SETTING",
     });
+    const error = await settings.get("app", "volume").catch((failure: unknown) => failure);
+    expect(JSON.stringify(sanitizeDiagnostic(error))).not.toContain("PRIVATE");
     const raw = await testDatabase.database.select<{ value_json: string }>(
       "SELECT value_json FROM settings WHERE scope = $1 AND setting_key = $2",
       ["app", "volume"],
     );
-    expect(raw[0]?.value_json).toBe("{broken");
+    expect(raw[0]?.value_json).toBe("PRIVATE_SETTING_FRAGMENT");
   });
 
   it("creates v3 saves, isolates profiles, and lists only owned rows", async () => {
@@ -474,6 +480,42 @@ describe("SQLite storage repositories", () => {
     }>("SELECT revision, state_json FROM saves WHERE save_id = $1", [save.saveId]);
     expect(afterCorruption[0]?.revision).toBe(beforeCorruption[0]?.revision);
     expect(afterCorruption[0]?.state_json).toBe("{broken");
+  });
+
+  it("does not echo corrupt save JSON through diagnostic causes or stacks", async () => {
+    const profiles = new SqliteProfileRepository(testDatabase.database);
+    const saves = new SqliteSaveRepository(testDatabase.database);
+    const save = makeV3Save();
+    await profiles.create(makeProfile(save.profileId));
+    await saves.create(save);
+    const corruptJson = "PRIVATE_SAVE_FRAGMENT";
+    await testDatabase.database.execute("UPDATE saves SET state_json = $1 WHERE save_id = $2", [
+      corruptJson,
+      save.saveId,
+    ]);
+    const logged: unknown[] = [];
+    configureDiagnostics((event) => logged.push(sanitizeDiagnostic(event.error)));
+    await expect(saves.load(save.saveId, save.profileId)).rejects.toMatchObject({
+      code: "INVALID_SAVE",
+      cause: { name: "SyntaxError", code: "INVALID_STORED_JSON" },
+    });
+    await expect(
+      saves.commit({
+        saveId: save.saveId,
+        profileId: save.profileId,
+        expectedRevision: save.revision,
+        nextState: save.state,
+        updatedAt: save.updatedAt,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_SAVE" });
+    const diagnosticJson = JSON.stringify(logged);
+    expect(diagnosticJson).toContain("INVALID_STORED_JSON");
+    expect(diagnosticJson).not.toContain("PRIVATE");
+    const raw = await testDatabase.database.select<{ state_json: string; revision: number }>(
+      "SELECT state_json, revision FROM saves WHERE save_id = $1",
+      [save.saveId],
+    );
+    expect(raw).toEqual([{ state_json: corruptJson, revision: save.revision }]);
   });
 
   it("does not expose an unsupported future save schema as a valid snapshot", async () => {

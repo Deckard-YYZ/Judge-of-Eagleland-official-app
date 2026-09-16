@@ -13,7 +13,7 @@ const allowedLayers = {
   application: new Set(["application", "game", "content", "storage", "shared"]),
   ui: new Set(["ui", "application", "content", "input", "shared"]),
   input: new Set(["input", "shared"]),
-  platform: new Set(["platform"]),
+  platform: new Set(["platform", "shared"]),
   shared: new Set(["shared"]),
 };
 

@@ -1,3 +1,4 @@
+import { getDiagnostics, type DiagnosticContext } from "../shared/diagnostics";
 import type { GameContentCatalog } from "../content/schema";
 import { isContentRepositoryError, type SplitContentRepository } from "../content/repository";
 import { validateGameContentCatalog } from "../content/validate";
@@ -143,7 +144,10 @@ export interface GameSession {
   reload(): Promise<GameSessionLoadResult>;
 
   /** 对当前已提交状态执行一次规则计算和条件版本提交。 */
-  dispatch(command: GameCommand): Promise<GameSessionDispatchResult>;
+  dispatch(
+    command: GameCommand,
+    diagnostics?: DiagnosticContext,
+  ): Promise<GameSessionDispatchResult>;
 
   /** 返回同一版本的同一快照对象；发布新版本前不会创建新对象。 */
   getSnapshot(): GameSessionSnapshot;
@@ -283,28 +287,36 @@ const isSafeRevision = (revision: unknown): revision is number =>
  * 新局、Profile、迁移和完整内容引用校验由更上层或后续阶段负责。
  */
 export const createGameSession = (dependencies: GameSessionDependencies): GameSession => {
+  const sessionId = `session-${getDiagnostics().operationId()}`;
   let snapshot: GameSessionSnapshot = emptySnapshot();
   let busy = false;
   let loadIdentity: { saveId: string; profileId: string } | null = null;
   const listeners = new Set<() => void>();
   const feedbackListeners = new Set<(feedback: readonly FeedbackRequest[]) => void>();
 
-  const notify = (listener: () => void): void => {
+  const notify = (listener: () => void, context?: DiagnosticContext): void => {
     try {
       listener();
-    } catch {
+    } catch (error) {
+      getDiagnostics().record({
+        source: "session",
+        event: "subscriber.failed",
+        level: "error",
+        ...context,
+        error,
+      });
       // 订阅者属于表现层；其异常不能改变已经发布的提交事实。
     }
   };
 
-  const publish = (nextSnapshot: GameSessionSnapshot): void => {
+  const publish = (nextSnapshot: GameSessionSnapshot, context?: DiagnosticContext): void => {
     snapshot = nextSnapshot;
     for (const listener of [...listeners]) {
-      notify(listener);
+      notify(listener, context);
     }
   };
 
-  const publishNeedsReload = (error: GameSessionError): void => {
+  const publishNeedsReload = (error: GameSessionError, context?: DiagnosticContext): void => {
     if (
       snapshot.status !== "ready" &&
       snapshot.status !== "saving" &&
@@ -313,15 +325,25 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       return;
     }
 
-    publish(needsReloadSnapshot(snapshot, error));
+    publish(needsReloadSnapshot(snapshot, error), context);
   };
 
-  const notifyFeedback = (feedback: readonly FeedbackRequest[]): void => {
+  const notifyFeedback = (
+    feedback: readonly FeedbackRequest[],
+    context?: DiagnosticContext,
+  ): void => {
     const frozenFeedback = deepFreeze(feedback) as readonly FeedbackRequest[];
     for (const listener of [...feedbackListeners]) {
       try {
         listener(frozenFeedback);
-      } catch {
+      } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "feedback.subscriber_failed",
+          level: "error",
+          ...context,
+          error,
+        });
         // 反馈只是临时表现；监听器失败不应把成功提交伪装成失败。
       }
     }
@@ -346,8 +368,16 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
   };
 
   const load = async (saveId: string, profileId: string): Promise<GameSessionLoadResult> => {
+    const context = { operationId: getDiagnostics().operationId(), sessionId };
+    getDiagnostics().record({ source: "session", event: "session.load.started", ...context });
     // 必须在第一个 await 前同步取得锁；load 期间也不接受迟到的 dispatch。
     if (busy) {
+      getDiagnostics().record({
+        source: "session",
+        event: "session.load.rejected",
+        ...context,
+        data: { code: "BUSY" },
+      });
       return busyFailure();
     }
 
@@ -355,17 +385,32 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
     // 加载切换上下文时先离开 ready；失败后不会继续使用旧 Profile/存档。
     // Failed accepted loads replace identity too: recovery must never restore an old profile.
     loadIdentity = { saveId, profileId };
-    publish(loadingSnapshot());
+    publish(loadingSnapshot(), context);
     const loadFailure = (error: GameSessionError): GameSessionFailure => {
-      publish(errorSnapshot(error));
+      getDiagnostics().record({
+        source: "session",
+        event: "session.load.failed",
+        level: "error",
+        ...context,
+        data: { code: error.code },
+      });
+      publish(errorSnapshot(error), context);
       return failure(error);
     };
 
     try {
       let loaded: SaveEnvelope | null;
       try {
-        loaded = await dependencies.saveRepository.load(saveId, profileId);
+        loaded = await dependencies.saveRepository.load(saveId, profileId, context);
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "session.load.stage_failed",
+          data: { phase: "repository_load" },
+          level: "error",
+          ...context,
+          error,
+        });
         if (isSaveRepositoryError(error)) {
           if (error.code === "SAVE_NOT_FOUND") {
             return loadFailure(createError("SAVE_NOT_FOUND", error.message));
@@ -391,6 +436,14 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       try {
         parsedSave = SaveEnvelopeSchema.parse(loaded);
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "session.load.stage_failed",
+          data: { phase: "save_schema" },
+          level: "error",
+          ...context,
+          error,
+        });
         return loadFailure(
           createError(
             "INVALID_SAVE",
@@ -407,8 +460,19 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       let loadedContent: unknown;
       try {
         // 使用存档精确 contentRef，不能改成默认或最新版内容。
-        loadedContent = await dependencies.contentRepository.loadGameContent(parsedSave.contentRef);
+        loadedContent = await dependencies.contentRepository.loadGameContent(
+          parsedSave.contentRef,
+          context,
+        );
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "session.load.stage_failed",
+          data: { phase: "content_load" },
+          level: "error",
+          ...context,
+          error,
+        });
         if (isContentRepositoryError(error) && error.code === "INVALID_CONTENT") {
           return loadFailure(createError("CONTENT_INVALID", error.message));
         }
@@ -424,6 +488,15 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       // same structural, reference, graph, progression, and asset checks used by built-in content.
       const contentValidation = validateGameContentCatalog(loadedContent);
       if (!contentValidation.ok) {
+        getDiagnostics().record({
+          source: "session",
+          event: "content.validation.failed",
+          level: "error",
+          ...context,
+          data: {
+            issues: contentValidation.issues.slice(0, 16).map(({ code, path }) => ({ code, path })),
+          },
+        });
         return loadFailure(
           createError(
             "CONTENT_INVALID",
@@ -449,6 +522,15 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       // Check their semantics only after the exact content version has passed validation.
       const stateValidation = checkGameStateInvariants(parsedSave.state, parsedContent);
       if (!stateValidation.ok) {
+        getDiagnostics().record({
+          source: "session",
+          event: "save.invariants.failed",
+          level: "error",
+          ...context,
+          data: {
+            issues: stateValidation.issues.slice(0, 16).map(({ code, path }) => ({ code, path })),
+          },
+        });
         return loadFailure(
           createError(
             "INVALID_SAVE",
@@ -459,7 +541,18 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       const frozenEnvelope = freezeEnvelope(parsedSave);
       const frozenContent = freezeContent(parsedContent);
       const nextSnapshot = readySnapshot(frozenEnvelope, frozenContent);
-      publish(nextSnapshot);
+      publish(nextSnapshot, context);
+      getDiagnostics().record({
+        source: "session",
+        event: "session.load.succeeded",
+        ...context,
+        data: {
+          revision: frozenEnvelope.revision,
+          contentPackageId: frozenEnvelope.contentRef.packageId,
+          contentVersion: frozenEnvelope.contentRef.version,
+          checkpoint: frozenEnvelope.state.storyCheckpoint,
+        },
+      });
 
       return Object.freeze({
         ok: true as const,
@@ -470,7 +563,11 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
     }
   };
 
-  const dispatch = async (command: GameCommand): Promise<GameSessionDispatchResult> => {
+  const dispatchInternal = async (
+    command: GameCommand,
+    context: DiagnosticContext,
+    completion: { outcome?: string },
+  ): Promise<GameSessionDispatchResult> => {
     // 与 load 共用同一锁；这里没有排队器，迟到点击直接返回 BUSY。
     if (busy) {
       return busyFailure();
@@ -479,6 +576,7 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
     busy = true;
     try {
       if (snapshot.status === "needsReload") {
+        completion.outcome = "needs_reload";
         return failure(
           createError(
             "RELOAD_REQUIRED",
@@ -497,6 +595,14 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       try {
         parsedCommand = GameCommandSchema.parse(command);
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "command.stage_failed",
+          data: { phase: "command_schema" },
+          level: "error",
+          ...context,
+          error,
+        });
         return failure(
           createError(
             "INVALID_COMMAND",
@@ -505,11 +611,25 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         );
       }
 
+      getDiagnostics().record({
+        source: "session",
+        event: "command.validated",
+        ...context,
+        data: { commandType: parsedCommand.type },
+      });
       let nowIso: string;
       try {
         nowIso = dependencies.clock();
         nowIso = TransitionContextSchema.parse({ nowIso }).nowIso;
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "command.stage_failed",
+          data: { phase: "clock" },
+          level: "error",
+          ...context,
+          error,
+        });
         return failure(
           createError("CLOCK_ERROR", getErrorMessage(error, "The session clock failed.")),
         );
@@ -528,6 +648,14 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
           { nowIso },
         );
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "command.stage_failed",
+          data: { phase: "transition" },
+          level: "error",
+          ...context,
+          error,
+        });
         return failure(
           createError(
             "TRANSITION_ERROR",
@@ -540,6 +668,14 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       try {
         checkedTransition = TransitionResultSchema.safeParse(transitionResult);
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "command.stage_failed",
+          data: { phase: "transition_schema" },
+          level: "error",
+          ...context,
+          error,
+        });
         return failure(
           createError(
             "TRANSITION_ERROR",
@@ -548,6 +684,19 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         );
       }
       if (!checkedTransition.success) {
+        getDiagnostics().record({
+          source: "session",
+          event: "transition.invalid",
+          level: "error",
+          ...context,
+          data: {
+            phase: "transition_schema",
+            issueCount: checkedTransition.error.issues.length,
+            issues: checkedTransition.error.issues
+              .slice(0, 16)
+              .map(({ code, path }) => ({ code, path })),
+          },
+        });
         return failure(
           createError(
             "TRANSITION_ERROR",
@@ -565,25 +714,51 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
 
       const candidateState = checkedTransition.data.nextState;
       // 让 saving 快照保留旧封套，同时在提交期间禁止任何交互。
-      publish(savingSnapshot(baseSnapshot));
+      publish(savingSnapshot(baseSnapshot), context);
+      getDiagnostics().record({
+        source: "session",
+        event: "transition.succeeded",
+        ...context,
+        data: { revision: baseEnvelope.revision, checkpoint: candidateState.storyCheckpoint },
+      });
+      getDiagnostics().record({
+        source: "session",
+        event: "save.commit.started",
+        ...context,
+        data: { expectedRevision: baseEnvelope.revision },
+      });
       let commitResult: { revision: number };
       try {
         // commit 是本次操作的唯一 await 写边界；expectedRevision 来自刚读取的已提交封套。
-        commitResult = await dependencies.saveRepository.commit({
-          saveId: baseEnvelope.saveId,
-          profileId: baseEnvelope.profileId,
-          expectedRevision: baseEnvelope.revision,
-          nextState: GameStateSchema.parse(candidateState),
-          updatedAt: nowIso,
-        });
+        commitResult = await dependencies.saveRepository.commit(
+          {
+            saveId: baseEnvelope.saveId,
+            profileId: baseEnvelope.profileId,
+            expectedRevision: baseEnvelope.revision,
+            nextState: GameStateSchema.parse(candidateState),
+            updatedAt: nowIso,
+          },
+          context,
+        );
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: isSaveRepositoryError(error) ? "save.commit.failed" : "save.commit.uncertain",
+          level: isSaveRepositoryError(error) ? "warn" : "error",
+          ...context,
+          data: {
+            outcome: isSaveRepositoryError(error) ? "not_committed" : "uncertain",
+            code: isSaveRepositoryError(error) ? error.code : "RELOAD_REQUIRED",
+          },
+          error,
+        });
         if (isSaveRepositoryError(error)) {
           if (error.code === "REVISION_CONFLICT") {
-            publishNeedsReload(createError("REVISION_CONFLICT", error.message));
+            publishNeedsReload(createError("REVISION_CONFLICT", error.message), context);
             return failure(createError("REVISION_CONFLICT", error.message));
           }
 
-          publish(readySnapshot(baseEnvelope, baseSnapshot.content));
+          publish(readySnapshot(baseEnvelope, baseSnapshot.content), context);
           return failure(createError(error.code, error.message));
         }
 
@@ -591,7 +766,7 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
           "RELOAD_REQUIRED",
           "The save result is uncertain; reload the save before continuing.",
         );
-        publishNeedsReload(reloadError);
+        publishNeedsReload(reloadError, context);
         return failure(reloadError);
       }
 
@@ -600,14 +775,27 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
         !isSafeRevision(commitResult.revision) ||
         commitResult.revision !== baseEnvelope.revision + 1
       ) {
+        getDiagnostics().record({
+          source: "session",
+          event: "save.commit.uncertain",
+          level: "error",
+          ...context,
+          data: { outcome: "uncertain", reason: "invalid_revision" },
+        });
         const reloadError = createError(
           "RELOAD_REQUIRED",
           "The save returned an invalid revision; reload the save before continuing.",
         );
-        publishNeedsReload(reloadError);
+        publishNeedsReload(reloadError, context);
         return failure(reloadError);
       }
 
+      getDiagnostics().record({
+        source: "session",
+        event: "save.commit.succeeded",
+        ...context,
+        data: { revision: commitResult.revision },
+      });
       let committedEnvelope: Readonly<SaveEnvelope>;
       try {
         committedEnvelope = freezeEnvelope({
@@ -617,6 +805,19 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
           state: candidateState,
         });
       } catch (error) {
+        getDiagnostics().record({
+          source: "session",
+          event: "session.publication_failed",
+          data: {
+            phase: "committed_envelope",
+            outcome: "needs_reload",
+            revision: commitResult.revision,
+          },
+          level: "error",
+          ...context,
+          error,
+        });
+        completion.outcome = "needs_reload";
         const reloadError = createError(
           "RELOAD_REQUIRED",
           zodMessage(
@@ -624,15 +825,34 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
             "The save succeeded but its published envelope could not be validated; reload the save.",
           ),
         );
-        publishNeedsReload(reloadError);
+        publishNeedsReload(reloadError, context);
         return failure(reloadError);
       }
 
       const nextSnapshot = readySnapshot(committedEnvelope, baseSnapshot.content);
-      publish(nextSnapshot);
+      publish(nextSnapshot, context);
+      getDiagnostics().record({
+        source: "session",
+        event: "session.published",
+        ...context,
+        data: {
+          revision: committedEnvelope.revision,
+          checkpoint: committedEnvelope.state.storyCheckpoint,
+          feedback: checkedTransition.data.feedback.slice(0, 16).map((item) =>
+            item.type === "attributeFeedback"
+              ? {
+                  type: item.type,
+                  changes: item.changes
+                    .slice(0, 16)
+                    .map(({ attributeId, actualDelta }) => ({ attributeId, actualDelta })),
+                }
+              : { type: item.type, outcome: item.outcome },
+          ),
+        },
+      });
 
       const feedback = deepFreeze(checkedTransition.data.feedback) as readonly FeedbackRequest[];
-      notifyFeedback(feedback);
+      notifyFeedback(feedback, context);
 
       return Object.freeze({
         ok: true as const,
@@ -641,6 +861,55 @@ export const createGameSession = (dependencies: GameSessionDependencies): GameSe
       });
     } finally {
       busy = false;
+    }
+  };
+
+  const dispatch = async (
+    command: GameCommand,
+    supplied?: DiagnosticContext,
+  ): Promise<GameSessionDispatchResult> => {
+    const context = {
+      operationId: supplied?.operationId ?? getDiagnostics().operationId(),
+      sessionId,
+    };
+    const started = performance.now();
+    getDiagnostics().record({
+      source: "session",
+      event: "command.started",
+      ...context,
+      data: { revision: snapshot.envelope?.revision },
+    });
+    try {
+      const completion: { outcome?: string } = {};
+      const result = await dispatchInternal(command, context, completion);
+      getDiagnostics().record({
+        source: "session",
+        event: "command.finished",
+        ...context,
+        data: {
+          outcome:
+            completion.outcome ??
+            (result.ok
+              ? "committed"
+              : result.code === "RELOAD_REQUIRED"
+                ? "uncertain"
+                : result.code === "REVISION_CONFLICT"
+                  ? "needs_reload"
+                  : "rejected"),
+          code: result.ok ? undefined : result.code,
+          durationMs: performance.now() - started,
+        },
+      });
+      return result;
+    } catch (error) {
+      getDiagnostics().record({
+        source: "session",
+        event: "command.unexpected_failure",
+        level: "error",
+        ...context,
+        error,
+      });
+      throw error;
     }
   };
 

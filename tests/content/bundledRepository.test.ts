@@ -114,3 +114,12 @@ describe("bundled content repository", () => {
     });
   });
 });
+
+it("retains INVALID_REF semantics when diagnostic summaries see null input", async () => {
+  const reader = vi.fn(installedFiles);
+  const repository = new BundledSplitContentRepository(reader);
+  await expect(repository.loadGameContent(null as unknown as ContentRef)).rejects.toMatchObject({
+    code: "INVALID_REF",
+  });
+  expect(reader).not.toHaveBeenCalled();
+});

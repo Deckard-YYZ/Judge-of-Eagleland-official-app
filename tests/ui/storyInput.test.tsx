@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { configureDiagnostics, type DiagnosticEvent } from "../../src/shared/diagnostics";
 import { useEffect, useSyncExternalStore } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +21,7 @@ import { StoryOverlay } from "../../src/ui/presentation/story/StoryOverlay";
 const storyId = "inspection_after_case_001";
 const now = "2026-09-16T00:00:00.000Z";
 afterEach(() => {
+  configureDiagnostics(() => undefined);
   cleanup();
   vi.restoreAllMocks();
 });
@@ -103,6 +105,8 @@ function deferred() {
 describe("text action story UI with a real session", () => {
   it("keeps unknown local, saves wrong penalties, and restores B/C/D/E from committed positions", async () => {
     const { saves, view } = await setup();
+    const diagnosticEvents: DiagnosticEvent[] = [];
+    configureDiagnostics((event) => diagnosticEvents.push(event));
     let mounted = render(ui(view));
     await firstInput();
     const dispatch = vi.spyOn(view, "dispatch");
@@ -112,11 +116,24 @@ describe("text action story UI with a real session", () => {
     submit("敬礼还是挥手");
     expect(screen.getByText(/未能确定一个动作/)).toBeTruthy();
     expect(dispatch).not.toHaveBeenCalled();
+    expect(
+      diagnosticEvents.some(
+        (event) => event.event === "input.recognized" && event.data?.recognition === "unknown",
+      ),
+    ).toBe(true);
+    expect(diagnosticEvents.some((event) => event.event === "command.started")).toBe(false);
+    expect(JSON.stringify(diagnosticEvents)).not.toContain("敬礼还是挥手");
     expect((await saves.load("save", "profile"))!.revision).toBe(before.revision);
 
     submit("挥手");
     await screen.findByText(/动作不符合要求/);
     expect(screen.getByText("权威 -2")).toBeTruthy();
+    const recognized = diagnosticEvents.filter(
+      (event) => event.event === "input.recognized" && event.data?.recognition === "known",
+    )[0];
+    expect(diagnosticEvents.find((event) => event.event === "session.published")?.operationId).toBe(
+      recognized.operationId,
+    );
     expect(view.getSnapshot().envelope!.revision).toBe(before.revision + 1);
     expect(document.activeElement).toBe(screen.getByRole("textbox"));
 
@@ -186,12 +203,15 @@ describe("text action story UI with a real session", () => {
     expect(dispatch).not.toHaveBeenCalled();
     submit("salute");
     await screen.findByText("巡视员检查了案件记录，准备离开。");
-    expect(dispatch).toHaveBeenCalledWith({
-      type: "submitStoryInput",
-      storyId,
-      stepId: "salute_at_arrival",
-      actionId: "salute",
-    });
+    expect(dispatch).toHaveBeenCalledWith(
+      {
+        type: "submitStoryInput",
+        storyId,
+        stepId: "salute_at_arrival",
+        actionId: "salute",
+      },
+      expect.objectContaining({ operationId: expect.any(String) }),
+    );
   });
 
   it("locks the round synchronously and preserves a submitted action across language changes", async () => {

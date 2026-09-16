@@ -761,3 +761,30 @@ h2,
     transition-duration: 0.01ms !important;
   }
 }
+
+.diagnostics-launcher {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  z-index: 9000;
+}
+.diagnostics-panel {
+  position: fixed;
+  inset: 4vh 4vw;
+  z-index: 10000;
+  overflow: auto;
+  padding: 24px;
+  background: #171c23;
+  color: #f1f1f1;
+  border: 2px solid #aaa;
+}
+.diagnostics-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 35vh;
+  overflow: auto;
+}
+.diagnostics-panel button,
+.diagnostics-panel label {
+  margin: 8px;
+}

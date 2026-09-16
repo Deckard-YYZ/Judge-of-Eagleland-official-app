@@ -1,7 +1,9 @@
+import { getDiagnostics, type DiagnosticContext } from "../shared/diagnostics";
 import { z } from "zod";
 
 import {
   SaveRepositoryError,
+  isSaveRepositoryError,
   parseGameStateForStorage,
   parseSaveEnvelopeForStorage,
   parseStoredSaveEnvelope,
@@ -11,6 +13,7 @@ import {
 } from "./saveRepository";
 import type { SqlDatabase } from "./schema";
 import type { GameState, SaveEnvelope } from "../game/model";
+import { parseStorageJson } from "./parseJson";
 
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
@@ -62,19 +65,19 @@ const parseUpdatedAt = (updatedAt: string): string => {
   return parsed.data;
 };
 
-const rowToEnvelope = (row: SaveRow): SaveEnvelope => {
+const rowToEnvelope = (row: SaveRow, context?: DiagnosticContext): SaveEnvelope => {
   let state: unknown;
   try {
-    state = JSON.parse(row.state_json);
-  } catch (error) {
+    state = parseStorageJson(row.state_json, "INVALID_STORED_JSON");
+  } catch (cause) {
     throw new SaveRepositoryError(
       "INVALID_SAVE",
       "The stored save state is not valid JSON.",
-      error,
+      cause,
     );
   }
 
-  return parseStoredSaveEnvelope({
+  const envelope = parseStoredSaveEnvelope({
     saveId: row.save_id,
     profileId: row.profile_id,
     revision: row.revision,
@@ -87,6 +90,18 @@ const rowToEnvelope = (row: SaveRow): SaveEnvelope => {
     updatedAt: row.updated_at,
     state,
   });
+  if (row.save_schema_version !== envelope.saveSchemaVersion)
+    getDiagnostics().record({
+      source: "sqlite",
+      event: "save.migrated_in_memory",
+      ...context,
+      data: {
+        fromVersion: row.save_schema_version,
+        toVersion: envelope.saveSchemaVersion,
+        revision: envelope.revision,
+      },
+    });
+  return envelope;
 };
 
 /**
@@ -97,7 +112,59 @@ const rowToEnvelope = (row: SaveRow): SaveEnvelope => {
 export class SqliteSaveRepository implements SaveRepository {
   constructor(private readonly database: SqlDatabase) {}
 
-  async load(saveId: string, profileId: string): Promise<SaveEnvelope | null> {
+  async load(
+    saveId: string,
+    profileId: string,
+    supplied?: DiagnosticContext,
+  ): Promise<SaveEnvelope | null> {
+    const context = supplied ?? { operationId: getDiagnostics().operationId() };
+    getDiagnostics().record({ source: "sqlite", event: "sqlite.load.started", ...context });
+    try {
+      const result = await this.loadInternal(saveId, profileId, context);
+      getDiagnostics().record({
+        source: "sqlite",
+        event: "sqlite.load.finished",
+        ...context,
+        data: { outcome: result ? "found" : "missing", revision: result?.revision },
+      });
+      return result;
+    } catch (error) {
+      getDiagnostics().record({
+        source: "sqlite",
+        event: "sqlite.load.failed",
+        level: "error",
+        ...context,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  async commit(input: SaveCommitInput, supplied?: DiagnosticContext): Promise<SaveCommitResult> {
+    const context = supplied ?? { operationId: getDiagnostics().operationId() };
+    try {
+      return await this.commitInternal(input, context);
+    } catch (error) {
+      getDiagnostics().record({
+        source: "sqlite",
+        event: isSaveRepositoryError(error) ? "sqlite.commit.failed" : "sqlite.commit.uncertain",
+        level: isSaveRepositoryError(error) ? "warn" : "error",
+        ...context,
+        data: {
+          outcome: isSaveRepositoryError(error) ? "not_committed" : "uncertain",
+          code: isSaveRepositoryError(error) ? error.code : "UNKNOWN_WRITE_RESULT",
+        },
+        error,
+      });
+      throw error;
+    }
+  }
+
+  private async loadInternal(
+    saveId: string,
+    profileId: string,
+    context: DiagnosticContext,
+  ): Promise<SaveEnvelope | null> {
     validateIdentity(saveId, "saveId");
     validateIdentity(profileId, "profileId");
 
@@ -111,7 +178,7 @@ export class SqliteSaveRepository implements SaveRepository {
     const row = rows[0];
     // Unknown IDs and another Profile's save have the same public result.
     if (!row) return null;
-    return rowToEnvelope(row);
+    return rowToEnvelope(row, context);
   }
 
   async listByProfile(profileId: string): Promise<readonly SaveEnvelope[]> {
@@ -124,7 +191,7 @@ export class SqliteSaveRepository implements SaveRepository {
         ORDER BY updated_at DESC, save_id ASC`,
       [profileId],
     );
-    return rows.map(rowToEnvelope);
+    return rows.map((row) => rowToEnvelope(row));
   }
 
   async create(save: SaveEnvelope): Promise<void> {
@@ -176,7 +243,10 @@ export class SqliteSaveRepository implements SaveRepository {
     }
   }
 
-  async commit(input: SaveCommitInput): Promise<SaveCommitResult> {
+  private async commitInternal(
+    input: SaveCommitInput,
+    context: DiagnosticContext,
+  ): Promise<SaveCommitResult> {
     if (!input || typeof input !== "object") {
       throw new SaveRepositoryError("INVALID_INPUT", "commit input must be an object.");
     }
@@ -222,7 +292,7 @@ export class SqliteSaveRepository implements SaveRepository {
     }
     // Validate the existing JSON without changing it. Legacy migration happens in
     // memory at this boundary and is intentionally not persisted by load.
-    rowToEnvelope(current);
+    rowToEnvelope(current, context);
     if (current.revision !== expectedRevision) {
       throw new SaveRepositoryError(
         "REVISION_CONFLICT",
@@ -230,6 +300,12 @@ export class SqliteSaveRepository implements SaveRepository {
       );
     }
 
+    getDiagnostics().record({
+      source: "sqlite",
+      event: "sqlite.cas.started",
+      ...context,
+      data: { expectedRevision },
+    });
     const result = await this.database.execute(
       `UPDATE saves
           SET state_json = $1,
@@ -243,6 +319,12 @@ export class SqliteSaveRepository implements SaveRepository {
       [stateJson, updatedAt, saveId, profileId, expectedRevision],
     );
 
+    getDiagnostics().record({
+      source: "sqlite",
+      event: "sqlite.cas.returned",
+      ...context,
+      data: { count: result.rowsAffected, expectedRevision },
+    });
     if (result.rowsAffected === 1) {
       return { revision: expectedRevision + 1 };
     }
