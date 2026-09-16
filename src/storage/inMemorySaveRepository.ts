@@ -78,31 +78,32 @@ export class InMemorySaveRepository implements SaveRepository {
   }
 
   async commit(input: SaveCommitInput): Promise<SaveCommitResult> {
-    validateIdentity(input.saveId, "saveId");
-    validateIdentity(input.profileId, "profileId");
-    validateIdentity(input.updatedAt, "updatedAt");
-    validateRevision(input.expectedRevision);
+    const { saveId, profileId, expectedRevision, nextState, updatedAt } = input;
+    validateIdentity(saveId, "saveId");
+    validateIdentity(profileId, "profileId");
+    validateIdentity(updatedAt, "updatedAt");
+    validateRevision(expectedRevision);
 
     // Parse and clone before touching the stored value. Invalid input cannot partially commit.
-    const parsedState = parseGameStateForStorage(input.nextState);
-    const nextState = parseGameStateForStorage(cloneJson(parsedState));
-    const stored = this.saves.get(input.saveId);
+    const parsedState = parseGameStateForStorage(nextState);
+    const parsedNextState = parseGameStateForStorage(cloneJson(parsedState));
+    const stored = this.saves.get(saveId);
 
     if (!stored) {
-      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${input.saveId}" does not exist.`);
+      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${saveId}" does not exist.`);
     }
 
-    if (stored.profileId !== input.profileId) {
+    if (stored.profileId !== profileId) {
       throw new SaveRepositoryError(
         "PROFILE_MISMATCH",
-        `Save "${input.saveId}" does not belong to profile "${input.profileId}".`,
+        `Save "${saveId}" does not belong to profile "${profileId}".`,
       );
     }
 
-    if (stored.revision !== input.expectedRevision) {
+    if (stored.revision !== expectedRevision) {
       throw new SaveRepositoryError(
         "REVISION_CONFLICT",
-        `Save "${input.saveId}" is at revision ${stored.revision}; expected ${input.expectedRevision}.`,
+        `Save "${saveId}" is at revision ${stored.revision}; expected ${expectedRevision}.`,
       );
     }
 
@@ -110,12 +111,12 @@ export class InMemorySaveRepository implements SaveRepository {
     const nextEnvelope = parseSaveEnvelopeForStorage({
       ...stored,
       revision: nextRevision,
-      updatedAt: input.updatedAt,
-      state: nextState,
+      updatedAt,
+      state: parsedNextState,
     });
 
     // No await occurs between the revision check and this write.
-    this.saves.set(input.saveId, cloneSave(nextEnvelope));
+    this.saves.set(saveId, cloneSave(nextEnvelope));
     return { revision: nextRevision };
   }
 }

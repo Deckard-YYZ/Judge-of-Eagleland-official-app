@@ -126,7 +126,7 @@ export async function initializeDatabase(
       throw error;
     }
     throw new DatabaseInitializationError(
-      "SQLite opened but the storage migrations could not be verified.",
+      "Could not initialize or verify the SQLite storage database.",
       error,
     );
   }

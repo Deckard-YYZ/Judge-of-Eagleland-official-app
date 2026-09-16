@@ -61,11 +61,11 @@ export interface AssetResolverDependencies {
 }
 
 /** Destination selected by `bundle.resources` in `src-tauri/tauri.conf.json`. */
-export const BUNDLED_CONTENT_ROOT = "content";
+const BUNDLED_CONTENT_ROOT = "content";
 
-const CONTROL_CHARACTER_PATTERN = /\p{Cc}/u;
-const URL_SCHEME_PATTERN = /^[A-Za-z][A-Za-z\d+.-]*:/u;
+const CONTROL_CHARACTER_PATTERN = /[\p{Cc}\p{Cf}]/u;
 const WINDOWS_FORBIDDEN_CHARACTER_PATTERN = /[<>:"|?*]/u;
+const WINDOWS_RESERVED_NAME_PATTERN = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\..*)?$/iu;
 
 const invalidRef = (field: string): AssetResolverError =>
   new AssetResolverError("INVALID_REF", `Content reference ${field} must be a safe path segment.`);
@@ -78,8 +78,11 @@ function assertSafeRefSegment(value: unknown, field: string): asserts value is s
     value === ".." ||
     value.includes("/") ||
     value.includes("\\") ||
+    value.includes("%") ||
+    value.includes("#") ||
     WINDOWS_FORBIDDEN_CHARACTER_PATTERN.test(value) ||
     CONTROL_CHARACTER_PATTERN.test(value) ||
+    WINDOWS_RESERVED_NAME_PATTERN.test(value) ||
     value.endsWith(".") ||
     value.endsWith(" ")
   ) {
@@ -90,75 +93,55 @@ function assertSafeRefSegment(value: unknown, field: string): asserts value is s
 const invalidAssetPath = (path: string, message: string): AssetResolverError =>
   new AssetResolverError("ASSET_PATH_INVALID", `Asset path "${path}" ${message}.`);
 
-const decodedPathSegment = (path: string, segment: string): string => {
-  let decoded = segment;
-  // Decode more than once so `%252e%252e` cannot become `..` after a second
-  // URL decoding step in a host or WebView.
-  for (let pass = 0; pass < 3 && decoded.includes("%"); pass += 1) {
-    let next: string;
-    try {
-      next = decodeURIComponent(decoded);
-    } catch (error) {
-      throw new AssetResolverError(
-        "ASSET_PATH_INVALID",
-        `Asset path "${path}" contains malformed percent encoding.`,
-        error,
-      );
-    }
-    if (next === decoded) break;
-    decoded = next;
-  }
-  return decoded;
-};
-
 const assertSafePathSegment = (path: string, segment: string): void => {
-  const decoded = decodedPathSegment(path, segment);
   if (
-    decoded === "." ||
-    decoded === ".." ||
-    decoded.includes("/") ||
-    decoded.includes("\\") ||
-    decoded.includes("?") ||
-    decoded.includes("#") ||
-    WINDOWS_FORBIDDEN_CHARACTER_PATTERN.test(decoded) ||
-    CONTROL_CHARACTER_PATTERN.test(decoded) ||
-    decoded.endsWith(".") ||
-    decoded.endsWith(" ")
+    segment.length === 0 ||
+    segment === "." ||
+    segment === ".." ||
+    segment.includes("%") ||
+    WINDOWS_FORBIDDEN_CHARACTER_PATTERN.test(segment) ||
+    WINDOWS_RESERVED_NAME_PATTERN.test(segment) ||
+    CONTROL_CHARACTER_PATTERN.test(segment) ||
+    segment.endsWith(".") ||
+    segment.endsWith(" ")
   ) {
     throw invalidAssetPath(path, "contains a path segment that is unsafe on the target platform");
   }
 };
 
 /**
- * Keep this check at the platform boundary even though content validation also
- * checks it. A resolver must never turn an untrusted catalog value into an
- * arbitrary file URL when called by a future repository implementation.
+ * Validate a package-relative path once, before it reaches either a native
+ * path resolver or a browser URL builder. Percent signs are rejected outright
+ * so an encoded separator or dot segment cannot appear after a later decode.
  */
-export function assertSafeAssetPath(value: unknown): asserts value is string {
+function assertSafeAssetPath(value: unknown): asserts value is string {
   if (typeof value !== "string" || value.length === 0) {
     throw new AssetResolverError(
       "ASSET_PATH_INVALID",
       "Asset paths must be non-empty package-relative strings.",
     );
   }
-  if (URL_SCHEME_PATTERN.test(value) || value.includes("://")) {
-    throw invalidAssetPath(value, "must not be URL-like or drive-prefixed");
-  }
   if (value.startsWith("/") || value.includes("\\")) {
-    throw invalidAssetPath(value, "must be package-relative and use \"/\" separators");
+    throw invalidAssetPath(value, 'must be package-relative and use "/" separators');
   }
-  if (CONTROL_CHARACTER_PATTERN.test(value)) {
-    throw invalidAssetPath(value, "must not contain control characters");
+  if (value.includes("%")) {
+    throw invalidAssetPath(value, "must not contain percent-encoded path data");
   }
   if (value.includes("?") || value.includes("#")) {
     throw invalidAssetPath(value, "must not contain a query or fragment");
   }
 
   const segments = value.split("/");
-  if (segments.some((segment) => segment.length === 0)) {
-    throw invalidAssetPath(value, "contains an empty path segment");
-  }
   for (const segment of segments) assertSafePathSegment(value, segment);
+}
+
+function assertAssetKind(value: unknown): asserts value is AssetKind {
+  if (value !== "image" && value !== "video" && value !== "audio") {
+    throw new AssetResolverError(
+      "ASSET_KIND_INVALID",
+      'Asset kind must be one of "image", "video", or "audio".',
+    );
+  }
 }
 
 function assertAssetId(value: unknown): asserts value is string {
@@ -167,47 +150,58 @@ function assertAssetId(value: unknown): asserts value is string {
   }
 }
 
-const assertCatalog = (catalog: AssetCatalogLike): void => {
-  if (!catalog || typeof catalog !== "object") {
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function assertCatalog(value: unknown): asserts value is AssetCatalogLike {
+  if (!isObject(value)) {
     throw new AssetResolverError("INVALID_REF", "An asset catalog is required.");
   }
-  const manifest = catalog.manifest;
-  if (!manifest || typeof manifest !== "object") {
+  const manifest = value.manifest;
+  if (!isObject(manifest)) {
     throw new AssetResolverError("INVALID_REF", "Asset catalog manifest is required.");
   }
   assertSafeRefSegment(manifest.packageId, "packageId");
   assertSafeRefSegment(manifest.version, "version");
-  if (!catalog.assets || typeof catalog.assets !== "object") {
+  if (!isObject(value.assets)) {
     throw new AssetResolverError("INVALID_REF", "Asset catalog assets are required.");
   }
-};
+}
 
-function assertBrowserBase(value: string): string {
+const invalidBrowserBase = (): AssetResolverError =>
+  new AssetResolverError(
+    "ASSET_RESOLUTION_FAILED",
+    "Browser asset base must be a safe local URL path.",
+  );
+
+function assertBrowserBase(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) throw invalidBrowserBase();
   if (
-    value.length === 0 ||
     value.startsWith("//") ||
-    URL_SCHEME_PATTERN.test(value) ||
-    value.includes("://") ||
     value.includes("\\") ||
+    value.includes("%") ||
     value.includes("?") ||
     value.includes("#") ||
+    value.includes(":") ||
     CONTROL_CHARACTER_PATTERN.test(value)
   ) {
-    throw new AssetResolverError(
-      "ASSET_RESOLUTION_FAILED",
-      "Browser asset base must be a local URL path.",
-    );
+    throw invalidBrowserBase();
   }
+
   const base = value.startsWith("/") ? value : `/${value}`;
-  const segments = base.split("/");
-  const interior = segments.slice(1, segments.at(-1) === "" ? -1 : undefined);
-  if (interior.some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
-    throw new AssetResolverError(
-      "ASSET_RESOLUTION_FAILED",
-      "Browser asset base must not contain empty or dot path segments.",
-    );
+  const withoutTrailingSlash = base.endsWith("/") ? base.slice(0, -1) : base;
+  const segments = withoutTrailingSlash.slice(1).split("/");
+  if (segments.length === 0 || segments.some((segment) => segment.length === 0)) {
+    throw invalidBrowserBase();
   }
-  return base.endsWith("/") ? base : `${base}/`;
+  for (const segment of segments) {
+    try {
+      assertSafePathSegment(base, segment);
+    } catch {
+      throw invalidBrowserBase();
+    }
+  }
+  return `${withoutTrailingSlash}/`;
 }
 
 const encodePath = (path: string): string =>
@@ -217,11 +211,15 @@ const encodePath = (path: string): string =>
     .join("/");
 
 /** Build the path passed to Tauri's `resolveResource` without using OS joins. */
-export function bundledResourcePath(ref: AssetPackageRef, assetPath: string): string {
+const bundledResourcePath = (ref: AssetPackageRef, assetPath: string): string => {
   assertSafeRefSegment(ref.packageId, "packageId");
   assertSafeRefSegment(ref.version, "version");
   assertSafeAssetPath(assetPath);
   return `${BUNDLED_CONTENT_ROOT}/${ref.packageId}/${ref.version}/${assetPath}`;
+};
+
+export interface AssetResolver {
+  resolve(catalog: AssetCatalogLike, assetId: string): Promise<string>;
 }
 
 /**
@@ -229,24 +227,9 @@ export function bundledResourcePath(ref: AssetPackageRef, assetPath: string): st
  *
  * In Tauri, the resolver first obtains the actual bundled resource path and
  * then converts it through the configured asset protocol. In browser preview,
- * it returns a local `/content/...` URL; this keeps preview code deterministic
- * without granting a browser page access to arbitrary local files.
+ * it returns a local URL rooted at `browserBaseUrl`.
  */
-export interface AssetResolver {
-  resolve(
-    catalog: AssetCatalogLike,
-    assetId: string,
-  ): Promise<string>;
-  resolve(assetId: string, catalog: AssetCatalogLike): Promise<string>;
-  resolveAsset(
-    catalog: AssetCatalogLike,
-    assetId: string,
-  ): Promise<ResolvedAsset>;
-  resolveAsset(assetId: string, catalog: AssetCatalogLike): Promise<ResolvedAsset>;
-  resolveUrl(catalog: AssetCatalogLike, assetId: string): Promise<string>;
-}
-
-export class RuntimeAssetResolver implements AssetResolver {
+class RuntimeAssetResolver implements AssetResolver {
   private readonly runtimeKind: RuntimeKind;
   private readonly resolveResource: (resourcePath: string) => Promise<string>;
   private readonly convertFileSrc: (filePath: string) => string;
@@ -255,23 +238,15 @@ export class RuntimeAssetResolver implements AssetResolver {
   constructor(dependencies: AssetResolverDependencies = {}) {
     const runtime = dependencies.runtime ?? detectRuntime();
     this.runtimeKind = typeof runtime === "string" ? runtime : runtime.kind;
+    if (this.runtimeKind !== "tauri" && this.runtimeKind !== "browser") {
+      throw new AssetResolverError("ASSET_RESOLUTION_FAILED", "Runtime kind is invalid.");
+    }
     this.resolveResource = dependencies.resolveResource ?? tauriResolveResource;
     this.convertFileSrc = dependencies.convertFileSrc ?? tauriConvertFileSrc;
     this.browserBaseUrl = assertBrowserBase(dependencies.browserBaseUrl ?? "/content/");
   }
 
-  async resolve(
-    first: AssetCatalogLike | string,
-    second: AssetCatalogLike | string,
-  ): Promise<string> {
-    return (await this.resolveAsset(first as never, second as never)).url;
-  }
-
-  async resolveAsset(
-    first: AssetCatalogLike | string,
-    second: AssetCatalogLike | string,
-  ): Promise<ResolvedAsset> {
-    const { catalog, assetId } = parseResolveArguments(first, second);
+  async resolve(catalog: AssetCatalogLike, assetId: string): Promise<string> {
     assertCatalog(catalog);
     assertAssetId(assetId);
 
@@ -281,36 +256,32 @@ export class RuntimeAssetResolver implements AssetResolver {
         `Asset "${assetId}" is not defined by content ${catalog.manifest.packageId}@${catalog.manifest.version}.`,
       );
     }
-    const definition = catalog.assets[assetId];
-    if (!definition || typeof definition !== "object") {
+    const definition = catalog.assets[assetId] as unknown;
+    if (!isObject(definition)) {
       throw new AssetResolverError(
         "ASSET_PATH_INVALID",
         `Asset "${assetId}" does not contain a valid definition.`,
       );
     }
+    assertAssetKind(definition.kind);
     assertSafeAssetPath(definition.path);
     const resourcePath = bundledResourcePath(catalog.manifest, definition.path);
 
     try {
-      const resolvedPath =
-        this.runtimeKind === "tauri" ? await this.resolveResource(resourcePath) : resourcePath;
+      if (this.runtimeKind === "browser") {
+        const packageRelativePath = resourcePath.slice(`${BUNDLED_CONTENT_ROOT}/`.length);
+        return `${this.browserBaseUrl}${encodePath(packageRelativePath)}`;
+      }
+
+      const resolvedPath = await this.resolveResource(resourcePath);
       if (typeof resolvedPath !== "string" || resolvedPath.length === 0) {
         throw new Error("Tauri returned an empty resource path.");
       }
-      const url =
-        this.runtimeKind === "tauri"
-          ? this.convertFileSrc(resolvedPath)
-          : `${this.browserBaseUrl}${encodePath(resourcePath.slice(`${BUNDLED_CONTENT_ROOT}/`.length))}`;
+      const url = this.convertFileSrc(resolvedPath);
       if (typeof url !== "string" || url.length === 0) {
         throw new Error("Asset URL conversion returned an empty URL.");
       }
-      return Object.freeze({
-        assetId,
-        kind: definition.kind,
-        packageRelativePath: definition.path,
-        resourcePath,
-        url,
-      });
+      return url;
     } catch (error) {
       if (error instanceof AssetResolverError) throw error;
       throw new AssetResolverError(
@@ -320,21 +291,8 @@ export class RuntimeAssetResolver implements AssetResolver {
       );
     }
   }
-
-  async resolveUrl(catalog: AssetCatalogLike, assetId: string): Promise<string> {
-    return this.resolve(catalog, assetId);
-  }
 }
 
 /** Factory keeps the default Tauri API at the platform edge and is convenient for tests. */
-export const createAssetResolver = (
-  dependencies: AssetResolverDependencies = {},
-): AssetResolver => new RuntimeAssetResolver(dependencies);
-
-export async function resolveAssetUrl(
-  catalog: AssetCatalogLike,
-  assetId: string,
-  dependencies: AssetResolverDependencies = {},
-): Promise<string> {
-  return createAssetResolver(dependencies).resolve(catalog, assetId);
-}
+export const createAssetResolver = (dependencies: AssetResolverDependencies = {}): AssetResolver =>
+  new RuntimeAssetResolver(dependencies);

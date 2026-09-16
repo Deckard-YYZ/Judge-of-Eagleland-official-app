@@ -19,6 +19,7 @@ const avatarErrorKeys = {
 
 export interface ProfilePageProps {
   entry: ProfileEntry;
+  storageMode?: "sqlite" | "memory-preview";
   themeMode: UiThemeMode;
   profileAvatarUrls: Readonly<Record<string, string>>;
   onThemeChange(mode: UiThemeMode): void;
@@ -31,6 +32,7 @@ export interface ProfilePageProps {
 
 export function ProfilePage({
   entry,
+  storageMode = "memory-preview",
   themeMode,
   profileAvatarUrls,
   onThemeChange,
@@ -150,7 +152,7 @@ export function ProfilePage({
             <h2 id="access-title">
               {t(mode === "login" ? "profile.entryTitle" : "profile.createTitle")}
             </h2>
-            <p>{t("profile.memoryNotice")}</p>
+            <p>{t(storageMode === "sqlite" ? "profile.sqliteNotice" : "profile.memoryNotice")}</p>
           </div>
 
           <div className="profile-access__stage" key={mode}>

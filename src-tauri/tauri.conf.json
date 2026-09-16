@@ -27,11 +27,11 @@
         "enable": true,
         "scope": ["$RESOURCE/content/**/*"]
       },
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
-    "active": true,
+    "active": false,
     "resources": {
       "../content/": "content/"
     }

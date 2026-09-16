@@ -27,14 +27,26 @@ export {
 } from "./settingsRepository";
 export {
   SqliteSaveRepository,
+} from "./sqliteSaveRepository";
+export {
+  SaveRepositoryError,
+  isSaveRepositoryError,
+  parseGameStateForStorage,
+  parseSaveEnvelopeForStorage,
+  parseStoredSaveEnvelope,
   type SaveCommitInput,
   type SaveCommitResult,
   type SaveRepository,
 } from "./saveRepository";
 export {
-  SqlDatabase,
+  exportSaveBackup,
+  importSaveBackup,
+  type SaveBackupDestination,
+} from "./saveBackup";
+export {
   STORAGE_SCHEMA_TABLES,
   STORAGE_SCHEMA_VERSION,
+  type SqlDatabase,
   type SqlExecuteResult,
   type StorageSchemaTable,
 } from "./schema";

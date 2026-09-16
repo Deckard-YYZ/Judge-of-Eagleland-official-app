@@ -22,6 +22,8 @@ export const EN_US_MESSAGES = {
   "profile.createTitle": "Create local archive",
   "profile.memoryNotice":
     "This is a frontend-only demo. Profiles and avatars remain in memory and reset when the page is refreshed or closed.",
+  "profile.sqliteNotice":
+    "Profiles and each ruling are saved to local SQLite. No network connection is required. Avatars remain in the current view only.",
   "profile.existingLegend": "Choose an existing profile",
   "profile.listLabel": "Local profiles",
   "profile.selectAria": "Select profile {displayName}",

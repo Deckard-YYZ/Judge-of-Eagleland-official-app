@@ -1,13 +1,8 @@
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import { spawnSync } from "node:child_process";
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import path from "node:path";
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-
-declare const process: { readonly execPath: string };
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const TSX_CLI = path.join(REPOSITORY_ROOT, "node_modules", "tsx", "dist", "cli.mjs");

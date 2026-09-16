@@ -1,0 +1,74 @@
+{
+  "saveId": "legacy-save",
+  "profileId": "profile-alpha",
+  "revision": 7,
+  "saveSchemaVersion": 1,
+  "contentRef": {
+    "packageId": "storage-fixture",
+    "version": "1.0.0"
+  },
+  "createdAt": "2026-09-14T10:00:00.000Z",
+  "updatedAt": "2026-09-15T10:00:00.000Z",
+  "state": {
+    "phase": {
+      "type": "playing"
+    },
+    "attributes": {
+      "authority": 48,
+      "restraint": 53
+    },
+    "flags": {
+      "first_case_closed": true
+    },
+    "cases": {
+      "case-resolved": {
+        "status": "resolved",
+        "history": [
+          {
+            "nodeId": "assessment",
+            "choiceId": "warning"
+          },
+          {
+            "nodeId": "review",
+            "choiceId": "formal-warning"
+          }
+        ],
+        "resolutionId": "warning",
+        "snapshot": {
+          "caseTitle": "旧语言案件标题",
+          "finalChoiceText": "旧语言选项",
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "旧语言裁定"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "旧语言结果"
+            }
+          ],
+          "attributeChanges": [
+            {
+              "attributeId": "restraint",
+              "label": "旧语言属性",
+              "before": 50,
+              "after": 53,
+              "actualDelta": 3
+            }
+          ],
+          "resolvedAt": "2026-09-15T09:00:00.000Z",
+          "resolvedOrder": 1
+        }
+      },
+      "case-pending": {
+        "status": "pending"
+      }
+    },
+    "pendingStoryIds": [],
+    "completedStoryIds": [
+      "story-completed"
+    ]
+  }
+}

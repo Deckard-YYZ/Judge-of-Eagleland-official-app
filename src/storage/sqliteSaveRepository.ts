@@ -170,15 +170,18 @@ export class SqliteSaveRepository implements SaveRepository {
   }
 
   async commit(input: SaveCommitInput): Promise<SaveCommitResult> {
-    validateIdentity(input.saveId, "saveId");
-    validateIdentity(input.profileId, "profileId");
-    validateRevision(input.expectedRevision, "expectedRevision");
-    const updatedAt = parseUpdatedAt(input.updatedAt);
+    // Freeze every scalar reference before the first await. Callers may reuse
+    // or mutate their input object while a SQL request is in flight.
+    const { saveId, profileId, expectedRevision, nextState, updatedAt: rawUpdatedAt } = input;
+    validateIdentity(saveId, "saveId");
+    validateIdentity(profileId, "profileId");
+    validateRevision(expectedRevision, "expectedRevision");
+    const updatedAt = parseUpdatedAt(rawUpdatedAt);
 
     // Parse before the first await. Zod returns a validated data clone, so a
     // caller cannot mutate the object while the SQL request is in flight and
     // change what gets stored. JSON encoding is then done from that clone.
-    const parsedState: GameState = parseGameStateForStorage(input.nextState);
+    const parsedState: GameState = parseGameStateForStorage(nextState);
     const stateJson = JSON.stringify(parsedState);
 
     // Validate the current row before writing. This protects a corrupt save or
@@ -189,31 +192,31 @@ export class SqliteSaveRepository implements SaveRepository {
               content_package_id, content_version, state_json, created_at, updated_at
          FROM saves
         WHERE save_id = $1`,
-      [input.saveId],
+      [saveId],
     );
     const current = currentRows[0];
     if (!current) {
-      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${input.saveId}" does not exist.`);
+      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${saveId}" does not exist.`);
     }
-    if (current.profile_id !== input.profileId) {
+    if (current.profile_id !== profileId) {
       throw new SaveRepositoryError(
         "PROFILE_MISMATCH",
-        `Save "${input.saveId}" does not belong to profile "${input.profileId}".`,
+        `Save "${saveId}" does not belong to profile "${profileId}".`,
       );
     }
     if (current.save_schema_version !== 1 && current.save_schema_version !== 2) {
       throw new SaveRepositoryError(
         "INVALID_SAVE",
-        `Save "${input.saveId}" uses unsupported schema version ${current.save_schema_version}.`,
+        `Save "${saveId}" uses unsupported schema version ${current.save_schema_version}.`,
       );
     }
     // Validate the existing JSON without changing it. v1 migration happens in
     // memory at this boundary and is intentionally not persisted by load.
     rowToEnvelope(current);
-    if (current.revision !== input.expectedRevision) {
+    if (current.revision !== expectedRevision) {
       throw new SaveRepositoryError(
         "REVISION_CONFLICT",
-        `Save "${input.saveId}" is at revision ${current.revision}; expected ${input.expectedRevision}.`,
+        `Save "${saveId}" is at revision ${current.revision}; expected ${expectedRevision}.`,
       );
     }
 
@@ -227,11 +230,11 @@ export class SqliteSaveRepository implements SaveRepository {
           AND profile_id = $4
           AND revision = $5
           AND save_schema_version IN (1, 2)`,
-      [stateJson, updatedAt, input.saveId, input.profileId, input.expectedRevision],
+      [stateJson, updatedAt, saveId, profileId, expectedRevision],
     );
 
     if (result.rowsAffected === 1) {
-      return { revision: input.expectedRevision + 1 };
+      return { revision: expectedRevision + 1 };
     }
     if (result.rowsAffected !== 0) {
       throw new Error(`Save compare-and-swap affected ${result.rowsAffected} rows; expected one.`);
@@ -243,28 +246,28 @@ export class SqliteSaveRepository implements SaveRepository {
     // retryable repository error because the write outcome is not knowable.
     const identityRows = await this.database.select<SaveIdentityRow>(
       "SELECT profile_id, revision, save_schema_version FROM saves WHERE save_id = $1",
-      [input.saveId],
+      [saveId],
     );
     const identity = identityRows[0];
     if (!identity) {
-      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${input.saveId}" does not exist.`);
+      throw new SaveRepositoryError("SAVE_NOT_FOUND", `Save "${saveId}" does not exist.`);
     }
-    if (identity.profile_id !== input.profileId) {
+    if (identity.profile_id !== profileId) {
       throw new SaveRepositoryError(
         "PROFILE_MISMATCH",
-        `Save "${input.saveId}" does not belong to profile "${input.profileId}".`,
+        `Save "${saveId}" does not belong to profile "${profileId}".`,
       );
     }
     if (identity.save_schema_version !== 1 && identity.save_schema_version !== 2) {
       throw new SaveRepositoryError(
         "INVALID_SAVE",
-        `Save "${input.saveId}" uses unsupported schema version ${identity.save_schema_version}.`,
+        `Save "${saveId}" uses unsupported schema version ${identity.save_schema_version}.`,
       );
     }
-    if (identity.revision !== input.expectedRevision) {
+    if (identity.revision !== expectedRevision) {
       throw new SaveRepositoryError(
         "REVISION_CONFLICT",
-        `Save "${input.saveId}" is at revision ${identity.revision}; expected ${input.expectedRevision}.`,
+        `Save "${saveId}" is at revision ${identity.revision}; expected ${expectedRevision}.`,
       );
     }
 

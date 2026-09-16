@@ -1,0 +1,68 @@
+{
+  "saveId": "storage-save",
+  "profileId": "profile-alpha",
+  "revision": 3,
+  "saveSchemaVersion": 2,
+  "contentRef": {
+    "packageId": "storage-fixture",
+    "version": "1.0.0"
+  },
+  "createdAt": "2026-09-15T10:00:00.000Z",
+  "updatedAt": "2026-09-15T11:00:00.000Z",
+  "state": {
+    "phase": {
+      "type": "playing"
+    },
+    "attributes": {
+      "authority": 50,
+      "restraint": 45
+    },
+    "flags": {
+      "first_case_closed": true
+    },
+    "cases": {
+      "case-pending": {
+        "status": "pending"
+      },
+      "case-active": {
+        "status": "active",
+        "currentNodeId": "review",
+        "history": [
+          {
+            "nodeId": "assessment",
+            "choiceId": "continue"
+          }
+        ]
+      },
+      "case-resolved": {
+        "status": "resolved",
+        "history": [
+          {
+            "nodeId": "assessment",
+            "choiceId": "warning"
+          }
+        ],
+        "resolutionId": "warning",
+        "finalChoiceId": "warning",
+        "snapshot": {
+          "attributeChanges": [
+            {
+              "attributeId": "authority",
+              "before": 45,
+              "after": 50,
+              "actualDelta": 5
+            }
+          ],
+          "resolvedAt": "2026-09-15T09:00:00.000Z",
+          "resolvedOrder": 1
+        }
+      }
+    },
+    "pendingStoryIds": [
+      "story-pending"
+    ],
+    "completedStoryIds": [
+      "story-completed"
+    ]
+  }
+}

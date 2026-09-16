@@ -1,8 +1,5 @@
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import { readdir, readFile } from "node:fs/promises";
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import path from "node:path";
-// @ts-expect-error Node typings are intentionally absent from the browser production tsconfig.
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";

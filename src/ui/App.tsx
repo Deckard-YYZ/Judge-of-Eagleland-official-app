@@ -11,6 +11,8 @@ import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme"
 
 export interface AppProps {
   profileEntry: ProfileEntry;
+  /** Tells the profile surface whether this is the persistent desktop path or preview memory. */
+  storageMode?: "sqlite" | "memory-preview";
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
 }
@@ -93,7 +95,12 @@ function AuthenticatedWorkspace({
 }
 
 /** App owns only the authenticated UI reference; exiting never writes GameState. */
-function LocalizedApp({ profileEntry, caseOpenDelayMs, decisionRevealDelayMs }: AppProps) {
+function LocalizedApp({
+  profileEntry,
+  storageMode = "memory-preview",
+  caseOpenDelayMs,
+  decisionRevealDelayMs,
+}: AppProps) {
   const { locale } = useI18n();
   const [themeMode, setThemeMode] = useState<UiThemeMode>(readInitialThemeMode);
   const [profileAvatarUrls, setProfileAvatarUrls] = useState<Readonly<Record<string, string>>>({});
@@ -143,6 +150,7 @@ function LocalizedApp({ profileEntry, caseOpenDelayMs, decisionRevealDelayMs }: 
     return (
       <ProfilePage
         entry={profileEntry}
+        storageMode={storageMode}
         themeMode={themeMode}
         profileAvatarUrls={profileAvatarUrls}
         onThemeChange={setThemeMode}

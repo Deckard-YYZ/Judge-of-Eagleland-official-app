@@ -67,17 +67,35 @@ const validateKey = (key: string): string => {
 
 /** Serialize once at the repository edge so stored settings remain JSON data. */
 const encodeValue = (value: unknown): string => {
-  const parsed = JsonValueSchema.safeParse(value);
-  if (!parsed.success) {
+  try {
+    const parsed = JsonValueSchema.safeParse(value);
+    if (!parsed.success) {
+      throw new SettingsRepositoryError(
+        "INVALID_VALUE",
+        "Setting values must be JSON-serializable.",
+        parsed.error,
+      );
+    }
+    // The schema parse also rejects lossy values such as NaN, undefined object
+    // members, Date instances, functions and bigint before JSON.stringify runs.
+    const encoded = JSON.stringify(parsed.data);
+    if (typeof encoded !== "string") {
+      throw new SettingsRepositoryError(
+        "INVALID_VALUE",
+        "Setting values must be JSON-serializable.",
+      );
+    }
+    return encoded;
+  } catch (error) {
+    if (error instanceof SettingsRepositoryError) throw error;
+    // Recursive values can make Zod or JSON.stringify throw before returning a
+    // regular validation result. Keep that failure at the settings boundary.
     throw new SettingsRepositoryError(
       "INVALID_VALUE",
       "Setting values must be JSON-serializable.",
-      parsed.error,
+      error,
     );
   }
-  // The schema parse also rejects lossy values such as NaN, undefined object
-  // members, Date instances, functions and bigint before JSON.stringify runs.
-  return JSON.stringify(parsed.data);
 };
 
 const decodeValue = (valueJson: string): unknown => {

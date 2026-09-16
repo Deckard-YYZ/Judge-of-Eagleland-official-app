@@ -20,6 +20,8 @@ export const DEFAULT_MESSAGES = {
   "profile.createTitle": "建立本地档案",
   "profile.memoryNotice":
     "当前为纯前端演示。档案和头像只保存在本次应用内存中，刷新或关闭页面后将重置。",
+  "profile.sqliteNotice":
+    "档案和每次裁定保存在本机 SQLite 中，无需网络连接。头像仅保留在当前界面。",
   "profile.existingLegend": "选择已有档案",
   "profile.listLabel": "本地档案员",
   "profile.selectAria": "选择档案员 {displayName}",

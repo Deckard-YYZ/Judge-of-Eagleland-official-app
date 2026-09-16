@@ -55,7 +55,7 @@ interface ProfileRow extends Record<string, unknown> {
  * function so registration and login cannot disagree about identity.
  */
 export const normalizeProfileLoginName = (value: string): string =>
-  typeof value === "string" ? normalizeProfileDisplayName(value) : value;
+  normalizeProfileDisplayName(value);
 
 const parseProfile = (profile: unknown): ProfileRecord => {
   try {
@@ -77,6 +77,9 @@ const validateProfileId = (profileId: string): string => {
 };
 
 const validateLoginName = (loginName: string): string => {
+  if (typeof loginName !== "string") {
+    throw new ProfileRepositoryError("INVALID_INPUT", "loginName must be a non-empty string.");
+  }
   const normalized = normalizeProfileLoginName(loginName);
   if (normalized.length === 0) {
     throw new ProfileRepositoryError("INVALID_INPUT", "loginName must be a non-empty string.");
@@ -84,13 +87,16 @@ const validateLoginName = (loginName: string): string => {
   return normalized;
 };
 
-const rowToProfile = (row: ProfileRow): ProfileRecord =>
-  parseProfile({
+const rowToProfile = (row: ProfileRow): ProfileRecord => {
+  const parsed = parseProfile({
     profileId: row.profile_id,
     loginName: row.login_name,
     displayName: row.display_name,
     createdAt: row.created_at,
   });
+  validateProfileId(parsed.profileId);
+  return parsed;
+};
 
 /**
  * SQLite-backed local Profile repository. It deliberately has no delete or
@@ -133,11 +139,15 @@ export class SqliteProfileRepository implements ProfileRepository {
   }
 
   async create(profile: ProfileRecord): Promise<void> {
+    // Parse first so malformed runtime values are reported as repository
+    // errors before the shared normalizer is called.
+    const source = parseProfile(profile);
     const parsed = parseProfile({
-      ...profile,
-      loginName: normalizeProfileLoginName(profile.loginName),
-      displayName: normalizeProfileDisplayName(profile.displayName),
+      ...source,
+      loginName: normalizeProfileLoginName(source.loginName),
+      displayName: normalizeProfileDisplayName(source.displayName),
     });
+    validateProfileId(parsed.profileId);
 
     // A no-op conflict is an unambiguous duplicate result. An IPC or database
     // exception is allowed through as-is because it may represent an unknown

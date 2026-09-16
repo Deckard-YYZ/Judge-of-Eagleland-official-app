@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "最小桌面窗口能力与 SQLite 探针权限。",
+  "description": "主窗口所需的最小路径解析与 SQLite 存储权限。",
   "windows": ["main"],
-  "permissions": ["core:default", "sql:default", "sql:allow-execute"]
+  "permissions": [
+    "core:path:allow-resolve-directory",
+    "sql:allow-close",
+    "sql:allow-load",
+    "sql:allow-select",
+    "sql:allow-execute"
+  ]
 }

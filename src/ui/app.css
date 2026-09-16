@@ -247,6 +247,47 @@ h2,
   padding: clamp(1rem, 4vw, 3rem) 0;
 }
 
+.startup-screen {
+  display: grid;
+  min-height: 100vh;
+  padding: 1rem;
+  place-items: center;
+  color: var(--ui-ink);
+  background: var(--ui-canvas);
+}
+
+.startup-screen__panel {
+  width: min(100%, 34rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border-top: 0.35rem solid var(--ui-emphasis);
+  background: var(--ui-surface);
+}
+
+.startup-screen h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+.startup-screen__panel > p:not(.kicker) {
+  color: var(--ui-muted);
+  font-size: 0.86rem;
+  line-height: 1.75;
+}
+
+.startup-screen__detail {
+  padding: 0.75rem;
+  border: 1px solid var(--ui-line);
+  color: var(--ui-ink) !important;
+  overflow-wrap: anywhere;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem !important;
+}
+
+.startup-screen .button {
+  margin-top: 0.75rem;
+}
+
 .profile-intro,
 .profile-access {
   position: relative;

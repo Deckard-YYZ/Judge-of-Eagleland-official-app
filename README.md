@@ -22,6 +22,8 @@ $env:Path = "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\depend
 node --version
 ```
 
+注意：本机旧 `npm.cmd` 会优先使用其同目录的 Node 18。若检查仍报告旧版本，应使用与 Node 24 配套的 npm，或用 Node 24 的绝对路径直接执行项目的 `node_modules/vitest/vitest.mjs`、`node_modules/typescript/bin/tsc`。不要删除锁文件来绕过运行时版本问题。
+
 代码由 Prettier 统一格式；修改后运行 `npm run format`。Rust 代码使用 `cargo fmt --manifest-path src-tauri/Cargo.toml`。
 
 ## 模块边界
