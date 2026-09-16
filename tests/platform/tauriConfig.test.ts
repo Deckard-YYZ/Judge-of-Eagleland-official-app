@@ -45,7 +45,22 @@ describe("Tauri resource and permission configuration", () => {
       active: false,
       resources: { "../content/": "content/" },
     });
-    expect(Object.keys(config.bundle.resources)).toEqual(["../content/"]);
+    // Ship only the fixed inference assets. Tokenizer dictionaries, Python
+    // environments and download caches must never enter the desktop package.
+    expect(config.bundle.resources).toEqual({
+      "../content/": "content/",
+      "../artifacts/voice/model/decoder-epoch-13-avg-2-chunk-16-left-64.onnx":
+        "voice/decoder-epoch-13-avg-2-chunk-16-left-64.onnx",
+      "../artifacts/voice/model/encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx":
+        "voice/encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+      "../artifacts/voice/model/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx":
+        "voice/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+      "../artifacts/voice/model/tokens.txt": "voice/tokens.txt",
+      "../artifacts/voice/native/lib/sherpa-onnx-c-api.dll": "sherpa-onnx-c-api.dll",
+      "../artifacts/voice/native/lib/onnxruntime.dll": "onnxruntime.dll",
+      "../artifacts/voice/native/lib/onnxruntime_providers_shared.dll":
+        "onnxruntime_providers_shared.dll",
+    });
   });
 
   it("limits the asset protocol and allows its CSP origins", async () => {

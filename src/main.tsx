@@ -6,6 +6,7 @@ import "./ui/app.css";
 import { initializeDiagnostics } from "./platform/diagnostics";
 import { installGlobalErrorLogging } from "./platform/globalErrors";
 import { DiagnosticsShell } from "./app/DiagnosticsShell";
+import { VoiceInputShell } from "./app/VoiceInputShell";
 
 await initializeDiagnostics();
 installGlobalErrorLogging();
@@ -20,6 +21,8 @@ const themeLabEnabled = new URLSearchParams(window.location.search).get("themeLa
 createRoot(rootElement).render(
   <StrictMode>
     {/* Composition-root preview gate: Theme Lab never enters the production App tree. */}
-    <DiagnosticsShell>{themeLabEnabled ? <ThemeLabPage /> : <BootstrapApp />}</DiagnosticsShell>
+    <DiagnosticsShell>
+      <VoiceInputShell>{themeLabEnabled ? <ThemeLabPage /> : <BootstrapApp />}</VoiceInputShell>
+    </DiagnosticsShell>
   </StrictMode>,
 );

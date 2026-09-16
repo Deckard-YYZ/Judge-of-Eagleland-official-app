@@ -10,6 +10,10 @@ use std::{
 const FILE_LIMIT: u64 = 256 * 1024;
 const REPORT_LIMIT: usize = 4 * 1024 * 1024;
 const KEYS: &[&str] = &[
+    "modelId",
+    "sampleRate",
+    "sampleCount",
+    "inputMode",
     "coverage",
     "omittedRecent",
     "memoryWindow",

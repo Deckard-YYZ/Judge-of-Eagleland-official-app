@@ -1,0 +1,17 @@
+{
+  "sherpaVersion": "1.13.8",
+  "modelId": "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20",
+  "runtime": {
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-win-x64-shared-MT-Release-lib.tar.bz2",
+    "sha256": "b8eedf41bd6d3779218887b48367bb7a3ece5aaa7667f01f69ee823a12b0a9e7"
+  },
+  "model": {
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20.tar.bz2",
+    "sha256": "68447f4fbc67e70eee3a93961f36e81e98f47aef73ce7e7ca00885c6cd3616a6"
+  },
+  "tokenizer": {
+    "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/python/sherpa_onnx/utils.py",
+    "sha256": "8226d02f91fe42f7f048ae04353b5874f4917aff72f3c0e7dd9aaec528bdac41"
+  },
+  "modelLicense": "Unconfirmed: official model archive has no model-specific license; see https://github.com/k2-fsa/sherpa-onnx/issues/3802"
+}

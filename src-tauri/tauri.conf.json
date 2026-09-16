@@ -25,7 +25,9 @@
     "security": {
       "assetProtocol": {
         "enable": true,
-        "scope": ["$RESOURCE/content/**/*"]
+        "scope": [
+          "$RESOURCE/content/**/*"
+        ]
       },
       "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'"
     }
@@ -33,7 +35,14 @@
   "bundle": {
     "active": false,
     "resources": {
-      "../content/": "content/"
+      "../content/": "content/",
+      "../artifacts/voice/model/decoder-epoch-13-avg-2-chunk-16-left-64.onnx": "voice/decoder-epoch-13-avg-2-chunk-16-left-64.onnx",
+      "../artifacts/voice/model/encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx": "voice/encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+      "../artifacts/voice/model/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx": "voice/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+      "../artifacts/voice/model/tokens.txt": "voice/tokens.txt",
+      "../artifacts/voice/native/lib/sherpa-onnx-c-api.dll": "sherpa-onnx-c-api.dll",
+      "../artifacts/voice/native/lib/onnxruntime.dll": "onnxruntime.dll",
+      "../artifacts/voice/native/lib/onnxruntime_providers_shared.dll": "onnxruntime_providers_shared.dll"
     }
   }
 }

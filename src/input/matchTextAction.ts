@@ -2,7 +2,8 @@ import type { ActionId } from "../shared/action";
 import type { AppLocale } from "../shared/locale";
 import { actionLexicons, type ActionLexicon } from "./actionLexicons";
 
-export type RecognizedAction = { type: "known"; actionId: ActionId } | { type: "unknown" };
+import type { RecognizedAction } from "../shared/recognizedAction";
+export type { RecognizedAction } from "../shared/recognizedAction";
 
 /** Keep separators intact: normalization must never join separate words. */
 export function normalizeActionText(text: string, locale: AppLocale): string {

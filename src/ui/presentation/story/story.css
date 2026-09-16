@@ -493,3 +493,18 @@
     transform: none;
   }
 }
+.action-input-panel__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block: 0.8rem;
+}
+
+.action-input-panel__modes [aria-pressed="true"] {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.action-input-panel__voice {
+  line-height: 1.6;
+}

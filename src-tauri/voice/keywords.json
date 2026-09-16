@@ -1,0 +1,36 @@
+{
+  "modelId": "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20",
+  "tokenizerVersion": "1.13.8",
+  "aliasHash": "01436a180f2d5f563f7dd651902343ecf8b80708f6dc3a9b9d296ec93510ba70",
+  "rows": [
+    {
+      "locale": "zh-CN",
+      "actionId": "salute",
+      "alias": "敬礼"
+    },
+    {
+      "locale": "zh-CN",
+      "actionId": "salute",
+      "alias": "行礼"
+    },
+    {
+      "locale": "zh-CN",
+      "actionId": "wave",
+      "alias": "挥手"
+    },
+    {
+      "locale": "en-US",
+      "actionId": "salute",
+      "alias": "salute"
+    },
+    {
+      "locale": "en-US",
+      "actionId": "wave",
+      "alias": "wave"
+    }
+  ],
+  "keywords": {
+    "zh-CN": "j ìng l ǐ @salute\nx íng l ǐ @salute\nh uī sh ǒu @wave\n",
+    "en-US": "S AH0 L UW1 T @salute\nW EY1 V @wave\n"
+  }
+}

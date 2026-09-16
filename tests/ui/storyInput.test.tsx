@@ -17,9 +17,198 @@ import { InMemorySaveRepository } from "../../src/storage/inMemorySaveRepository
 import { SaveRepositoryError } from "../../src/storage/saveRepository";
 import { I18nProvider, useI18n } from "../../src/ui/i18n";
 import { StoryOverlay } from "../../src/ui/presentation/story/StoryOverlay";
+import { VoiceInputProvider } from "../../src/ui/input/VoiceInputProvider";
+import {
+  VoiceInputError,
+  type VoiceInputRequest,
+  type VoiceInputService,
+} from "../../src/shared/voiceInput";
+import type { RecognizedAction } from "../../src/shared/recognizedAction";
 
 const storyId = "inspection_after_case_001";
 const now = "2026-09-16T00:00:00.000Z";
+
+function voiceFixture() {
+  const attempts: {
+    request: VoiceInputRequest;
+    resolve(result: RecognizedAction): void;
+    reject(error: unknown): void;
+  }[] = [];
+  const service: VoiceInputService = {
+    available: true,
+    recognize: vi.fn(
+      (request) =>
+        new Promise<RecognizedAction>((resolve, reject) => {
+          attempts.push({ request, resolve, reject });
+          request.onPhase("recording");
+        }),
+    ),
+  };
+  return { service, attempts };
+}
+
+async function beginVoice() {
+  fireEvent.click(screen.getByRole("button", { name: "语音输入" }));
+  fireEvent.click(screen.getByRole("button", { name: "开始录音" }));
+}
+
+describe("voice action rounds with a real session", () => {
+  it("keeps a text fallback when no voice service is installed", async () => {
+    const { view } = await setup();
+    render(ui(view));
+    await firstInput();
+    fireEvent.click(screen.getByRole("button", { name: "语音输入" }));
+    expect(screen.getByText(/当前环境无法使用语音/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "开始录音" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "文字输入" }));
+    submit("敬礼");
+    await screen.findByText("巡视员检查了案件记录，准备离开。");
+  });
+
+  it("cancels a capturing round when another command makes the session busy", async () => {
+    const { view, saves } = await setup();
+    const { service, attempts } = voiceFixture();
+    render(ui(view, service));
+    await firstInput();
+    await beginVoice();
+    const gate = deferred();
+    const commit = saves.commit.bind(saves);
+    const commitSpy = vi.spyOn(saves, "commit").mockImplementation(async (input) => {
+      await gate.promise;
+      return commit(input);
+    });
+    let pending!: ReturnType<GameSessionView["dispatch"]>;
+    act(() => {
+      pending = view.dispatch({
+        type: "submitStoryInput",
+        storyId,
+        stepId: "salute_at_arrival",
+        actionId: "wave",
+      });
+    });
+    expect(attempts[0].request.signal.aborted).toBe(true);
+    await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
+    expect(commitSpy).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      gate.resolve();
+      await pending;
+    });
+    expect(commitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("finishes recording explicitly, keeps unknown local, and commits one wrong result", async () => {
+    const { view } = await setup();
+    const { service, attempts } = voiceFixture();
+    render(ui(view, service));
+    await firstInput();
+    const dispatch = vi.spyOn(view, "dispatch");
+    const revision = view.getSnapshot().envelope!.revision;
+    await beginVoice();
+    fireEvent.click(screen.getByRole("button", { name: "结束录音并识别" }));
+    expect(attempts[0].request.stopSignal.aborted).toBe(true);
+    expect(attempts[0].request.signal.aborted).toBe(false);
+    await act(async () => attempts[0].resolve({ type: "unknown" }));
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(view.getSnapshot().envelope!.revision).toBe(revision);
+    expect(screen.getByText(/未能确定一个动作/)).toBeTruthy();
+    const start = screen.getByRole("button", { name: "开始录音" });
+    act(() => {
+      fireEvent.click(start);
+      fireEvent.click(start);
+    });
+    expect(attempts).toHaveLength(2);
+    await act(async () => attempts[1].resolve({ type: "known", actionId: "wave" }));
+    await screen.findByText("权威 -2");
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(view.getSnapshot().envelope!.revision).toBe(revision + 1);
+  });
+
+  it.each(["cancel", "text", "locale", "unmount"] as const)(
+    "discards a late known result after %s",
+    async (cause) => {
+      const { view } = await setup();
+      const { service, attempts } = voiceFixture();
+      const mounted = render(ui(view, service));
+      await firstInput();
+      const dispatch = vi.spyOn(view, "dispatch");
+      await beginVoice();
+      if (cause === "cancel") fireEvent.click(screen.getByRole("button", { name: "取消本轮" }));
+      if (cause === "text") fireEvent.click(screen.getByRole("button", { name: "文字输入" }));
+      if (cause === "locale") fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
+      if (cause === "unmount") mounted.unmount();
+      expect(attempts[0].request.signal.aborted).toBe(true);
+      await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
+      expect(dispatch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("cannot send an old voice result into another session at the same step", async () => {
+    const previous = await setup();
+    const next = await setup();
+    const { service, attempts } = voiceFixture();
+    const mounted = render(ui(previous.view, service));
+    await firstInput();
+    const oldDispatch = vi.spyOn(previous.view, "dispatch");
+    const newDispatch = vi.spyOn(next.view, "dispatch");
+    await beginVoice();
+    mounted.rerender(ui(next.view, service));
+    await firstInput();
+    expect(attempts[0].request.signal.aborted).toBe(true);
+    await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
+    expect(oldDispatch).not.toHaveBeenCalled();
+    expect(newDispatch).not.toHaveBeenCalled();
+  });
+
+  it("discards an old service result when the provider changes", async () => {
+    const { view } = await setup();
+    const previous = voiceFixture();
+    const next = voiceFixture();
+    const mounted = render(ui(view, previous.service));
+    await firstInput();
+    const dispatch = vi.spyOn(view, "dispatch");
+    await beginVoice();
+    mounted.rerender(ui(view, next.service));
+    expect(previous.attempts[0].request.signal.aborted).toBe(true);
+    await act(async () => previous.attempts[0].resolve({ type: "known", actionId: "wave" }));
+    expect(dispatch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "开始录音" }));
+    expect(next.attempts).toHaveLength(1);
+  });
+
+  it("shows technical errors without penalties and permits a new recording", async () => {
+    const { view } = await setup();
+    const { service, attempts } = voiceFixture();
+    render(ui(view, service));
+    await firstInput();
+    const revision = view.getSnapshot().envelope!.revision;
+    await beginVoice();
+    await act(async () => attempts[0].reject(new VoiceInputError("PERMISSION_DENIED")));
+    expect(screen.getByRole("alert").textContent).toContain("麦克风权限被拒绝");
+    expect(view.getSnapshot().envelope!.revision).toBe(revision);
+    fireEvent.click(screen.getByRole("button", { name: "开始录音" }));
+    await act(async () => attempts[1].resolve({ type: "known", actionId: "salute" }));
+    await screen.findByText("巡视员检查了案件记录，准备离开。");
+  });
+
+  it("preserves a voice command already saving when the language changes", async () => {
+    const { view, saves } = await setup();
+    const { service, attempts } = voiceFixture();
+    render(ui(view, service));
+    await firstInput();
+    const gate = deferred();
+    const commit = saves.commit.bind(saves);
+    vi.spyOn(saves, "commit").mockImplementation(async (input) => {
+      await gate.promise;
+      return commit(input);
+    });
+    await beginVoice();
+    await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
+    fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
+    await act(async () => gate.resolve());
+    await screen.findByText("Authority -2");
+    expect(screen.getByText(/That action does not meet/)).toBeTruthy();
+  });
+});
 afterEach(() => {
   configureDiagnostics(() => undefined);
   cleanup();
@@ -75,10 +264,12 @@ function Presentation({ view }: { view: GameSessionView }) {
   );
 }
 
-function ui(view: GameSessionView) {
+function ui(view: GameSessionView, service?: VoiceInputService) {
   return (
     <I18nProvider initialLocale="zh-CN" storage={null}>
-      <Presentation view={view} />
+      <VoiceInputProvider service={service}>
+        <Presentation view={view} />
+      </VoiceInputProvider>
     </I18nProvider>
   );
 }

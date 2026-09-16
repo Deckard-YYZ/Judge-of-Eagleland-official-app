@@ -5,6 +5,7 @@ pub mod diagnostic_reports;
 #[cfg(all(windows, debug_assertions))]
 pub mod diagnostic_watchdog;
 pub mod diagnostics;
+pub mod voice_input;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -45,6 +46,7 @@ pub fn run() {
     let result = tauri::Builder::default()
         .manage(diagnostics.clone())
         .manage(health.clone())
+        .manage(std::sync::Arc::new(voice_input::VoiceState::default()))
         .setup(|app| {
             use tauri::Manager;
             diagnostics::install(app);
@@ -64,7 +66,9 @@ pub fn run() {
             diagnostic_reports::diagnostics_snapshot,
             diagnostic_reports::diagnostics_set_detailed,
             diagnostic_reports::diagnostics_export,
-            diagnostic_health::diagnostics_heartbeat
+            diagnostic_health::diagnostics_heartbeat,
+            voice_input::voice_infer,
+            voice_input::voice_cancel
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "本地案件模拟游戏桌面容器"
 authors = ["Eagle Judge"]
 edition = "2021"
-rust-version = "1.77.2"
+# Locked dependencies (time/serde_with/ICU) require >=1.88; verified here on 1.94.
+rust-version = "1.88"
 
 [lib]
 name = "eagle_judge_lib"
@@ -21,6 +22,8 @@ tauri-plugin-sql = { version = "=2.4.1", features = ["sqlite"] }
 serde_json = "1"
 
 [target.'cfg(windows)'.dependencies]
+sha2 = "=0.10.9"
+sherpa-onnx = { version = "=1.13.8", default-features = false, features = ["shared"] }
 webview2-com = "=0.38.2"
 windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_Diagnostics_Debug", "Win32_System_Kernel", "Win32_System_Com", "Win32_Storage_FileSystem", "Win32_System_Memory"] }
 

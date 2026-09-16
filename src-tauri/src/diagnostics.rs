@@ -264,6 +264,10 @@ impl Diagnostics {
             if let Some(data) = object.get_mut("data").and_then(Value::as_object_mut) {
                 data.retain(|key, _| {
                     [
+                        "modelId",
+                        "sampleRate",
+                        "sampleCount",
+                        "inputMode",
                         "frontendBuildId",
                         "issues",
                         "feedback",

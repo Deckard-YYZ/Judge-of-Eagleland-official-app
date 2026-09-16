@@ -7,8 +7,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "npm run voice:check && vite",
+    "build": "tsc --noEmit && npm run voice:check && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -18,12 +18,14 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.{mjs,js,ts}\" \"tests/**/*.{ts,tsx}\" \"*.{ts,tsx,json,html,css}\" --ignore-unknown",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.{mjs,js,ts}\" \"tests/**/*.{ts,tsx}\" \"*.{ts,tsx,json,html,css}\" --ignore-unknown",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "check": "npm run typecheck && npm run test && npm run check:boundaries && npm run format:check",
+    "check": "npm run typecheck && npm run voice:check && npm run test && npm run check:boundaries && npm run format:check",
     "validate:content": "tsx scripts/validate-content.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "diagnostics:archive": "node scripts/archive-diagnostics.mjs"
+    "diagnostics:archive": "node scripts/archive-diagnostics.mjs",
+    "voice:prepare": "tsx scripts/voice-keywords.ts --raw && python -X utf8 scripts/prepare-voice.py && tsx scripts/voice-keywords.ts --check",
+    "voice:check": "tsx scripts/voice-keywords.ts --check"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

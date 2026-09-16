@@ -1,0 +1,3 @@
+[env]
+# Prepared by npm run voice:prepare; avoid unverified downloads during Cargo builds.
+SHERPA_ONNX_LIB_DIR = { value = "artifacts/voice/native/lib", relative = true }

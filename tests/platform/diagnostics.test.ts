@@ -72,11 +72,26 @@ describe("diagnostic failure isolation", () => {
     transport.record({
       source: "storage",
       event: "save.failed",
-      data: { revision: 4, text: "private", save: { private: true } },
+      data: {
+        revision: 4,
+        sampleRate: 16000,
+        sampleCount: 1600,
+        modelId: "test-kws",
+        inputMode: "voice",
+        samples: [0.1, 0.2],
+        text: "private",
+        save: { private: true },
+      },
       error,
     });
     await Promise.resolve();
-    expect(records[0].data).toEqual({ revision: 4 });
+    expect(records[0].data).toEqual({
+      revision: 4,
+      sampleRate: 16000,
+      sampleCount: 1600,
+      modelId: "test-kws",
+      inputMode: "voice",
+    });
     expect(JSON.stringify(records)).not.toContain("Alice");
     expect(JSON.stringify(records)).not.toContain("secret");
     expect(JSON.stringify(records)).toContain("SQLITE_BUSY");

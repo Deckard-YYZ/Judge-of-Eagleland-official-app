@@ -113,7 +113,7 @@ node --version
 
 中文输入「敬礼／行礼」或「挥手」，英文输入 `salute` 或 `wave`。匹配使用当前选择语言；
 空白、不匹配和多个不同动作均为 unknown，不写存档。采用字面包含规则，不理解否定语义。
-目前交付文字入口；语音、摄像头留待后续接入。
+文字入口可用；Windows x64 已接入 sherpa-onnx 中英语音试验入口，静态检查通过、真实设备效果待人工验收。摄像头留待后续接入。
 
 Save schema v3 增加 `storyCheckpoint`：正确后从下一步恢复，错误后从当前输入恢复。
 普通内容的继续不写存档；最后一步是输入时，通过与完成 Story 原子保存。
@@ -150,3 +150,16 @@ Vite source map 只写入 `artifacts/build-support/<frontendBuildId>`，不会�
 exe、PDB、manifest、maps 及 SHA-256 清单归档到 `artifacts/diagnostic-archives`（均 gitignored）。
 重新单独运行 npm build 会使旧 exe 与 dist 不匹配，此时归档拒绝，须重新构建 native。
 详细接入约束与后续 Error Report 扩展见 [实施文档](Desktop_Log_Error_Report_Integration.md)。
+
+## 语音试验：sherpa-onnx KWS
+
+首次在开发机运行 `npm run voice:prepare` 准备固定版本运行库、模型与同源关键词（需要 Python 3 / venv）。
+随后运行 `npm run tauri:dev`，或 `npm run tauri:build -- --debug --no-bundle` 生成桌面开发包。
+运行时离线推理，不需要 Python；不要只复制 exe，旁边的 DLL、voice/ 和 content/ 也需要保留。
+
+在 1.1.0 内容包的 actionInput 页面切到“语音输入”→“开始录音”→说词→“结束录音并识别”。
+中文支持“敬礼/行礼/挥手”，英文支持 `salute/wave`；最长 8 秒，整轮有多个不同动作则 unknown，
+权限/设备/模型故障不处罚，文字始终可用。浏览器预览不提供原生语音。
+
+真实模型静音烟测：`src-tauri/target/debug/eagle-judge.exe --voice-model-smoke`，不使用麦克风或 UI，不能当作准确率验收。
+人工测试清单、参数、资源来源、分发许可待确认项与扩词流程见 [语音实施与验收文档](Desktop_Voice_Sherpa_Implementation.md)。
