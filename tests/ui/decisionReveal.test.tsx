@@ -13,6 +13,7 @@ const CONTENT = createGameContentView(MINIMAL_GAME_CONTENT, MINIMAL_ZH_CN);
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
   Reflect.deleteProperty(window, "IntersectionObserver");
 });
 
@@ -67,6 +68,7 @@ describe("DecisionPanel viewport reveal", () => {
 
     expect(screen.getByRole("button", { name: /现有材料不足/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /确认违规/ })).toBeTruthy();
+    expect(screen.getByText("powered by GPT")).toBeTruthy();
 
     rerender(
       <DecisionPanel
@@ -82,8 +84,19 @@ describe("DecisionPanel viewport reveal", () => {
     expect(disconnect).toHaveBeenCalled();
   });
 
-  it("falls back to the timed wait when IntersectionObserver is unavailable", () => {
+  it("checks viewport geometry before the timed wait when IntersectionObserver is unavailable", () => {
     vi.useFakeTimers();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 10,
+      bottom: 110,
+      left: 10,
+      right: 310,
+      width: 300,
+      height: 100,
+      x: 10,
+      y: 10,
+      toJSON: () => ({}),
+    });
     const node = CONTENT.cases.case_001.nodes.assessment;
     render(
       <DecisionPanel

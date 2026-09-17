@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useDocumentTranslator } from "../ui/i18n/useDocumentTranslator";
 import { getDiagnostics } from "../shared/diagnostics";
 
 /** A rendering failure never means an in-flight save was rolled back. */
@@ -21,25 +22,30 @@ export class DiagnosticErrorBoundary extends Component<
   }
   render() {
     if (!this.state.failed) return this.props.children;
-    return (
-      <main className="startup-screen">
-        <section className="startup-screen__panel" role="alert">
-          <h1>界面发生错误 / Interface error</h1>
-          <p>请重新加载并读取已保存进度。正在提交的操作需要重新读档核对，不会自动重试。</p>
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={() => window.location.reload()}
-          >
-            重新加载 / Reload
-          </button>
-          {this.props.onDiagnostics ? (
-            <button type="button" className="button" onClick={this.props.onDiagnostics}>
-              诊断信息 / Diagnostics
-            </button>
-          ) : null}
-        </section>
-      </main>
-    );
+    return <DiagnosticFallback onDiagnostics={this.props.onDiagnostics} />;
   }
+}
+
+function DiagnosticFallback({ onDiagnostics }: { onDiagnostics?: () => void }) {
+  const t = useDocumentTranslator();
+  return (
+    <main className="startup-screen">
+      <section className="startup-screen__panel" role="alert">
+        <h1>{t("diagnostics.interfaceError")}</h1>
+        <p>{t("diagnostics.reloadNotice")}</p>
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={() => window.location.reload()}
+        >
+          {t("diagnostics.reload")}
+        </button>
+        {onDiagnostics ? (
+          <button type="button" className="button" onClick={onDiagnostics}>
+            {t("diagnostics.title")}
+          </button>
+        ) : null}
+      </section>
+    </main>
+  );
 }

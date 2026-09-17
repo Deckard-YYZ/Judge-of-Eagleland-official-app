@@ -1,0 +1,50 @@
+.interface-settings {
+  position: relative;
+}
+.interface-settings__trigger {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+.interface-settings__trigger:hover,
+.interface-settings__trigger[aria-expanded="true"] {
+  background: var(--ui-quiet);
+}
+.interface-settings__trigger svg {
+  width: 1.3rem;
+}
+.interface-settings__panel {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  width: 17rem;
+  max-width: calc(100vw - 2rem);
+  padding: 1.2rem;
+  border: 1px solid var(--ui-ink);
+  background: var(--ui-surface);
+  z-index: 20;
+  animation: profile-stage-enter var(--motion-standard) var(--motion-ease);
+}
+.interface-settings__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.interface-settings__heading button {
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  font-size: 1.4rem;
+}
+.interface-settings__panel p {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.7rem;
+  color: var(--ui-muted);
+}

@@ -1,6 +1,86 @@
 import type { MessageCatalog } from "../translator";
 
 export const EN_US_MESSAGES = {
+  "decision.startFailed": "Could not prepare the decision options. Please retry.",
+  "decision.retryStart": "Retry preparing options",
+  "decision.poweredBy": "powered by EncryptAI",
+
+  "diagnostics.interfaceError": "Interface error",
+  "diagnostics.reloadNotice":
+    "Reload and read the saved progress. Verify any in-flight operation against the saved state; it will not be retried automatically.",
+  "diagnostics.reload": "Reload",
+
+  "diagnostics.open": "Diagnostics",
+  "diagnostics.title": "Diagnostics",
+  "diagnostics.close": "Close",
+  "diagnostics.unavailable": "Diagnostics unavailable",
+  "diagnostics.notice":
+    "A heartbeat indicates an observer response, not a successful save. Reports export a local summary and are not uploaded. Review before sharing; error text redaction is best effort.",
+  "diagnostics.detailed": "Detailed logging for 5 minutes",
+  "diagnostics.detailedEnabled":
+    "Detailed logging enabled for 5 minutes, then the default level resumes. Dumps remain disabled.",
+  "diagnostics.levelFailed":
+    "Native log level update failed or is unconfirmed; the frontend setting was applied.",
+  "diagnostics.default": "Default level",
+  "diagnostics.defaultRestored": "Default level restored",
+  "diagnostics.export": "Export report",
+  "diagnostics.exported": "Exported: {path}",
+  "diagnostics.exportFailed":
+    "Export failed or timed out. A report may still be writing after a timeout; game state is unchanged.",
+  "diagnostics.filter": "Filter events or operations",
+  "diagnostics.level": "Level",
+  "diagnostics.all": "All",
+  "diagnostics.debug": "Debug",
+  "diagnostics.info": "Info",
+  "diagnostics.warn": "Warning",
+  "diagnostics.error": "Error",
+  "diagnostics.records": "{count} records (bounded window; may be incomplete)",
+
+  "settings.title": "Display settings",
+  "settings.close": "Close settings",
+  "study.settings": "Display settings",
+  "study.close": "Close settings",
+  "study.operator": "Adjudicator · 07",
+  "study.sample": "UI specimen",
+  "study.directions": "Design direction",
+  "study.judicial": "A · Judicial office",
+  "study.terminal": "B · Control terminal",
+  "study.previewNotice": "Layout and interaction preview; no archive writes",
+  "study.return": "Return to sign in",
+  "study.station": "Adjudication desk",
+  "study.restraint": "Restraint",
+  "study.authority": "Authority",
+  "study.caseTitle": "The Night Archive Incident",
+  "study.recordNumber": "RECORD / 001",
+  "study.subject": "Review of an unauthorized archive removal and its return",
+  "study.personName": "Clerk Lin",
+  "study.personDetail": "An archive clerk with three years of service.",
+  "study.summary": "An archive removed without authorization was returned the following morning.",
+  "study.bodyOne":
+    "The clerk admits taking the archive home to complete an entry, but denies copying or passing on its contents.",
+  "study.bodyTwo":
+    "A time entry in the duty log has been altered. The available material does not establish who made the change.",
+  "study.registry": "Office of Judicial Records · Local archive",
+  "study.pageNumber": "RECORD 001 / PAGE 01",
+  "study.showEmpty": "View empty state",
+  "study.showCase": "Open sample record",
+  "study.decisionTitle": "Determine the initial disposition",
+  "study.decisionDetail":
+    "Choose a finding based on the available record. Hover or focus an option to read its note.",
+  "study.choiceReview": "Request further review",
+  "study.choiceConfirm": "Find a procedural violation",
+  "study.choiceDismiss": "Decline a finding for insufficient evidence",
+  "study.hintReview":
+    "Obtain the complete duty log to verify the handover and the altered time entry.",
+  "study.hintConfirm": "Base the procedural finding on the unauthorized removal of the archive.",
+  "study.hintDismiss":
+    "The current record does not establish copying or transfer; do not extend the finding.",
+  "study.confirm": "Confirm sample choice",
+  "study.recorded": "Sample choice confirmed",
+  "study.confirmedNotice":
+    "This is a UI demonstration. The choice remains on this page and is not written to a game archive.",
+  "study.reset": "Reset sample",
+
   "story.inputLabel": "Enter an action",
   "story.inputHint":
     "Use an action word or short phrase in the selected language. Input with several different actions cannot be confirmed.",

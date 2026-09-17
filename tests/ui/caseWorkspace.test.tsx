@@ -65,7 +65,8 @@ describe("CaseWorkspace document handoff", () => {
     expect(screen.queryByRole("heading", { name: "第 002 号：调阅权限申请" })).toBeNull();
     act(() => vi.advanceTimersByTime(1_500));
     expect(screen.getByRole("heading", { name: "第 002 号：调阅权限申请" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "开始案件" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "开始案件" })).toBeNull();
+    expect(screen.getByText("滚动至此以准备裁定选项")).toBeTruthy();
 
     rerender(
       <CaseWorkspace

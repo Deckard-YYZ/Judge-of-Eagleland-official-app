@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
 import { translateSessionError, useI18n } from "../i18n";
+import { PendingCaseReview } from "./PendingCaseReview";
 import { DecisionPanel } from "./DecisionPanel";
 import { ResolutionPanel } from "./ResolutionPanel";
 import { CaseBody, CaseSummary, CharacterSection } from "./TextBlocks";
@@ -17,8 +18,11 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
   const { t } = useI18n();
   const titleId = useId();
   const panelHeadingRef = useRef<HTMLHeadingElement>(null);
-  const startingRef = useRef(false);
-  const [starting, setStarting] = useState(false);
+  const [autoStart, setAutoStart] = useState<{
+    caseId: string;
+    startedAt: number;
+    nodeId: string | null;
+  } | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
 
   const selectedCaseId = snapshot.selectedCaseId;
@@ -43,8 +47,6 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
 
   useEffect(() => {
     setCommandError(null);
-    startingRef.current = false;
-    setStarting(false);
   }, [selectedCaseId]);
 
   useEffect(() => {
@@ -58,28 +60,21 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
     }
   }, [panelKey, snapshot.status]);
 
-  const startCase = async (): Promise<void> => {
-    if (!selectedCaseId || !caseCommandsAllowed || startingRef.current) {
-      return;
-    }
+  const onThinkingStarted = useCallback(
+    (startedAt: number) => {
+      if (selectedCaseId) setAutoStart({ caseId: selectedCaseId, startedAt, nodeId: null });
+    },
+    [selectedCaseId],
+  );
 
-    // Capture the selected ID before dispatch. Selection is UI state and must not
-    // be re-read after an async boundary to construct a different command.
-    const caseId = selectedCaseId;
-    startingRef.current = true;
-    setStarting(true);
-    setCommandError(null);
-
-    try {
-      const result = await dispatch({ type: "startCase", caseId });
-      if (!result.ok) {
-        setCommandError(translateSessionError(t, result.code));
-      }
-    } finally {
-      startingRef.current = false;
-      setStarting(false);
-    }
-  };
+  useEffect(() => {
+    if (progress?.status !== "active" || !selectedCaseId) return;
+    setAutoStart((current) =>
+      current?.caseId === selectedCaseId && current.nodeId === null
+        ? { ...current, nodeId: progress.currentNodeId }
+        : current,
+    );
+  }, [selectedCaseId, progress]);
 
   if (snapshot.status === "idle") {
     return <CaseReaderState title={t("case.idleTitle")} detail={t("case.idleDetail")} />;
@@ -173,21 +168,13 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
 
         <div className="case-reader__workflow">
           {progress.status === "pending" ? (
-            <section className="case-start" aria-labelledby={`${titleId}-start`}>
-              <p className="kicker">{t("case.startKicker")}</p>
-              <h2 id={`${titleId}-start`} ref={panelHeadingRef} tabIndex={-1}>
-                {t("case.startTitle")}
-              </h2>
-              <p>{t("case.startDetail")}</p>
-              <button
-                className="button button--primary case-start__button"
-                type="button"
-                disabled={interactionLocked || starting}
-                onClick={() => void startCase()}
-              >
-                {t(starting || snapshot.status === "saving" ? "case.archiving" : "case.start")}
-              </button>
-            </section>
+            <PendingCaseReview
+              key={selectedCaseId}
+              caseId={selectedCaseId}
+              dispatch={dispatch}
+              disabled={interactionLocked}
+              onThinkingStarted={onThinkingStarted}
+            />
           ) : progress.status === "active" ? (
             currentNode ? (
               <DecisionPanel
@@ -198,6 +185,12 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
                 dispatch={dispatch}
                 disabled={interactionLocked}
                 revealDelayMs={decisionRevealDelayMs}
+                thinkingStartedAt={
+                  autoStart?.caseId === selectedCaseId &&
+                  (autoStart.nodeId === null || autoStart.nodeId === progress.currentNodeId)
+                    ? autoStart.startedAt
+                    : undefined
+                }
                 headingRef={panelHeadingRef}
                 onCommandError={setCommandError}
               />

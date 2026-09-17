@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import type { GameSessionViewSnapshot } from "../../application/gameSessionView";
 import type { LocalProfileSummary } from "../../application/profileEntry";
 import type { CaseId } from "../../content/schema";
-import { LocaleSwitch } from "../LocaleSwitch";
-import { ThemeSwitch } from "../ThemeSwitch";
+import { InterfaceSettings } from "../InterfaceSettings";
 import { translateSessionError, useI18n, type MessageKey } from "../i18n";
 import type { UiThemeMode } from "../theme";
 import { Sidebar } from "./Sidebar";
@@ -72,8 +71,6 @@ export function AppShell({
         </a>
 
         <div className="app-shell__account">
-          <LocaleSwitch />
-          <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
           <span className={`app-shell__status app-shell__status--${snapshot.status}`}>
             {t(sessionStatusKeys[snapshot.status])}
           </span>
@@ -88,6 +85,7 @@ export function AppShell({
           >
             {t("shell.exit")}
           </button>
+          <InterfaceSettings themeMode={themeMode} onThemeChange={onThemeChange} />
         </div>
       </header>
 

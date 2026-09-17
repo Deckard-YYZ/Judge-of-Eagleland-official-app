@@ -41,7 +41,12 @@ function SidebarSection({ id, title, count, expanded, onToggle, children }: Side
             {formatNumber(count)}
           </span>
           <span className="case-sidebar__chevron" aria-hidden="true">
-            {expanded ? "−" : "+"}
+            <span className="case-sidebar__chevron-glyph case-sidebar__chevron-glyph--expand">
+              +
+            </span>
+            <span className="case-sidebar__chevron-glyph case-sidebar__chevron-glyph--collapse">
+              −
+            </span>
           </span>
         </button>
       </h2>
@@ -86,7 +91,11 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
         </button>
       </div>
 
-      <div className="case-sidebar__panels" id={`${baseId}-panels`} hidden={!sidebarExpanded}>
+      <div
+        className={`case-sidebar__panels${sidebarExpanded ? " case-sidebar__panels--expanded" : ""}`}
+        id={`${baseId}-panels`}
+        hidden={!sidebarExpanded}
+      >
         <SidebarSection
           id={`${baseId}-attributes`}
           title={t("sidebar.attributes")}
@@ -101,6 +110,13 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
                   <dt>{attribute.label}</dt>
                   <dd>
                     <strong>{formatNumber(attribute.value)}</strong>
+                    <span className="case-sidebar__scale" aria-hidden="true">
+                      <i
+                        style={{
+                          left: `${Math.max(0, Math.min(100, ((attribute.value - attribute.min) / (attribute.max - attribute.min || 1)) * 100))}%`,
+                        }}
+                      />
+                    </span>
                     <span>
                       {t("sidebar.attributeRange", {
                         min: formatNumber(attribute.min),

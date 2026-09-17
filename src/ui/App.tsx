@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSessionView } from "../application/gameSessionView";
 import type { LocalProfileSummary, ProfileEntry } from "../application/profileEntry";
+import { InterfaceSettings } from "./InterfaceSettings";
 import { CaseWorkspace } from "./case";
 import { I18nProvider, useI18n } from "./i18n";
 import { FeedbackLayer } from "./presentation/feedback";
 import { StoryOverlay } from "./presentation/story";
 import { ProfilePage } from "./profile/ProfilePage";
 import { AppShell } from "./shell";
+import { WorkspaceStudy } from "./workspace-study/WorkspaceStudy";
 import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme";
 
 export interface AppProps {
@@ -85,6 +87,7 @@ function AuthenticatedWorkspace({
       <FeedbackLayer sessionView={session} />
       {!recovering && (
         <StoryOverlay
+          settings={<InterfaceSettings themeMode={themeMode} onThemeChange={onThemeChange} />}
           sessionView={session}
           snapshot={snapshot}
           endingOpen={endingOpen}
@@ -152,6 +155,17 @@ function LocalizedApp({
     void session.setLocale(locale);
     setActive({ profile, session });
   };
+
+  const previewDirection = new URLSearchParams(window.location.search).get("uiPreview");
+  if (previewDirection === "judicial" || previewDirection === "terminal") {
+    return (
+      <WorkspaceStudy
+        initialDirection={previewDirection}
+        themeMode={themeMode}
+        onThemeChange={setThemeMode}
+      />
+    );
+  }
 
   if (!active) {
     return (

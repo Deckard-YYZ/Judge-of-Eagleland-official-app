@@ -176,19 +176,18 @@ describe("I18nProvider", () => {
           id="localized-annotation"
           annotation={{ body: [] }}
           anchorElement={anchor}
-          pinned
           onDismiss={onDismiss}
         />
       </I18nProvider>,
     );
 
-    expect(document.getElementById("localized-annotation")?.getAttribute("role")).toBe("dialog");
+    expect(document.getElementById("localized-annotation")?.getAttribute("role")).toBe("tooltip");
     expect(screen.getByText("选项附注")).toBeTruthy();
-    expect(screen.getByLabelText("关闭选项附注")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "关闭选项附注" })).toBeNull();
 
     act(() => screen.getByRole("button", { name: "切换为英语" }).click());
     expect(screen.getByText("Option note")).toBeTruthy();
-    expect(screen.getByLabelText("Close option note")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close option note" })).toBeNull();
     expect(onDismiss).not.toHaveBeenCalled();
 
     anchor.remove();

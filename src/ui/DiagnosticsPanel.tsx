@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDocumentTranslator } from "./i18n/useDocumentTranslator";
 import type { DiagnosticViewerService } from "../shared/diagnosticViewer";
 
 /** Read-only observer: no save reads, command retries, or recovery side effects. */
@@ -9,10 +10,20 @@ export function DiagnosticsPanel({
   service: DiagnosticViewerService;
   onClose(): void;
 }) {
+  const t = useDocumentTranslator();
   const [snapshot, setSnapshot] = useState<Record<string, unknown>>({});
   const [filter, setFilter] = useState("");
   const [level, setLevel] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<
+    | "diagnostics.unavailable"
+    | "diagnostics.detailedEnabled"
+    | "diagnostics.levelFailed"
+    | "diagnostics.defaultRestored"
+    | "diagnostics.exported"
+    | "diagnostics.exportFailed"
+    | ""
+  >("");
+  const [exportPath, setExportPath] = useState("");
   const [exporting, setExporting] = useState(false);
   useEffect(() => {
     let live = true;
@@ -24,7 +35,7 @@ export function DiagnosticsPanel({
         const value = await service.snapshot();
         if (live) setSnapshot(value);
       } catch {
-        if (live) setNotice("诊断状态不可用 / Diagnostics unavailable");
+        if (live) setNotice("diagnostics.unavailable");
       } finally {
         pending = false;
       }
@@ -56,40 +67,38 @@ export function DiagnosticsPanel({
       className="diagnostics-panel"
       role="dialog"
       aria-modal="true"
-      aria-label="诊断信息 / Diagnostics"
+      aria-label={t("diagnostics.title")}
     >
-      <h2>诊断信息 / Diagnostics</h2>
+      <h2>{t("diagnostics.title")}</h2>
       <button type="button" autoFocus onClick={onClose}>
-        关闭 / Close
+        {t("diagnostics.close")}
       </button>
-      <p>
-        心跳仅代表观测点响应，不代表保存成功。报告只导出本地摘要，不会上传。分享前请检查；异常文字脱敏是尽力处理。
-      </p>
+      <p>{t("diagnostics.notice")}</p>
       <button
         type="button"
         onClick={async () => {
           try {
             await service.setDetailed(true);
-            setNotice("详细日志已开启 5 分钟；到期自动恢复默认级别，不启用 dump。");
+            setNotice("diagnostics.detailedEnabled");
           } catch {
-            setNotice("原生日志级别更新失败或结果未知；前端设置已应用。");
+            setNotice("diagnostics.levelFailed");
           }
         }}
       >
-        详细日志 5 分钟 / Detailed
+        {t("diagnostics.detailed")}
       </button>
       <button
         type="button"
         onClick={async () => {
           try {
             await service.setDetailed(false);
-            setNotice("已恢复默认级别 / Default level restored");
+            setNotice("diagnostics.defaultRestored");
           } catch {
-            setNotice("原生日志级别更新失败或结果未知；前端设置已应用。");
+            setNotice("diagnostics.levelFailed");
           }
         }}
       >
-        默认级别 / Default
+        {t("diagnostics.default")}
       </button>
       <button
         type="button"
@@ -97,34 +106,41 @@ export function DiagnosticsPanel({
         onClick={async () => {
           setExporting(true);
           try {
-            setNotice(`导出成功 / Exported: ${await service.exportReport()}`);
+            setExportPath(await service.exportReport());
+            setNotice("diagnostics.exported");
           } catch {
-            setNotice(
-              "导出未确认 / Export failed or timed out. 超时可能仍在写报告；游戏状态未改变。",
-            );
+            setNotice("diagnostics.exportFailed");
           } finally {
             setExporting(false);
           }
         }}
       >
-        导出报告 / Export report
+        {t("diagnostics.export")}
       </button>
-      <p role="status">{notice}</p>
+      <p role="status">
+        {notice === "diagnostics.exported"
+          ? t(notice, { path: exportPath })
+          : notice
+            ? t(notice)
+            : ""}
+      </p>
       <pre>{JSON.stringify(summary, null, 2)}</pre>
       <label>
-        筛选事件或 operation / Filter
+        {t("diagnostics.filter")}
         <input value={filter} onChange={(event) => setFilter(event.target.value)} />
       </label>
       <label>
-        级别 / Level
+        {t("diagnostics.level")}
         <select value={level} onChange={(event) => setLevel(event.target.value)}>
-          <option value="">全部 / All</option>
-          {["debug", "info", "warn", "error"].map((value) => (
-            <option key={value}>{value}</option>
+          <option value="">{t("diagnostics.all")}</option>
+          {(["debug", "info", "warn", "error"] as const).map((value) => (
+            <option key={value} value={value}>
+              {t(`diagnostics.${value}`)}
+            </option>
           ))}
         </select>
       </label>
-      <p>{records.length} 条记录 / records（有界窗口，可能缺失）</p>
+      <p>{t("diagnostics.records", { count: records.length })}</p>
       <pre>{records.map((record) => JSON.stringify(record)).join("\n")}</pre>
     </section>
   );

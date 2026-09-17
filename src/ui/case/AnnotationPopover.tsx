@@ -8,10 +8,7 @@ export interface AnnotationPopoverProps {
   id: string;
   annotation: Readonly<ChoiceAnnotation>;
   anchorElement: HTMLElement;
-  pinned: boolean;
   onDismiss(): void;
-  onMouseEnter?(): void;
-  onMouseLeave?(): void;
 }
 
 interface PopoverPosition {
@@ -37,23 +34,13 @@ export function AnnotationPopover({
   id,
   annotation,
   anchorElement,
-  pinned,
   onDismiss,
-  onMouseEnter,
-  onMouseLeave,
 }: AnnotationPopoverProps) {
   const { t } = useI18n();
   const popoverRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
   const titleId = `${id}-title`;
   const bodyId = `${id}-body`;
-
-  useLayoutEffect(() => {
-    if (pinned) {
-      closeButtonRef.current?.focus({ preventScroll: true });
-    }
-  }, [pinned]);
 
   useLayoutEffect(() => {
     const popover = popoverRef.current;
@@ -83,16 +70,52 @@ export function AnnotationPopover({
       const viewportHeight = visualViewport?.height ?? ownerWindow.innerHeight;
       const viewportRight = viewportLeft + viewportWidth;
       const viewportBottom = viewportTop + viewportHeight;
-      const maxWidth = Math.max(0, Math.min(MAX_POPOVER_WIDTH, viewportWidth - 24));
-      const maxHeight = Math.max(0, viewportHeight - 24);
+      const groupRect =
+        anchorElement.closest(".decision-panel__choices")?.getBoundingClientRect() ?? anchorRect;
+      const maxWidth = Math.max(
+        0,
+        Math.min(MAX_POPOVER_WIDTH, viewportWidth - 2 * VIEWPORT_PADDING),
+      );
+      const viewportMaxHeight = Math.max(0, viewportHeight - 2 * VIEWPORT_PADDING);
       const measuredWidth = Math.min(popoverRect.width, maxWidth);
-      const measuredHeight = Math.min(popoverRect.height, maxHeight);
-      const roomBelow = viewportBottom - anchorRect.bottom;
-      const roomAbove = anchorRect.top - viewportTop;
+      const naturalHeight = Math.min(popover.scrollHeight + 4, viewportMaxHeight);
+      const roomAbove = Math.max(0, groupRect.top - viewportTop - VIEWPORT_PADDING - ANCHOR_GAP);
+      const roomBelow = Math.max(
+        0,
+        viewportBottom - groupRect.bottom - VIEWPORT_PADDING - ANCHOR_GAP,
+      );
+      const roomRight = viewportRight - groupRect.right - VIEWPORT_PADDING - ANCHOR_GAP;
+      const roomLeft = groupRect.left - viewportLeft - VIEWPORT_PADDING - ANCHOR_GAP;
+      // Prefer outside the entire option group, so moving between rows never
+      // travels through a floating note. A narrow viewport uses the larger gap.
+      const side =
+        roomAbove >= naturalHeight
+          ? "above"
+          : roomRight >= measuredWidth
+            ? "right"
+            : roomLeft >= measuredWidth
+              ? "left"
+              : roomBelow >= naturalHeight
+                ? "below"
+                : roomAbove >= roomBelow
+                  ? "above"
+                  : "below";
+      const availableHeight =
+        side === "above" ? roomAbove : side === "below" ? roomBelow : viewportMaxHeight;
+      const maxHeight = Math.min(viewportMaxHeight, Math.max(64, availableHeight));
+      const measuredHeight = Math.min(naturalHeight, maxHeight);
       const preferredTop =
-        roomBelow >= measuredHeight + ANCHOR_GAP || roomBelow >= roomAbove
-          ? anchorRect.bottom + ANCHOR_GAP
-          : anchorRect.top - measuredHeight - ANCHOR_GAP;
+        side === "above"
+          ? groupRect.top - measuredHeight - ANCHOR_GAP
+          : side === "below"
+            ? groupRect.bottom + ANCHOR_GAP
+            : anchorRect.top;
+      const preferredLeft =
+        side === "right"
+          ? groupRect.right + ANCHOR_GAP
+          : side === "left"
+            ? groupRect.left - measuredWidth - ANCHOR_GAP
+            : anchorRect.left;
       const maximumLeft = Math.max(
         viewportLeft + VIEWPORT_PADDING,
         viewportRight - VIEWPORT_PADDING - measuredWidth,
@@ -102,7 +125,7 @@ export function AnnotationPopover({
         viewportBottom - VIEWPORT_PADDING - measuredHeight,
       );
       const nextPosition = {
-        left: Math.min(Math.max(anchorRect.left, viewportLeft + VIEWPORT_PADDING), maximumLeft),
+        left: Math.min(Math.max(preferredLeft, viewportLeft + VIEWPORT_PADDING), maximumLeft),
         top: Math.min(Math.max(preferredTop, viewportTop + VIEWPORT_PADDING), maximumTop),
         maxWidth,
         maxHeight,
@@ -133,12 +156,13 @@ export function AnnotationPopover({
       }
 
       event.preventDefault();
-      anchorElement.focus({ preventScroll: true });
       onDismiss();
     };
 
     const resizeObserver = new ownerWindow.ResizeObserver(schedulePosition);
     resizeObserver.observe(anchorElement);
+    const groupElement = anchorElement.closest(".decision-panel__choices");
+    if (groupElement) resizeObserver.observe(groupElement);
     resizeObserver.observe(popover);
     resizeObserver.observe(ownerDocument.documentElement);
 
@@ -199,39 +223,17 @@ export function AnnotationPopover({
       }
     : { visibility: "hidden" };
 
-  const restoreAnchorFocus = (): void => {
-    if (anchorElement.isConnected) {
-      anchorElement.focus({ preventScroll: true });
-    }
-    onDismiss();
-  };
-
   return createPortal(
     <div
       ref={popoverRef}
       id={id}
-      className={`annotation-popover${pinned ? " annotation-popover--pinned" : ""}`}
-      role={pinned ? "dialog" : "tooltip"}
-      aria-modal={pinned ? false : undefined}
+      className="annotation-popover"
+      role="tooltip"
       aria-labelledby={titleId}
-      aria-describedby={pinned ? bodyId : undefined}
       style={style}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       <header className="annotation-popover__header">
         <h3 id={titleId}>{annotation.title ?? t("annotation.fallbackTitle")}</h3>
-        {pinned ? (
-          <button
-            ref={closeButtonRef}
-            className="annotation-popover__close"
-            type="button"
-            aria-label={t("annotation.close")}
-            onClick={restoreAnchorFocus}
-          >
-            ×
-          </button>
-        ) : null}
       </header>
       <div id={bodyId} className="annotation-popover__body">
         {annotation.body.map((block, index) => (

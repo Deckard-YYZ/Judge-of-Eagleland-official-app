@@ -14,6 +14,7 @@ export interface StoryOverlayProps {
   sessionView: GameSessionView;
   snapshot: GameSessionViewSnapshot;
   endingOpen: boolean;
+  settings?: React.ReactNode;
   onCloseEnding(): void;
 }
 
@@ -42,11 +43,12 @@ const focusableSelector = [
 
 interface ModalFrameProps {
   identity: string;
+  settings?: React.ReactNode;
   onDismiss?: () => void;
   children: React.ReactNode;
 }
 
-function ModalFrame({ identity, onDismiss, children }: ModalFrameProps) {
+function ModalFrame({ identity, onDismiss, children, settings }: ModalFrameProps) {
   const { t } = useI18n();
   const frameRef = useRef<HTMLDivElement>(null);
 
@@ -110,9 +112,7 @@ function ModalFrame({ identity, onDismiss, children }: ModalFrameProps) {
       aria-label={t("story.dialogAria")}
     >
       <div className="story-overlay__frame" ref={frameRef} tabIndex={-1} onKeyDown={trapFocus}>
-        <div className="story-overlay__toolbar">
-          <LocaleSwitch />
-        </div>
+        <div className="story-overlay__toolbar">{settings ?? <LocaleSwitch />}</div>
         {children}
       </div>
     </div>
@@ -128,6 +128,7 @@ export function StoryOverlay({
   snapshot,
   endingOpen,
   onCloseEnding,
+  settings,
 }: StoryOverlayProps) {
   const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
@@ -217,7 +218,7 @@ export function StoryOverlay({
     const identity = `${sessionKey}:${saveIdentity}:story:${currentStoryId}`;
 
     return (
-      <ModalFrame identity={identity}>
+      <ModalFrame settings={settings} identity={identity}>
         {story ? (
           <StoryPlayer
             key={identity}
@@ -274,7 +275,7 @@ export function StoryOverlay({
     const identity = `${sessionKey}:ending:${state.phase.endingId}`;
 
     return (
-      <ModalFrame identity={identity} onDismiss={onCloseEnding}>
+      <ModalFrame settings={settings} identity={identity} onDismiss={onCloseEnding}>
         <EndingView
           endingId={state.phase.endingId}
           title={ending?.title ?? t("story.unnamedEnding")}
@@ -286,7 +287,10 @@ export function StoryOverlay({
 
   if (state.phase.type === "ending") {
     return (
-      <ModalFrame identity={`${sessionKey}:ending-pending:${state.phase.endingId}`}>
+      <ModalFrame
+        settings={settings}
+        identity={`${sessionKey}:ending-pending:${state.phase.endingId}`}
+      >
         <section
           className="story-player story-player--error"
           aria-labelledby="ending-pending-title"

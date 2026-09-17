@@ -20,6 +20,9 @@
   --ui-overlay: rgba(8, 9, 10, 0.84);
   --ui-shadow: none;
   --ui-content-max: 80rem;
+  --ui-reading-width: 56rem;
+  --ui-font-document: "Noto Serif SC", "Songti SC", SimSun, Georgia, serif;
+  --ui-rule: color-mix(in srgb, var(--ui-ink) 22%, transparent);
   --motion-fast: 120ms;
   --motion-standard: 180ms;
   --motion-emphasized: 220ms;
@@ -241,10 +244,17 @@ h2,
 }
 
 .profile-page {
-  width: min(calc(100% - 2rem), var(--ui-content-max));
+  display: flex;
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
-  padding: clamp(1rem, 4vw, 3rem) 0;
+  min-height: 100dvh;
+  flex-direction: column;
+  color: var(--ui-ink);
+  background: var(--ui-canvas);
+}
+
+.profile-page__preferences {
+  padding: 1.25rem clamp(1rem, 3vw, 2.5rem);
 }
 
 .startup-screen {
@@ -288,29 +298,6 @@ h2,
   margin-top: 0.75rem;
 }
 
-.profile-intro,
-.profile-access {
-  position: relative;
-  overflow: hidden;
-}
-
-.profile-intro {
-  display: flex;
-  min-height: 30rem;
-  padding: clamp(1.5rem, 5vw, 4rem);
-  flex-direction: column;
-  justify-content: space-between;
-  color: var(--ui-inverse);
-  background: var(--ui-emphasis);
-}
-
-.profile-intro__topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-}
-
 .ui-preferences {
   display: flex;
   min-width: 0;
@@ -320,69 +307,43 @@ h2,
   gap: 0.5rem;
 }
 
-.profile-intro :is(.theme-switch, .locale-switch),
-.app-shell__bar :is(.theme-switch, .locale-switch) {
-  border-color: color-mix(in srgb, var(--ui-inverse) 34%, transparent);
-  color: var(--ui-inverse);
-  background: transparent;
-}
-
-.profile-intro :is(.theme-switch, .locale-switch) button,
-.app-shell__bar :is(.theme-switch, .locale-switch) button {
-  color: color-mix(in srgb, var(--ui-inverse) 62%, transparent);
-}
-
-.profile-intro :is(.theme-switch, .locale-switch) button + button,
-.app-shell__bar :is(.theme-switch, .locale-switch) button + button {
-  border-left-color: color-mix(in srgb, var(--ui-inverse) 34%, transparent);
-}
-
-.profile-intro :is(.theme-switch, .locale-switch) button[aria-pressed="true"],
-.app-shell__bar :is(.theme-switch, .locale-switch) button[aria-pressed="true"] {
-  color: var(--ui-emphasis);
-  background: var(--ui-inverse);
-}
-
-.profile-intro__copy {
-  max-width: 34rem;
-  margin: clamp(5rem, 18vh, 10rem) 0 3rem;
-}
-
-.profile-intro__copy .kicker {
-  color: color-mix(in srgb, var(--ui-inverse) 62%, transparent);
-}
-
-.profile-intro h1 {
-  max-width: 11ch;
-  margin-bottom: 1.5rem;
-  color: var(--ui-inverse);
-  font-size: clamp(2.7rem, 7vw, 5.5rem);
-  font-weight: 650;
-  letter-spacing: -0.055em;
-  line-height: 0.98;
-}
-
-.profile-intro__copy > p:last-child {
-  max-width: 31rem;
-  margin-bottom: 0;
-  color: color-mix(in srgb, var(--ui-inverse) 72%, transparent);
-  font-size: 0.94rem;
-  line-height: 1.85;
-}
-
-.profile-intro__folio {
-  margin: 0;
-  color: color-mix(in srgb, var(--ui-inverse) 48%, transparent);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.61rem;
-  letter-spacing: 0.14em;
-}
-
 .profile-access {
-  padding: clamp(2rem, 6vw, 4.5rem);
+  display: flex;
+  flex: 1;
+  padding: 2rem 1.25rem 5.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-brand {
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.profile-brand__seal {
+  font-family: var(--ui-font-document);
+  display: grid;
+  width: clamp(5.5rem, 10vw, 7rem);
+  aspect-ratio: 1;
+  margin: 0 auto 1.5rem;
+  place-items: center;
+  border: 2px solid var(--ui-emphasis);
   color: var(--ui-ink);
-  background: var(--ui-surface);
-  border-top: 0.35rem solid var(--ui-emphasis);
+  font-size: clamp(2.8rem, 6vw, 3.75rem);
+  font-weight: 650;
+}
+
+.profile-brand .kicker {
+  margin-bottom: 0.65rem;
+}
+
+.profile-brand h1 {
+  font-family: var(--ui-font-document);
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
 }
 
 .profile-access__content {
@@ -391,14 +352,15 @@ h2,
 }
 
 .profile-access__header {
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--ui-line);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ui-line);
+  text-align: center;
 }
 
 .profile-access h2 {
   margin-bottom: 0.9rem;
   color: var(--ui-ink);
-  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-size: 1rem;
   font-weight: 650;
   letter-spacing: -0.035em;
 }
@@ -458,6 +420,10 @@ h2,
 
 .profile-form--register > fieldset > input[type="text"] {
   display: block;
+}
+
+.profile-form--login legend {
+  text-align: center;
 }
 
 .profile-picker {
@@ -664,6 +630,7 @@ h2,
 }
 
 .profile-status {
+  text-align: center;
   min-height: 3rem;
   margin-top: 1.8rem;
   padding-top: 1.25rem;
@@ -696,54 +663,13 @@ h2,
   }
 }
 
-@media (min-width: 60rem) {
-  .profile-page {
-    display: grid;
-    min-height: 100vh;
-    padding: 3rem 0;
-    grid-template-columns: minmax(0, 1.1fr) minmax(25rem, 0.9fr);
-    align-items: stretch;
-  }
-
-  .profile-intro,
-  .profile-access {
-    min-height: calc(100vh - 6rem);
-  }
-}
-
-@media (max-width: 59.99rem) {
-  .profile-intro,
-  .profile-access {
-    min-height: 32rem;
-  }
-}
-
 @media (max-width: 40rem) {
-  .profile-page {
-    width: min(calc(100% - 1rem), var(--ui-content-max));
-    padding: 0.5rem 0;
+  .profile-page__preferences {
+    justify-content: flex-end;
   }
 
-  .profile-intro,
   .profile-access {
-    padding: 1.5rem;
-  }
-
-  .profile-intro__topbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .ui-preferences {
-    justify-content: flex-start;
-  }
-
-  .profile-intro :is(.theme-switch, .locale-switch) {
-    align-self: flex-start;
-  }
-
-  .profile-intro h1 {
-    font-size: clamp(2.35rem, 13vw, 3.6rem);
+    padding: 1.5rem 1rem 3rem;
   }
 
   .avatar-editor {
@@ -774,9 +700,10 @@ h2,
   z-index: 10000;
   overflow: auto;
   padding: 24px;
-  background: #171c23;
-  color: #f1f1f1;
-  border: 2px solid #aaa;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  border: 1px solid var(--ui-rule);
+  border-top: 3px solid var(--ui-ink);
 }
 .diagnostics-panel pre {
   white-space: pre-wrap;
@@ -787,4 +714,26 @@ h2,
 .diagnostics-panel button,
 .diagnostics-panel label {
   margin: 8px;
+}
+
+.diagnostics-launcher {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--ui-line);
+  color: var(--ui-muted);
+  background: var(--ui-canvas);
+  font-size: 0.6rem;
+}
+.diagnostics-launcher:hover {
+  color: var(--ui-ink);
+}
+.diagnostics-panel h2 {
+  font-family: var(--ui-font-document);
+}
+.diagnostics-panel button,
+.diagnostics-panel input,
+.diagnostics-panel select {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ui-line);
+  color: var(--ui-ink);
+  background: var(--ui-surface);
 }

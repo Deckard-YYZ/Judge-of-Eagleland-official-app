@@ -2,8 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } fro
 import type { GameSessionView } from "../../application/gameSessionView";
 import type { LocalProfileSummary, ProfileEntry } from "../../application/profileEntry";
 import { normalizeProfileDisplayName } from "../../application/profileEntry";
-import { LocaleSwitch } from "../LocaleSwitch";
-import { ThemeSwitch } from "../ThemeSwitch";
+import { InterfaceSettings } from "../InterfaceSettings";
 import { translateProfileError, useI18n, type MessageKey } from "../i18n";
 import type { UiThemeMode } from "../theme";
 import {
@@ -117,38 +116,20 @@ export function ProfilePage({
 
   return (
     <main className="profile-page">
-      <section className="profile-intro" aria-labelledby="product-title">
-        <div className="profile-intro__topbar">
-          <div className="wordmark">
-            <span className="wordmark__seal" aria-hidden="true">
-              {t("brand.seal")}
-            </span>
-            <span>
-              <strong>{t("brand.name")}</strong>
-              <small>{t("brand.office")}</small>
-            </span>
-          </div>
-          <div className="ui-preferences">
-            <LocaleSwitch />
-            <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
-          </div>
-        </div>
-
-        <div className="profile-intro__copy">
-          <p className="kicker">{t("profile.introKicker")}</p>
-          <h1 id="product-title">{t("profile.introTitle")}</h1>
-          <p>{t("profile.introDescription")}</p>
-        </div>
-
-        <p className="profile-intro__folio" aria-hidden="true">
-          {t("profile.folio")}
-        </p>
-      </section>
+      <div className="profile-page__preferences ui-preferences">
+        <InterfaceSettings themeMode={themeMode} onThemeChange={onThemeChange} />
+      </div>
 
       <section className="profile-access" aria-labelledby="access-title">
         <div className="profile-access__content">
+          <div className="profile-brand">
+            <span className="profile-brand__seal" aria-hidden="true">
+              {t("brand.seal")}
+            </span>
+            <p className="kicker">{t("brand.name")}</p>
+            <h1>{t("brand.office")}</h1>
+          </div>
           <div className="profile-access__header">
-            <p className="kicker">{t("profile.accessKicker")}</p>
             <h2 id="access-title">
               {t(mode === "login" ? "profile.entryTitle" : "profile.createTitle")}
             </h2>

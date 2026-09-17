@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDemoProfileEntry } from "../../src/app/demoProfiles";
@@ -10,6 +10,30 @@ import { App } from "../../src/ui/App";
 let nextObjectUrl = 1;
 const createObjectURL = vi.fn(() => `blob:profile-avatar-${nextObjectUrl++}`);
 const revokeObjectURL = vi.fn();
+
+function settingsButton(name: string) {
+  const visible = screen.queryByRole("button", { name });
+  if (visible) return visible;
+  fireEvent.click(screen.getByRole("button", { name: /^(界面设置|Display settings)$/ }));
+  return screen.getByRole("button", { name });
+}
+
+const reviewIntersections = new Map<Element, IntersectionObserverCallback>();
+async function enterReviewViewport() {
+  await screen.findByText("滚动至此以准备裁定选项");
+  act(() => {
+    for (const [target, callback] of reviewIntersections) {
+      if (target.closest(".pending-case-review")) {
+        callback(
+          [{ target, isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      }
+    }
+  });
+  await waitFor(() => expect(document.querySelector(".decision-options-revealed")).not.toBeNull());
+  expect(screen.queryByRole("button", { name: "开始案件" })).toBeNull();
+}
 
 async function completeInspection(user: ReturnType<typeof userEvent.setup>) {
   const dialog = await screen.findByRole("dialog", { name: "重要剧情" });
@@ -24,6 +48,37 @@ async function completeInspection(user: ReturnType<typeof userEvent.setup>) {
 }
 
 beforeEach(() => {
+  reviewIntersections.clear();
+  Object.defineProperty(window, "IntersectionObserver", {
+    configurable: true,
+    value: class {
+      constructor(private callback: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        reviewIntersections.set(target, this.callback);
+        if (!target.closest(".pending-case-review")) {
+          queueMicrotask(() => {
+            if (reviewIntersections.get(target) === this.callback) {
+              this.callback(
+                [
+                  {
+                    target,
+                    isIntersecting: true,
+                    intersectionRatio: 1,
+                  } as IntersectionObserverEntry,
+                ],
+                this as unknown as IntersectionObserver,
+              );
+            }
+          });
+        }
+      }
+      disconnect() {
+        for (const [target, callback] of reviewIntersections) {
+          if (callback === this.callback) reviewIntersections.delete(target);
+        }
+      }
+    },
+  });
   nextObjectUrl = 1;
   createObjectURL.mockClear();
   revokeObjectURL.mockClear();
@@ -46,6 +101,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  Reflect.deleteProperty(window, "IntersectionObserver");
+  reviewIntersections.clear();
   window.localStorage.clear();
   document.documentElement.lang = "";
   delete document.documentElement.dataset.theme;
@@ -64,14 +121,14 @@ describe("App mock workspace flow", () => {
     await user.click(
       await screen.findByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }),
     );
-    await user.click(await screen.findByRole("button", { name: "开始案件" }));
+    await enterReviewViewport();
     const chineseChoice = await screen.findByRole("button", { name: /现有材料不足/ });
     fireEvent.focus(chineseChoice);
     let annotation = await screen.findByRole("tooltip");
     expect(within(annotation).getByText("材料限制")).toBeTruthy();
 
     // click without pointerdown keeps the open portal mounted while locale projection changes.
-    fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
+    fireEvent.click(settingsButton("切换为英语"));
     expect(await screen.findByRole("button", { name: /evidence does not support/ })).toBeTruthy();
     annotation = await screen.findByRole("tooltip");
     expect(within(annotation).getByText("Limits of the record")).toBeTruthy();
@@ -81,14 +138,14 @@ describe("App mock workspace flow", () => {
     await user.click(screen.getByRole("button", { name: /evidence does not support/ }));
     let dialog = await screen.findByRole("dialog", { name: "Important story" });
     expect(within(dialog).getByRole("heading", { name: "Archive Procedure Revised" })).toBeTruthy();
-    await user.click(within(dialog).getByRole("button", { name: "Switch to Simplified Chinese" }));
+    await user.click(settingsButton("Switch to Simplified Chinese"));
     dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     expect(within(dialog).getByRole("heading", { name: "档案室流程调整" })).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: "完成剧情" }));
     await completeInspection(user);
 
     expect(await screen.findByText("保留程序违规记录，本次不追加处分。")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "切换为英语" }));
+    await user.click(settingsButton("切换为英语"));
     expect(
       await screen.findByText("Record the procedural breach without additional discipline."),
     ).toBeTruthy();
@@ -105,7 +162,7 @@ describe("App mock workspace flow", () => {
     expect(screen.getByRole("heading", { name: "进入本地档案" })).toBeTruthy();
     expect(screen.queryByText("LOCAL PROFILE")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "切换为英语" }));
+    await user.click(settingsButton("切换为英语"));
     expect(document.documentElement.lang).toBe("en-US");
     expect(window.localStorage.getItem("judge-of-eagleland.ui-locale")).toBe("en-US");
     expect(screen.getByRole("heading", { name: "Enter local archive" })).toBeTruthy();
@@ -114,14 +171,14 @@ describe("App mock workspace flow", () => {
     await user.click(screen.getByRole("button", { name: "Select profile 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("heading", { name: "Awaiting case selection" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Switch to Simplified Chinese" })).toBeTruthy();
+    expect(settingsButton("Switch to Simplified Chinese")).toBeTruthy();
     expect(screen.queryByText("等待调取案卷")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Switch to Simplified Chinese" }));
+    await user.click(settingsButton("Switch to Simplified Chinese"));
     expect(document.documentElement.lang).toBe("zh-CN");
     expect(screen.getByRole("heading", { name: "等待调取案卷" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "切换为英语" }));
+    await user.click(settingsButton("切换为英语"));
     firstRender.unmount();
     render(<App profileEntry={createDemoProfileEntry()} />);
     expect(document.documentElement.lang).toBe("en-US");
@@ -135,13 +192,13 @@ describe("App mock workspace flow", () => {
     );
 
     expect(document.documentElement.dataset.theme).toBe("light");
-    await user.click(screen.getByRole("button", { name: "深色" }));
+    await user.click(settingsButton("深色"));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem("judge-of-eagleland.ui-theme")).toBe("dark");
 
     await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "登录" }));
-    expect(screen.getByRole("button", { name: "深色" }).getAttribute("aria-pressed")).toBe("true");
+    expect(settingsButton("深色").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("moves from Profile through both cases and returns from the ending to read-only history", async () => {
@@ -158,7 +215,7 @@ describe("App mock workspace flow", () => {
       await screen.findByRole("heading", { level: 1, name: "第 001 号：夜间档案室事件" }),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "开始案件" }));
+    await enterReviewViewport();
     expect(
       await screen.findByRole("heading", { level: 2, name: "你如何评价现有材料？" }),
     ).toBeTruthy();
@@ -179,18 +236,18 @@ describe("App mock workspace flow", () => {
       name: "第 002 号：调阅权限申请，待开始",
     });
     await user.click(secondCase);
-    await user.click(await screen.findByRole("button", { name: "开始案件" }));
+    await enterReviewViewport();
     await user.click(screen.getByRole("button", { name: /要求补充复核后再调阅/ }));
     await completeInspection(user);
 
     dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     expect(within(dialog).getByRole("heading", { name: "平衡的裁定" })).toBeTruthy();
     expect(within(dialog).getByText("终局影像暂时无法播放，但案件在克制中告一段落。")).toBeTruthy();
-    await user.click(within(dialog).getByRole("button", { name: "切换为英语" }));
+    await user.click(settingsButton("切换为英语"));
     dialog = await screen.findByRole("dialog", { name: "Important story" });
     expect(within(dialog).getByRole("heading", { name: "A Balanced Judgment" })).toBeTruthy();
     expect(within(dialog).getByText(/ending video is unavailable/)).toBeTruthy();
-    await user.click(within(dialog).getByRole("button", { name: "Switch to Simplified Chinese" }));
+    await user.click(settingsButton("Switch to Simplified Chinese"));
     dialog = await screen.findByRole("dialog", { name: "重要剧情" });
     await user.click(within(dialog).getByRole("button", { name: "继续" }));
     await user.click(within(dialog).getByRole("button", { name: "完成剧情" }));
@@ -266,7 +323,7 @@ it("makes recovery reachable after a story commit failure and permits retry afte
   await user.click(
     await screen.findByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }),
   );
-  await user.click(await screen.findByRole("button", { name: "开始案件" }));
+  await enterReviewViewport();
   await user.click(await screen.findByRole("button", { name: /现有材料不足/ }));
   const dialog = await screen.findByRole("dialog", { name: "重要剧情" });
   const commit = vi
