@@ -5,6 +5,7 @@ pub mod diagnostic_reports;
 #[cfg(all(windows, debug_assertions))]
 pub mod diagnostic_watchdog;
 pub mod diagnostics;
+mod voice_audio_stats;
 pub mod voice_input;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

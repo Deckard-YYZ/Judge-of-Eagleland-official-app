@@ -283,3 +283,46 @@ host minidump 需使用对应归档中的 PDB 分析，前端堆栈需使用同 
 - 主代理最终 Rust 12 tests / fmt 通过，包含历史日志、坏行、真实 junction 拒绝、满 4 run 的全局截断及 health 标记保留。
   最新 debug exe 独立监视 fixture 再次通过：`C:\Users\admin\AppData\Local\Temp\eagle-diagnostic-fixture-1789554343613`。
   没有操作真实用户存档，没有继续此前中止的 UI 自动化，没有创建 git commit。
+
+
+### 2026-09-18：语音 unknown 诊断细化
+
+默认 info 日志按同一 operationId 查看 `voice.capture_settings` → `voice.pcm_captured` →
+`voice.pcm_resampled` → `voice.pcm_received` → `voice.kws_config` / `voice.model_load` → `voice.decode_summary`。
+三个 PCM 摘要分别对应重采样前、16k 重采样后、原生收到的数据，可比较 count/duration/RMS/peak/20ms maxFrameRms。
+RMS dBFS 下限为 -120，`dbfsFloored` 标记触底；nearZeroRatio 使用绝对幅度 ≤0.0001，clippedRatio 使用 ≥0.999。
+这些是幅度统计，不是 VAD、语音占比或质量结论；短词后长静音会拉低整段 RMS，应同时看 maxFrameRms。
+
+采集设置仅记录实际采样率、声道数、echoCancellation/noiseSuppression/autoGainControl 及 AudioContext 采样率；
+不包含设备 ID/名称、原始 PCM、录音或转写。原生记录既有 KWS 参数、词条数、冷/热加载耗时、decode 次数/耗时、
+命中次数及去重 ActionIds；SDK 没有提供置信度，因此不生成评分。
+unknown 原因为 empty_audio（前端未收到帧）、too_short、no_keyword、multiple_actions 或 unrecognized_label。
+本次仅增强观测，没有调整识别阈值、规则或保存语义；尚不能据此确认用户实录持续 unknown 的根因。
+
+主审：新增字段已覆盖前端 transport、原生 writer 和报告导出投影测试；Rust 19 tests 通过。
+类型、词表、边界、格式检查及最新 debug 构建、双语静音 smoke 通过。
+全量前端 428/429 通过；既有 decisionReveal 文案断言仍期待 GPT，而 HEAD 已显示 EncryptAI，未在本轮改动。
+人工实录、设备差异与阈值校准仍为后续 TODO；本轮未进行麦克风测试。详细交付记录见 Desktop_Voice_Sherpa_Implementation.md。
+
+### 独立 WAV 测试工具
+
+`tools/voice-cli` 提供独立进程的离线诊断，构建产物为 `artifacts/voice-cli`。
+每个输入 WAV 输出 JSONL，记录 PCM 统计、有效 KWS 参数、命中与耗时；stdout 可重定向保存。
+不接入游戏日志目录、不访问存档、不默认录音或上传。输入文件路径会出现在本地结果中，分享前需检查。
+后续可将用户显式导出的单次录音交给该工具重放，再按同一 PCM 对照参数；麦克风导出仍是 TODO。
+
+后续进展：独立工具已增加用户主动启动的 `voice-record.cmd` 录音入口，WAV 与同名 UTF-8 JSONL
+保存在其 recordings 目录，unknown 仍保留。此功能与游戏默认不保存音频的诊断策略分离；
+游戏 WebView 原始采集导出仍待做。录音文件由用户本地管理，不自动上传、覆盖或清理。
+
+独立工具 --segment 对照新增 segmentation 字段，含能量参数、全部活动/短脉冲范围、每段WAV与结果、汇总result。
+原始result保留；分段错误另报error并exit1。双击voice-record-segment.cmd可录音、保存原音及处理副本，并对照结果。
+这不是正式游戏自动分段功能；报告携带本地路径且可能包含自定义关键词，按本地实验结果管理。
+
+### 独立 ASR 报告（2026-09-18）
+
+artifacts/asr-cli 工具采用 SenseVoice，stdout逐文件输出JSONL；录音入口保存原始WAV及同名报告。
+记录 backend/modelId、实际配置/aliasHash、模型加载及推理耗时、PCM统计、rawText、normalizedText、动作result。
+unknown原因包括too_short/silence/empty_transcript/no_alias/multiple_actions；文件故障另有error并退出1。
+转写有文字不等于动作匹配成功。报告会包含用户实际说话内容和本地路径，仅留在本机，不自动并入游戏Error Report。
+后续接入需区分ASR输出和动作映射、保留版本与对应录音关系；用户主动导出与脱敏策略仍待设计。

@@ -13,6 +13,35 @@ const KEYS: &[&str] = &[
     "modelId",
     "sampleRate",
     "sampleCount",
+    "maxFrameRms",
+    "frameDurationMs",
+    "rms",
+    "peak",
+    "rmsDbfs",
+    "dbfsFloor",
+    "dbfsFloored",
+    "nearZeroRatio",
+    "nearZeroThreshold",
+    "clippedRatio",
+    "clippingThreshold",
+    "invalidSampleCount",
+    "audioContextSampleRate",
+    "channelCount",
+    "echoCancellation",
+    "noiseSuppression",
+    "autoGainControl",
+    "maxActivePaths",
+    "trailingBlanks",
+    "keywordsScore",
+    "keywordsThreshold",
+    "keywordCount",
+    "loadMode",
+    "loadDurationMs",
+    "decodeCount",
+    "decodeDurationMs",
+    "hitCount",
+    "actionIds",
+    "unknownReason",
     "inputMode",
     "coverage",
     "omittedRecent",
@@ -440,6 +469,37 @@ pub fn build_info_mode() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn voice_statistics_survive_writer_and_report_without_audio() {
+        let root = std::env::temp_dir().join(format!("eagle-voice-report-{}", timestamp_ms()));
+        let diagnostics = Diagnostics::new(root.join("logs"));
+        let mut stats = crate::voice_audio_stats::summarize(&[0.0, 0.5, -0.5], 16000);
+        stats["samples"] = json!([0.123456]);
+        stats["deviceId"] = json!("private-device");
+        diagnostics.record(
+            json!({"source":"voice","event":"voice.pcm_received","level":"info","data":stats}),
+            "frontend",
+        );
+        diagnostics.record(json!({"source":"voice","event":"voice.decode_summary","data":{"decodeCount":10,"decodeDurationMs":20,"hitCount":2,"actionIds":["salute","wave"],"unknownReason":"multiple_actions"}}),"frontend");
+        diagnostics.record(json!({"source":"voice","event":"voice.kws_config","data":{"modelId":"test","locale":"zh-CN","maxActivePaths":4,"trailingBlanks":1,"keywordsScore":1.0,"keywordsThreshold":0.25,"keywordCount":3,"loadMode":"cold","loadDurationMs":15,"audioContextSampleRate":48000,"channelCount":1,"echoCancellation":true,"noiseSuppression":true,"autoGainControl":false}}),"frontend");
+        let path = export(&diagnostics, json!({})).unwrap();
+        let text = fs::read_to_string(path).unwrap();
+        assert!(!text.contains("private-device"));
+        assert!(!text.contains("0.123456"));
+        let report: Value = serde_json::from_str(&text).unwrap();
+        let records = report["runs"][0]["files"]["runtime.jsonl"]["records"]
+            .as_array()
+            .unwrap();
+        assert_eq!(
+            records[0]["data"],
+            crate::voice_audio_stats::summarize(&[0.0, 0.5, -0.5], 16000)
+        );
+        assert_eq!(records[1]["data"]["actionIds"], json!(["salute", "wave"]));
+        assert_eq!(records[1]["data"]["unknownReason"], "multiple_actions");
+        assert_eq!(records[2]["data"]["keywordsThreshold"], 0.25);
+        assert_eq!(records[2]["data"]["autoGainControl"], false);
+        assert_eq!(records[2]["data"]["loadDurationMs"], 15);
+    }
     #[test]
     fn exports_closed_run_and_rejects_sensitive_fields_and_bad_records() {
         let root = std::env::temp_dir().join(format!("eagle-report-test-{}", timestamp_ms()));

@@ -7,6 +7,7 @@ import {
   type VoiceInputService,
 } from "../shared/voiceInput";
 import { getDiagnostics } from "../shared/diagnostics";
+import { recordVoiceAudio } from "./voiceAudioStats";
 
 export const VOICE_PERMISSION_TIMEOUT_MS = 15000;
 const SETUP_TIMEOUT_MS = 10000;
@@ -90,6 +91,25 @@ async function capture(
     if (request.stopSignal.aborted)
       return { samples: new Float32Array(), sampleRate: VOICE_SAMPLE_RATE };
     context = new AudioContext();
+    // Explicit settings only; device identifiers and labels never enter diagnostics.
+    try {
+      const settings = stream.getAudioTracks()[0]?.getSettings?.();
+      getDiagnostics().record({
+        source: "voiceInput",
+        event: "voice.capture_settings",
+        ...request.context,
+        data: {
+          audioContextSampleRate: context.sampleRate,
+          sampleRate: settings?.sampleRate,
+          channelCount: settings?.channelCount,
+          echoCancellation: settings?.echoCancellation,
+          noiseSuppression: settings?.noiseSuppression,
+          autoGainControl: settings?.autoGainControl,
+        },
+      });
+    } catch {
+      /* Optional diagnostic settings must not interrupt capture. */
+    }
     await bounded(
       context.audioWorklet.addModule(
         new URL("./voiceCapture.worklet.js?no-inline", import.meta.url).href,
@@ -263,10 +283,21 @@ export function createVoiceInputService(backend: VoiceInferenceBackend): VoiceIn
       try {
         const raw = await capture(request, trackPending);
         if (request.signal.aborted) throw new VoiceInputError("CANCELLED");
-        if (!raw.samples.length) return { type: "unknown" };
+        // Scan before transferring the buffer to the resampling worker detaches it.
+        recordVoiceAudio("voice.pcm_captured", raw.samples, raw.sampleRate, request.context);
+        if (!raw.samples.length) {
+          getDiagnostics().record({
+            source: "voiceInput",
+            event: "voice.capture_unknown",
+            ...request.context,
+            data: { unknownReason: "empty_audio" },
+          });
+          return { type: "unknown" };
+        }
         request.onPhase("recognizing");
         const samples = await resample(raw.samples, raw.sampleRate, request.signal);
         if (request.signal.aborted) throw new VoiceInputError("CANCELLED");
+        recordVoiceAudio("voice.pcm_resampled", samples, VOICE_SAMPLE_RATE, request.context);
         getDiagnostics().record({
           source: "voiceInput",
           event: "capture_completed",

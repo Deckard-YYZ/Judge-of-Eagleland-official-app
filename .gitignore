@@ -3,6 +3,7 @@ dist/
 artifacts/
 coverage/
 src-tauri/target/
+tools/voice-cli/target/
 src-tauri/gen/
 *.local
 *.log

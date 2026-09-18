@@ -25,7 +25,10 @@
     "tauri:build": "tauri build",
     "diagnostics:archive": "node scripts/archive-diagnostics.mjs",
     "voice:prepare": "tsx scripts/voice-keywords.ts --raw && python -X utf8 scripts/prepare-voice.py && tsx scripts/voice-keywords.ts --check",
-    "voice:check": "tsx scripts/voice-keywords.ts --check"
+    "voice:check": "tsx scripts/voice-keywords.ts --check",
+    "voice:cli:build": "node scripts/build-voice-cli.mjs",
+    "asr:prepare": "python -X utf8 scripts/prepare-asr.py",
+    "asr:cli:build": "node scripts/build-asr-cli.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

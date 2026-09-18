@@ -11,6 +11,11 @@ use std::{
 use tauri::Manager;
 
 const MODEL_ID: &str = "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20";
+const MAX_ACTIVE_PATHS: i32 = 4;
+const TRAILING_BLANKS: i32 = 1;
+const KEYWORDS_SCORE: f32 = 1.0;
+const KEYWORDS_THRESHOLD: f32 = 0.25;
+
 #[derive(Default)]
 pub struct VoiceState {
     active: Mutex<Option<(String, Arc<AtomicBool>)>>,
@@ -51,6 +56,18 @@ fn normalize(found: &BTreeSet<String>, locale: &str) -> Value {
         }
     }
     json!({"type":"unknown"})
+}
+
+fn unknown_reason(found: &BTreeSet<String>, allowed: &BTreeSet<&str>) -> Option<&'static str> {
+    if found.is_empty() {
+        Some("no_keyword")
+    } else if found.iter().any(|id| !allowed.contains(id.as_str())) {
+        Some("unrecognized_label")
+    } else if found.len() > 1 {
+        Some("multiple_actions")
+    } else {
+        None
+    }
 }
 
 impl VoiceState {
@@ -103,10 +120,10 @@ fn load_model(directory: &Path, locale: &str) -> Result<sherpa_onnx::KeywordSpot
     config.model_config.provider = Some("cpu".into());
     config.model_config.num_threads = 1;
     config.keywords_buf = Some(keywords.into());
-    config.max_active_paths = 4;
-    config.num_trailing_blanks = 1;
-    config.keywords_score = 1.0;
-    config.keywords_threshold = 0.25;
+    config.max_active_paths = MAX_ACTIVE_PATHS;
+    config.num_trailing_blanks = TRAILING_BLANKS;
+    config.keywords_score = KEYWORDS_SCORE;
+    config.keywords_threshold = KEYWORDS_THRESHOLD;
     sherpa_onnx::KeywordSpotter::create(&config).ok_or("UNAVAILABLE".into())
 }
 
@@ -117,13 +134,40 @@ fn infer(
     samples: &[f32],
     locale: &str,
     cancelled: &AtomicBool,
+    observe: &dyn Fn(&str, Value),
 ) -> Result<Value, String> {
     if samples.len() < 3200 {
+        observe(
+            "voice.decode_summary",
+            json!({"unknownReason":"too_short","decodeCount":0,"decodeDurationMs":0,"hitCount":0,"actionIds":[]}),
+        );
         return Ok(json!({"type":"unknown"}));
     }
+    let words: Value =
+        serde_json::from_str(include_str!("../voice/keywords.json")).unwrap_or(Value::Null);
+    let keyword_count = words["keywords"][locale]
+        .as_str()
+        .map(|s| s.lines().filter(|line| !line.is_empty()).count())
+        .unwrap_or(0);
+    observe(
+        "voice.kws_config",
+        json!({"modelId":MODEL_ID,"locale":locale,"maxActivePaths":MAX_ACTIVE_PATHS,"trailingBlanks":TRAILING_BLANKS,"keywordsScore":KEYWORDS_SCORE,"keywordsThreshold":KEYWORDS_THRESHOLD,"keywordCount":keyword_count}),
+    );
     let mut model = state.model.lock().map_err(|_| "UNAVAILABLE")?;
-    if model.as_ref().map(|(language, _)| language.as_str()) != Some(locale) {
-        *model = Some((locale.into(), load_model(directory, locale)?));
+    let cold = model.as_ref().map(|(language, _)| language.as_str()) != Some(locale);
+    let load_started = std::time::Instant::now();
+    if cold {
+        let loaded = load_model(directory, locale);
+        observe(
+            "voice.model_load",
+            json!({"loadMode":"cold","loadDurationMs":load_started.elapsed().as_secs_f64()*1000.0,"outcome":if loaded.is_ok(){"ready"}else{"error"}}),
+        );
+        *model = Some((locale.into(), loaded?));
+    } else {
+        observe(
+            "voice.model_load",
+            json!({"loadMode":"warm","loadDurationMs":load_started.elapsed().as_secs_f64()*1000.0,"outcome":"ready"}),
+        );
     }
     if cancelled.load(Ordering::Relaxed) {
         return Err("CANCELLED".into());
@@ -135,23 +179,52 @@ fn infer(
     stream.accept_waveform(16000, &vec![0.0; 8000]);
     stream.input_finished();
     let mut found = BTreeSet::new();
+    let (mut decode_count, mut hit_count) = (0, 0);
+    let decode_started = std::time::Instant::now();
     while kws.is_ready(&stream) {
         if cancelled.load(Ordering::Relaxed) {
             return Err("CANCELLED".into());
         }
         kws.decode(&stream);
+        decode_count += 1;
         if let Some(result) = kws.get_result(&stream) {
             if !result.keyword.is_empty() {
+                hit_count += 1;
                 found.insert(result.keyword);
                 kws.reset(&stream);
             }
         }
     }
     // Collect the complete utterance: first-hit dispatch would miss ambiguity.
-    Ok(normalize(&found, locale))
+    let result = normalize(&found, locale);
+    let allowed: BTreeSet<&str> = words["rows"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| row["locale"] == locale)
+        .filter_map(|row| row["actionId"].as_str())
+        .collect();
+    let actions: Vec<_> = found
+        .iter()
+        .filter(|id| allowed.contains(id.as_str()))
+        .cloned()
+        .collect();
+    let reason = unknown_reason(&found, &allowed);
+    observe(
+        "voice.decode_summary",
+        json!({"decodeCount":decode_count,"decodeDurationMs":decode_started.elapsed().as_secs_f64()*1000.0,"hitCount":hit_count,"actionIds":actions,"unknownReason":reason}),
+    );
+    Ok(result)
 }
 #[cfg(not(windows))]
-fn infer(_: &VoiceState, _: &Path, _: &[f32], _: &str, _: &AtomicBool) -> Result<Value, String> {
+fn infer(
+    _: &VoiceState,
+    _: &Path,
+    _: &[f32],
+    _: &str,
+    _: &AtomicBool,
+    _: &dyn Fn(&str, Value),
+) -> Result<Value, String> {
     Err("UNAVAILABLE".into())
 }
 
@@ -190,7 +263,9 @@ pub async fn voice_infer(
         let _guard=guard; let started=std::time::Instant::now();
         let operation_id=operation_id.filter(|id|id.len()<=100);
         diagnostics.record(json!({"source":"voice","event":"voice.inference_started","level":"info","operationId":operation_id,"data":{"modelId":MODEL_ID,"locale":locale,"sampleRate":sample_rate,"sampleCount":samples.len()}}),"host");
-        let result=infer(&state,&directory,&samples,&locale,&cancelled);
+        let observe=|event:&str,data:Value| diagnostics.record(json!({"source":"voice","event":event,"level":"info","operationId":operation_id,"data":data}),"host");
+        observe("voice.pcm_received",crate::voice_audio_stats::summarize(&samples,sample_rate));
+        let result=infer(&state,&directory,&samples,&locale,&cancelled,&observe);
         diagnostics.record(json!({"source":"voice","event":"voice.inference_finished","level":if result.is_ok(){"info"}else{"warn"},"operationId":operation_id,"data":{"outcome":result.as_ref().map(|v|v["type"].as_str().unwrap_or("unknown")).unwrap_or("error"),"code":result.as_ref().err(),"durationMs":started.elapsed().as_millis()}}),"host");
         result
     }).await.map_err(|_|"RECOGNITION_FAILED".to_string())?
@@ -210,8 +285,14 @@ pub fn smoke_mode() -> bool {
         let state = VoiceState::default();
         let cancelled = AtomicBool::new(false);
         for locale in ["zh-CN", "en-US"] {
-            if infer(&state, &directory, &vec![0.0; 16000], locale, &cancelled)?
-                != json!({"type":"unknown"})
+            if infer(
+                &state,
+                &directory,
+                &vec![0.0; 16000],
+                locale,
+                &cancelled,
+                &|_, _| {},
+            )? != json!({"type":"unknown"})
             {
                 return Err("RECOGNITION_FAILED".into());
             }
@@ -231,6 +312,42 @@ pub fn smoke_mode() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unknown_reason_explains_result_without_exposing_unrecognized_text() {
+        let allowed = ["salute", "wave"].into();
+        assert_eq!(
+            unknown_reason(&BTreeSet::new(), &allowed),
+            Some("no_keyword")
+        );
+        assert_eq!(
+            unknown_reason(&["salute".into(), "wave".into()].into(), &allowed),
+            Some("multiple_actions")
+        );
+        assert_eq!(
+            unknown_reason(&["unrecognized".into()].into(), &allowed),
+            Some("unrecognized_label")
+        );
+        assert_eq!(unknown_reason(&["salute".into()].into(), &allowed), None);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn short_pcm_reports_skip_without_loading_model() {
+        let events = std::cell::RefCell::new(Vec::new());
+        assert_eq!(
+            infer(
+                &VoiceState::default(),
+                Path::new("missing-model"),
+                &[0.0; 10],
+                "zh-CN",
+                &AtomicBool::new(false),
+                &|event, data| events.borrow_mut().push((event.to_owned(), data))
+            )
+            .unwrap(),
+            json!({"type":"unknown"})
+        );
+        assert_eq!(events.borrow()[0].1["unknownReason"], "too_short");
+        assert_eq!(events.borrow()[0].1["decodeCount"], 0);
+    }
     #[test]
     fn validates_pcm_locale_and_operation_bounds() {
         assert!(validate(&[0.0], 16000, "zh-CN", "id").is_ok());

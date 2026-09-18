@@ -6,6 +6,7 @@ import {
 import type { VoiceInferenceBackend, VoiceInputRequest } from "../../src/shared/voiceInput";
 import type { RecognizedAction } from "../../src/shared/recognizedAction";
 import { resampleVoicePcm } from "../../src/platform/pcmAudio";
+import { configureDiagnostics, type DiagnosticEvent } from "../../src/shared/diagnostics";
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await Promise.resolve();
@@ -107,6 +108,7 @@ beforeEach(() => {
   vi.stubGlobal("Worker", ResampleWorker);
 });
 afterEach(() => {
+  configureDiagnostics(() => undefined);
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -118,6 +120,46 @@ function backend() {
 }
 
 describe("explicit bounded voice capture", () => {
+  it("observes pre/post resampling and tolerates unavailable track settings", async () => {
+    Object.defineProperty(track, "getSettings", {
+      value: () => {
+        throw new Error("unsupported settings");
+      },
+    });
+    const records: DiagnosticEvent[] = [];
+    configureDiagnostics((event) => records.push(event));
+    const engine = backend();
+    const attempt = request();
+    const result = createVoiceInputService(engine).recognize(attempt.options);
+    await flush();
+    Worklet.latest.emit({ type: "samples", samples: new Float32Array(4800).fill(0.25) });
+    attempt.stop.abort();
+    await expect(result).resolves.toEqual({ type: "known", actionId: "salute" });
+    expect(records.find((record) => record.event === "voice.pcm_captured")?.data).toMatchObject({
+      sampleRate: 48000,
+      sampleCount: 4800,
+      rms: 0.25,
+    });
+    expect(records.find((record) => record.event === "voice.pcm_resampled")?.data).toMatchObject({
+      sampleRate: 16000,
+      sampleCount: 1600,
+    });
+    expect(track.stop).toHaveBeenCalledOnce();
+  });
+  it("explains an empty capture without invoking native recognition", async () => {
+    const records: DiagnosticEvent[] = [];
+    configureDiagnostics((event) => records.push(event));
+    const engine = backend();
+    const attempt = request();
+    const result = createVoiceInputService(engine).recognize(attempt.options);
+    await flush();
+    attempt.stop.abort();
+    await expect(result).resolves.toEqual({ type: "unknown" });
+    expect(records.find((record) => record.event === "voice.capture_unknown")?.data).toEqual({
+      unknownReason: "empty_audio",
+    });
+    expect(engine.infer).not.toHaveBeenCalled();
+  });
   it("does not acquire devices during construction or capability checks", () => {
     expect(createVoiceInputService(backend()).available).toBe(true);
     expect(getUserMedia).not.toHaveBeenCalled();

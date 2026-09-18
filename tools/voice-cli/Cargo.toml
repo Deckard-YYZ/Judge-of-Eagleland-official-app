@@ -1,0 +1,20 @@
+[package]
+name = "eagle-voice-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Standalone WAV keyword diagnostics for Eagle Judge"
+
+[[bin]]
+name = "voice-test"
+path = "src/main.rs"
+
+[[bin]]
+name = "asr-test"
+path = "src/asr_main.rs"
+
+[dependencies]
+sherpa-onnx = { version = "=1.13.8", default-features = false, features = ["shared"] }
+serde_json = "1"
+cpal = "=0.16.0"
+hound = "3.5.1"

@@ -163,3 +163,11 @@ exe、PDB、manifest、maps 及 SHA-256 清单归档到 `artifacts/diagnostic-ar
 
 真实模型静音烟测：`src-tauri/target/debug/eagle-judge.exe --voice-model-smoke`，不使用麦克风或 UI，不能当作准确率验收。
 人工测试清单、参数、资源来源、分发许可待确认项与扩词流程见 [语音实施与验收文档](Desktop_Voice_Sherpa_Implementation.md)。
+
+独立 CMD 工具：`npm run voice:cli:build`，随后使用 `artifacts\voice-cli\voice-test.cmd --help`。
+支持 WAV 离线识别、参数对照与 JSONL 结果，不启动游戏。详见 [工具说明](tools/voice-cli/README.md)。
+需要保存自己的声音时，双击构建目录中的 `voice-record.cmd`，按提示开始/结束录音；WAV 和识别报告保存在同目录 `recordings` 下。
+
+ASR 对照工具：`npm run asr:prepare` → `npm run asr:cli:build`，双击 `artifacts\asr-cli\asr-record.cmd`。
+使用 SenseVoiceSmall INT8 输出实际转写，再精确匹配动作；保存 WAV/JSONL，也可重放 KWS 的旧录音。
+详见 [ASR 工具说明](tools/voice-cli/ASR_README.md)，此实验尚未接入游戏。
