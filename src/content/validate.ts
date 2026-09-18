@@ -49,7 +49,10 @@ export type ContentValidationIssueCode =
   | "LOCALIZATION_LOCALE_MISMATCH"
   | "LOCALIZATION_ID_MISSING"
   | "LOCALIZATION_ID_EXTRA"
-  | "LOCALIZATION_ANNOTATION_MISMATCH";
+  | "LOCALIZATION_ANNOTATION_MISMATCH"
+  | "NARRATION_VERSION_UNSUPPORTED"
+  | "NARRATION_TEXT_MISSING"
+  | "NARRATION_TEXT_UNUSED";
 
 export type ContentValidationPath = readonly (string | number)[];
 
@@ -791,6 +794,22 @@ export const validateLocalizedContentCatalog = (
     issues.push({ code, source, objectId, path: [...path], message });
   };
 
+  // Localizations inherit the rules package version; even orphan entries cannot add v4 fields.
+  if (gameContent.manifest.contentSchemaVersion < 4) {
+    for (const [storyId, story] of Object.entries(localized.stories)) {
+      for (const [stepId, step] of Object.entries(story.steps)) {
+        if (step.narrationText !== undefined) {
+          addIssue(
+            "NARRATION_VERSION_UNSUPPORTED",
+            storyId,
+            ["stories", storyId, "steps", stepId, "narrationText"],
+            "narrationText requires content schema v4.",
+          );
+        }
+      }
+    }
+  }
+
   if (localized.packageId !== gameContent.manifest.packageId) {
     addIssue(
       "LOCALIZATION_PACKAGE_ID_MISMATCH",
@@ -909,6 +928,38 @@ export const validateLocalizedContentCatalog = (
       storyId,
       addIssue,
     );
+    for (const step of story.steps) {
+      const localizedStep = copy.steps[step.id];
+      if (!localizedStep) continue;
+      const narration =
+        step.type === "text" || step.type === "actionInput" ? step.narration : undefined;
+      const dedicated = narration?.textSource === "narrationText";
+      const path = ["stories", storyId, "steps", step.id];
+      if (!dedicated && localizedStep.narrationText !== undefined) {
+        addIssue(
+          "NARRATION_TEXT_UNUSED",
+          storyId,
+          [...path, "narrationText"],
+          "narrationText must be explicitly referenced by this step.",
+        );
+      }
+      if (narration !== undefined) {
+        const text = dedicated
+          ? localizedStep.narrationText?.trim()
+          : localizedStep.blocks
+              .map((block) => block.text.trim())
+              .filter(Boolean)
+              .join("\n");
+        if (!text) {
+          addIssue(
+            "NARRATION_TEXT_MISSING",
+            storyId,
+            [...path, dedicated ? "narrationText" : "blocks"],
+            "Narration requires non-blank localized text.",
+          );
+        }
+      }
+    }
   }
 
   return issues.length === 0

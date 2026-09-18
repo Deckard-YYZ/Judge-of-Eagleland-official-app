@@ -1,6 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    if eagle_judge_lib::narration::smoke_mode() {
+        return;
+    }
     if eagle_judge_lib::voice_input::smoke_mode() {
         return;
     }

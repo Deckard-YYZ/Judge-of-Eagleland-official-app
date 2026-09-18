@@ -42,7 +42,15 @@
       "../artifacts/voice/model/tokens.txt": "voice/tokens.txt",
       "../artifacts/voice/native/lib/sherpa-onnx-c-api.dll": "sherpa-onnx-c-api.dll",
       "../artifacts/voice/native/lib/onnxruntime.dll": "onnxruntime.dll",
-      "../artifacts/voice/native/lib/onnxruntime_providers_shared.dll": "onnxruntime_providers_shared.dll"
+      "../artifacts/voice/native/lib/onnxruntime_providers_shared.dll": "onnxruntime_providers_shared.dll",
+      "../artifacts/tts/model/model.onnx": "tts/model.onnx",
+      "../artifacts/tts/model/tokens.txt": "tts/tokens.txt",
+      "../artifacts/tts/model/lexicon.txt": "tts/lexicon.txt",
+      "../artifacts/tts/model/date.fst": "tts/date.fst",
+      "../artifacts/tts/model/number.fst": "tts/number.fst",
+      "../artifacts/tts/model/phone.fst": "tts/phone.fst",
+      "../artifacts/tts/model/LICENSE": "tts/LICENSE",
+      "../artifacts/tts/model/README.md": "tts/README.md"
     }
   }
 }

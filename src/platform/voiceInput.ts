@@ -9,6 +9,8 @@ import {
 import { getDiagnostics } from "../shared/diagnostics";
 import { recordVoiceAudio } from "./voiceAudioStats";
 
+import type { AudioOccupancy } from "./audioOccupancy";
+
 export const VOICE_PERMISSION_TIMEOUT_MS = 15000;
 const SETUP_TIMEOUT_MS = 10000;
 const RECOGNITION_TIMEOUT_MS = 60000;
@@ -248,7 +250,10 @@ async function resample(
 }
 
 /** One explicit recording per call. An uncancellable IPC keeps the lane occupied. */
-export function createVoiceInputService(backend: VoiceInferenceBackend): VoiceInputService {
+export function createVoiceInputService(
+  backend: VoiceInferenceBackend & { whenIdle?: () => Promise<void> },
+  occupancy?: AudioOccupancy,
+): VoiceInputService {
   let owner: object | null = null;
   return {
     get available() {
@@ -265,12 +270,17 @@ export function createVoiceInputService(backend: VoiceInferenceBackend): VoiceIn
       if (owner) throw new VoiceInputError("BUSY");
       if (request.signal.aborted) throw new VoiceInputError("CANCELLED");
       if (!this.available) throw new VoiceInputError("UNAVAILABLE");
+      const reservation = occupancy?.reserveInput();
+      if (occupancy && !reservation) throw new VoiceInputError("BUSY");
       const attempt = {};
       owner = attempt;
       let pending = 0;
       let finished = false;
       const release = () => {
-        if (finished && pending === 0 && owner === attempt) owner = null;
+        if (finished && pending === 0 && owner === attempt) {
+          owner = null;
+          reservation?.release();
+        }
       };
       const trackPending = (promise: Promise<unknown>) => {
         pending++;
@@ -281,6 +291,32 @@ export function createVoiceInputService(backend: VoiceInferenceBackend): VoiceIn
         void promise.then(settled, settled);
       };
       try {
+        if (reservation) {
+          getDiagnostics().record({
+            source: "voiceInput",
+            event: "voice.awaiting_silence",
+            ...request.context,
+            data: { phase: "preparing" },
+          });
+          try {
+            await bounded(
+              reservation.prepare(),
+              request.signal,
+              SETUP_TIMEOUT_MS,
+              "CAPTURE_FAILED",
+            );
+          } catch (error) {
+            getDiagnostics().record({
+              source: "voiceInput",
+              event: "voice.awaiting_silence_failed",
+              ...request.context,
+              data: { reason: "output_not_confirmed_silent" },
+            });
+            if (error instanceof VoiceInputError) throw error;
+            throw new VoiceInputError("CAPTURE_FAILED", { cause: error });
+          }
+        }
+        if (request.signal.aborted) throw new VoiceInputError("CANCELLED");
         const raw = await capture(request, trackPending);
         if (request.signal.aborted) throw new VoiceInputError("CANCELLED");
         // Scan before transferring the buffer to the resampling worker detaches it.
@@ -313,7 +349,13 @@ export function createVoiceInputService(backend: VoiceInferenceBackend): VoiceIn
             context: request.context,
           }),
         );
-        trackPending(inference);
+        // Logical cancellation is not native completion: retain input ownership until IPC drains.
+        trackPending(
+          inference.then(
+            () => backend.whenIdle?.(),
+            () => backend.whenIdle?.(),
+          ),
+        );
         const result = await bounded(
           inference,
           request.signal,

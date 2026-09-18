@@ -215,7 +215,8 @@ export function StoryOverlay({
 
   if (currentStoryId) {
     const story = content.stories[currentStoryId];
-    const identity = `${sessionKey}:${saveIdentity}:story:${currentStoryId}`;
+    const contentRef = snapshot.envelope?.contentRef;
+    const identity = `${sessionKey}:${saveIdentity}:${contentRef?.packageId}:${contentRef?.version}:story:${currentStoryId}`;
 
     return (
       <ModalFrame settings={settings} identity={identity}>
@@ -226,6 +227,9 @@ export function StoryOverlay({
             story={story}
             sessionView={sessionView}
             attributes={content.attributes}
+            narrationReady={
+              snapshot.localizationStatus === "ready" || snapshot.localizationStatus === "fallback"
+            }
             resumeStepId={
               state.storyCheckpoint?.storyId === currentStoryId
                 ? state.storyCheckpoint.resumeStepId

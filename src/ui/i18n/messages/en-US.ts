@@ -1,6 +1,19 @@
 import type { MessageCatalog } from "../translator";
 
 export const EN_US_MESSAGES = {
+  "narration.label": "Story narration",
+  "narration.replay": "Replay narration",
+  "narration.stop": "Stop narration",
+  "narration.preparing": "Preparing narration…",
+  "narration.playing": "Narrating…",
+  "narration.enabled": "Enable story narration",
+  "narration.error.unavailable": "Narration is unavailable. You can continue reading.",
+  "narration.error.busy": "Audio is in use. Replay when it is free.",
+  "narration.error.invalid": "This passage cannot be narrated. You can continue reading.",
+  "narration.error.failed": "Narration failed. Replay or continue reading.",
+  "narration.error.autoplay": "Automatic playback was blocked. Select replay.",
+  "narration.error.timeout": "Narration timed out. Replay or continue.",
+
   "decision.startFailed": "Could not prepare the decision options. Please retry.",
   "decision.retryStart": "Retry preparing options",
   "decision.poweredBy": "powered by EncryptAI",

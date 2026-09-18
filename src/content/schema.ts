@@ -23,7 +23,7 @@ export type EndingId = z.infer<typeof IdSchema>;
 export type AssetId = z.infer<typeof IdSchema>;
 
 /** 当前骨架支持的内容 Schema 版本。升级时需显式增加迁移或兼容策略。 */
-export const SUPPORTED_CONTENT_SCHEMA_VERSION = 3;
+export const SUPPORTED_CONTENT_SCHEMA_VERSION = 4;
 
 export const TextBlockSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -150,7 +150,11 @@ export const GameContentManifestSchema = z
   .strictObject({
     packageId: IdSchema,
     version: IdSchema,
-    contentSchemaVersion: z.union([z.literal(2), z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION)]),
+    contentSchemaVersion: z.union([
+      z.literal(2),
+      z.literal(3),
+      z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION),
+    ]),
     defaultLocale: AppLocaleSchema.default(DEFAULT_LOCALE),
     supportedLocales: z.array(AppLocaleSchema).min(1),
   })
@@ -218,17 +222,30 @@ export const GameCaseDefinitionSchema = z.strictObject({
 });
 export type GameCaseDefinition = z.infer<typeof GameCaseDefinitionSchema>;
 
+/** Logical voice identifiers deliberately contain no provider or model configuration. */
+export const NarrationDefinitionSchema = z.strictObject({
+  voiceId: z.literal("system"),
+  textSource: z.enum(["blocks", "narrationText"]),
+});
+export type NarrationDefinition = z.infer<typeof NarrationDefinitionSchema>;
+export type NarrationVoiceId = NarrationDefinition["voiceId"];
+
 export const ActionInputStepSchema = z.strictObject({
   id: IdSchema,
   type: z.literal("actionInput"),
   targetActionId: z.enum(ACTION_IDS),
   wrongEffects: GameEffectsSchema.optional(),
+  narration: NarrationDefinitionSchema.optional(),
 });
 export type ActionInputStep = z.infer<typeof ActionInputStepSchema>;
 
 export const GameStoryStepSchema = z.discriminatedUnion("type", [
   ActionInputStepSchema,
-  z.strictObject({ id: IdSchema, type: z.literal("text") }),
+  z.strictObject({
+    id: IdSchema,
+    type: z.literal("text"),
+    narration: NarrationDefinitionSchema.optional(),
+  }),
   z.strictObject({ id: IdSchema, type: z.literal("video"), assetId: IdSchema }),
   z.strictObject({
     id: IdSchema,
@@ -265,6 +282,22 @@ export const GameContentCatalogSchema = z
     assets: z.record(IdSchema, AssetDefinitionSchema),
   })
   .superRefine((content, context) => {
+    if (content.manifest.contentSchemaVersion < 4) {
+      for (const [storyId, story] of Object.entries(content.stories)) {
+        story.steps.forEach((step, index) => {
+          if (
+            (step.type === "text" || step.type === "actionInput") &&
+            step.narration !== undefined
+          ) {
+            context.addIssue({
+              code: "custom",
+              path: ["stories", storyId, "steps", index, "narration"],
+              message: "narration requires content schema v4.",
+            });
+          }
+        });
+      }
+    }
     if (content.manifest.contentSchemaVersion === 2) {
       for (const [storyId, story] of Object.entries(content.stories)) {
         story.steps.forEach((step, index) => {
@@ -310,6 +343,7 @@ export const LocalizedCaseSchema = z.strictObject({
 
 export const LocalizedStoryStepSchema = z.strictObject({
   blocks: z.array(TextBlockSchema).min(1),
+  narrationText: z.string().optional(),
 });
 
 export const LocalizedStorySchema = z.strictObject({

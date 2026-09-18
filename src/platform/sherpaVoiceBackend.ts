@@ -6,9 +6,19 @@ import type { RecognizedAction } from "../shared/recognizedAction";
 
 let pendingNativeCall = false;
 let pendingCancelCall = false;
+const idleWaiters = new Set<() => void>();
+function notifyIdle() {
+  if (pendingNativeCall || pendingCancelCall) return;
+  for (const resolve of idleWaiters) resolve();
+  idleWaiters.clear();
+}
 
 /** Native work is bounded separately; cancel never turns a late result into a command. */
-export const sherpaVoiceBackend: VoiceInferenceBackend = {
+export const sherpaVoiceBackend: VoiceInferenceBackend & { whenIdle(): Promise<void> } = {
+  whenIdle() {
+    if (!pendingNativeCall && !pendingCancelCall) return Promise.resolve();
+    return new Promise((resolve) => idleWaiters.add(resolve));
+  },
   get available() {
     return isTauri();
   },
@@ -34,6 +44,7 @@ export const sherpaVoiceBackend: VoiceInferenceBackend = {
           .catch(() => undefined)
           .finally(() => {
             pendingCancelCall = false;
+            notifyIdle();
           });
       }
     };
@@ -54,6 +65,7 @@ export const sherpaVoiceBackend: VoiceInferenceBackend = {
           })
           .finally(() => {
             pendingNativeCall = false;
+            notifyIdle();
           }),
         new Promise<never>((_, reject) => {
           abortListener = () => {

@@ -14,7 +14,7 @@ import {
   type SqliteTestDatabase,
 } from "../fixtures/storage/sqliteTestDatabase";
 
-// Replace only the native resource transport: the installed schema-v3 files pass
+// Replace only the native resource transport: the installed schema-v4 files pass
 // through the same full package loader and production repository as the desktop.
 const readInstalledPackage: BundledPackageReader = async ({ packageId, version }) => {
   const root = new URL(`../../content/${packageId}/${version}/`, import.meta.url);
@@ -76,7 +76,23 @@ const finalChoice = {
   nodeId: "disposition",
   choiceId: "formal_warning",
 } as const;
+async function completeTutorial(session: GameSessionView) {
+  expect(
+    (
+      await session.dispatch({
+        type: "submitStoryInput",
+        storyId: "tutorial_voice_order",
+        stepId: "order",
+        actionId: "salute",
+      })
+    ).ok,
+  ).toBe(true);
+  expect(
+    (await session.dispatch({ type: "completeStory", storyId: "tutorial_voice_order" })).ok,
+  ).toBe(true);
+}
 async function reachDisposition(session: GameSessionView) {
+  await completeTutorial(session);
   expect((await session.dispatch({ type: "startCase", caseId: "case_001" })).ok).toBe(true);
   expect(
     (
@@ -106,9 +122,14 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
       profile_id: profileId,
       state: { cases: { case_001: { status: "pending" } } },
     });
+    await completeTutorial(entry.session);
+    expect(row(database, saveId)).toMatchObject({
+      revision: 2,
+      state: { completedStoryIds: ["tutorial_voice_order"] },
+    });
     expect((await entry.session.dispatch({ type: "startCase", caseId: "case_001" })).ok).toBe(true);
     expect(row(database, saveId)).toMatchObject({
-      revision: 1,
+      revision: 3,
       state: {
         cases: { case_001: { status: "active", currentNodeId: "assessment", history: [] } },
       },
@@ -125,7 +146,7 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
     ).toBe(true);
     const intermediate = row(database, saveId);
     expect(intermediate).toMatchObject({
-      revision: 2,
+      revision: 4,
       state: {
         cases: {
           case_001: {
@@ -143,14 +164,14 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
     app = await boot(database);
     entry = entered(await app.profileEntry.enter(profileId));
     expect(entry.session.getSnapshot()).toMatchObject({
-      envelope: { saveId, revision: 2 },
+      envelope: { saveId, revision: 4 },
       state: intermediate.state,
     });
     expect(row(database, saveId)).toEqual(intermediate);
     expect((await entry.session.dispatch(finalChoice)).ok).toBe(true);
     const completed = row(database, saveId);
     expect(completed).toMatchObject({
-      revision: 3,
+      revision: 5,
       state: {
         attributes: { restraint: 51, authority: 51 },
         flags: { first_case_closed: true, second_case_reviewed: false },
@@ -180,7 +201,7 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
     database = fixture.openConnection();
     app = await boot(database);
     entry = entered(await app.profileEntry.enter(profileId));
-    expect(entry.session.getSnapshot().envelope).toMatchObject({ saveId, revision: 3 });
+    expect(entry.session.getSnapshot().envelope).toMatchObject({ saveId, revision: 5 });
     expect(entry.session.getSnapshot().state).toEqual(completed.state);
     expect(row(database, saveId)).toEqual(completed);
     expect(database.native.prepare("SELECT count(*) AS total FROM saves").get()).toEqual({
@@ -214,7 +235,7 @@ describe("desktop vertical slice with installed content and real SQLite", () => 
     expect((await stale.session.dispatch(finalChoice)).ok).toBe(false);
     expect(row(secondDatabase, saveId)).toEqual(committed);
     expect(committed).toMatchObject({
-      revision: 3,
+      revision: 5,
       state: { attributes: { restraint: 51, authority: 51 } },
     });
   });

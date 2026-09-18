@@ -30,5 +30,7 @@ fn main() {
     println!("cargo:rerun-if-changed=voice");
     println!("cargo:rerun-if-changed=../artifacts/voice/model");
     println!("cargo:rerun-if-changed=../artifacts/voice/native/lib");
+    println!("cargo:rerun-if-changed=tts");
+    println!("cargo:rerun-if-changed=../artifacts/tts/model");
     tauri_build::build();
 }

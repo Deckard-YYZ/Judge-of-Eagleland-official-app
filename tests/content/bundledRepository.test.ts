@@ -39,7 +39,7 @@ describe("bundled content repository", () => {
       );
     }
     expect(reader).toHaveBeenCalledWith(DEFAULT_BUNDLED_CONTENT_REF);
-    expect(DEFAULT_BUNDLED_CONTENT_REF.version).toBe("1.1.0");
+    expect(DEFAULT_BUNDLED_CONTENT_REF.version).toBe("1.2.0");
     expect((await repository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF)).stories).toHaveProperty(
       "inspection_after_case_001",
     );

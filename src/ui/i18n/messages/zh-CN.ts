@@ -1,4 +1,17 @@
 export const DEFAULT_MESSAGES = {
+  "narration.label": "剧情朗读",
+  "narration.replay": "重播朗读",
+  "narration.stop": "停止朗读",
+  "narration.preparing": "正在准备朗读…",
+  "narration.playing": "正在朗读…",
+  "narration.enabled": "启用剧情朗读",
+  "narration.error.unavailable": "当前环境无法朗读，请继续阅读文字。",
+  "narration.error.busy": "语音正在使用中，请稍后重播。",
+  "narration.error.invalid": "这段内容暂时无法朗读，请继续阅读文字。",
+  "narration.error.failed": "朗读失败，可以重播或继续阅读文字。",
+  "narration.error.autoplay": "自动播放被阻止，请点击重播。",
+  "narration.error.timeout": "朗读准备超时，请重播或继续。",
+
   "decision.startFailed": "无法准备裁定选项，请重试。",
   "decision.retryStart": "重新准备选项",
   "decision.poweredBy": "powered by EncryptAI",

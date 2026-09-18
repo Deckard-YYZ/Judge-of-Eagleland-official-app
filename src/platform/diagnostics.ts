@@ -23,6 +23,10 @@ export interface DiagnosticRecord extends DiagnosticIdentity {
 const sensitiveKey = /^(text|input|raw|displayName|password|token|save|snapshot|state)$/i;
 const summaryKeys = new Set([
   "modelId",
+  "requestId",
+  "voiceId",
+  "textLength",
+  "audioDurationMs",
   "sampleRate",
   "sampleCount",
   "maxFrameRms",

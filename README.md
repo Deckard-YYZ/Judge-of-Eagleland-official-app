@@ -26,6 +26,21 @@ node --version
 
 代码由 Prettier 统一格式；修改后运行 `npm run format`。Rust 代码使用 `cargo fmt --manifest-path src-tauri/Cargo.toml`。
 
+## 固定声音旁白（TTS）
+
+新游戏使用内容包 `1.2.0`（content schema v4），进入教程可自动朗读，支持停止、重播和设置中的旁白开关。
+旧存档仍读取原绑定版本。浏览器预览保留文字并显示旁白不可用；正式输出使用 Windows Tauri + sherpa 本地合成。
+
+```powershell
+npm run voice:prepare  # 首次准备已锁定的 sherpa 1.13.8 共享运行库和 KWS 资源
+npm run tts:prepare    # 显式下载并校验固定 TTS 模型；正式运行不联网下载
+npm run tts:smoke      # 编译桌面程序，生成中英文 WAV 与 JSON 合成报告，不开启麦克风
+```
+
+TTS 使用 `system` 固定声音（Melo 中英模型、speaker 0、speed 1），独立资源约 177.5 MB。
+录音会先停止旁白，再经过短尾音保护；权限或原生识别仍在途时不能重播。关闭旁白或合成失败不影响文字输入与游戏进度。
+进度、测试证据、许可记录和硬件/安装验收待办见 [TTS / Content / Validator 实施记录](Desktop_TTS_Content_Validator_Implementation.md)。
+
 ## 模块边界
 
 | 目录 | 职责 | 允许的项目依赖 |

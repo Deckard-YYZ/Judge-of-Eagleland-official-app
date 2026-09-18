@@ -15,6 +15,13 @@ async function createPendingAndResolvedSnapshot(): Promise<GameSessionViewSnapsh
   const view = createGameSessionView(demo.session, demo.contentRepository);
   await demo.reload();
   await view.setLocale("zh-CN");
+  await view.dispatch({
+    type: "submitStoryInput",
+    storyId: "tutorial_voice_order",
+    stepId: "order",
+    actionId: "salute",
+  });
+  await view.dispatch({ type: "completeStory", storyId: "tutorial_voice_order" });
   await view.dispatch({ type: "startCase", caseId: "case_001" });
   await view.dispatch({
     type: "chooseOption",

@@ -2,10 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  ACTION_INPUT_GAME_CONTENT,
-  ACTION_INPUT_LOCALIZATIONS,
-} from "../../src/app/actionInputContent";
+
 import { createDemoSave } from "../../src/app/demoSession";
 import { createGameSession, type GameSession } from "../../src/application/gameSession";
 import { BundledSplitContentRepository } from "../../src/content/bundledRepository";
@@ -141,24 +138,26 @@ async function reachInspection(session: GameSession) {
 }
 
 describe("action-input fixed fixture through GameSession and disk SQLite", () => {
-  it("loads the same schema-v3 physical package and both localizations as the browser bridge", async () => {
+  it("retains the immutable schema-v3 physical package and both localizations", async () => {
     const contentRepository = repository();
-    expect(await contentRepository.loadGameContent(ref)).toEqual(ACTION_INPUT_GAME_CONTENT);
+    const root = new URL("../../content/minimal-test-package/1.1.0/", import.meta.url);
+    const expectedGame = JSON.parse(await readFile(new URL("game.json", root), "utf8"));
+    expect(await contentRepository.loadGameContent(ref)).toEqual(expectedGame);
     for (const locale of ["zh-CN", "en-US"] as const) {
       expect(await contentRepository.loadLocalization(ref, locale)).toEqual(
-        ACTION_INPUT_LOCALIZATIONS[locale],
+        JSON.parse(await readFile(new URL(`locales/${locale}.json`, root), "utf8")),
       );
     }
-    expect(ACTION_INPUT_GAME_CONTENT.initial.storyIds).toEqual([]);
+    expect(expectedGame.manifest).toMatchObject({ version: "1.1.0", contentSchemaVersion: 3 });
+    expect(expectedGame.stories).not.toHaveProperty("tutorial_voice_order");
+    expect(expectedGame.initial.storyIds).toEqual([]);
     const previous = await contentRepository.loadGameContent({ ...ref, version: "1.0.0" });
-    expect(ACTION_INPUT_GAME_CONTENT.cases).toEqual(previous.cases);
-    expect(ACTION_INPUT_GAME_CONTENT.assets).toEqual(previous.assets);
+    expect(expectedGame.cases).toEqual(previous.cases);
+    expect(expectedGame.assets).toEqual(previous.assets);
     for (const [storyId, story] of Object.entries(previous.stories)) {
-      expect(ACTION_INPUT_GAME_CONTENT.stories[storyId]).toEqual(story);
+      expect(expectedGame.stories[storyId]).toEqual(story);
     }
-    expect(ACTION_INPUT_GAME_CONTENT.stories[firstStory]).toEqual(
-      ACTION_INPUT_GAME_CONTENT.stories[secondStory],
-    );
+    expect(expectedGame.stories[firstStory]).toEqual(expectedGame.stories[secondStory]);
   });
 
   it("restores C after B, restores D after a wrong attempt once, and keeps two story positions independent", async () => {

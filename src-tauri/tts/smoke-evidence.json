@@ -1,0 +1,70 @@
+{
+  "cancellation": {
+    "busyUntilNativeExit": true,
+    "code": "CANCELLED",
+    "elapsedMs": 503,
+    "recovered": true
+  },
+  "listeningVerified": false,
+  "modelId": "vits-melo-tts-zh_en",
+  "runs": [
+    {
+      "durationSeconds": 0.8823582766439909,
+      "elapsedMs": 4151,
+      "file": "tts-zh-CN-0.wav",
+      "locale": "zh-CN",
+      "peak": 0.10205758363008499,
+      "sampleCount": 38912,
+      "sampleRate": 44100,
+      "fixtureText": "请敬礼。"
+    },
+    {
+      "durationSeconds": 1.0183219954648526,
+      "elapsedMs": 317,
+      "file": "tts-en-US-1.wav",
+      "locale": "en-US",
+      "peak": 0.12442196905612946,
+      "sampleCount": 44908,
+      "sampleRate": 44100,
+      "fixtureText": "Please salute."
+    },
+    {
+      "durationSeconds": 2.918730158730159,
+      "elapsedMs": 788,
+      "file": "tts-zh-CN-2.wav",
+      "locale": "zh-CN",
+      "peak": 0.2633481025695801,
+      "sampleCount": 128716,
+      "sampleRate": 44100,
+      "fixtureText": "接下来请按照提示完成一个简单输入。"
+    },
+    {
+      "durationSeconds": 3.332063492063492,
+      "elapsedMs": 844,
+      "file": "tts-en-US-3.wav",
+      "locale": "en-US",
+      "peak": 0.4477478861808777,
+      "sampleCount": 146944,
+      "sampleRate": 44100,
+      "fixtureText": "Follow the next prompt to complete a simple input."
+    },
+    {
+      "durationSeconds": 0.7178684807256236,
+      "elapsedMs": 225,
+      "file": "tts-zh-CN-4.wav",
+      "locale": "zh-CN",
+      "peak": 0.10088517516851425,
+      "sampleCount": 31658,
+      "sampleRate": 44100,
+      "fixtureText": "请敬礼。"
+    }
+  ],
+  "sdkVersion": "1.13.8",
+  "speakerId": 0,
+  "speed": 1.0,
+  "voiceId": "system",
+  "recordedAt": "2026-09-18",
+  "platform": "Windows x64 development build (local workstation)",
+  "selectedResourceBytes": 177481452,
+  "englishFixtureLexiconMissingWords": []
+}

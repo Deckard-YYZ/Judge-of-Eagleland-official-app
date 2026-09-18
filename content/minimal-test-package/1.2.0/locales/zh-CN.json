@@ -1,0 +1,369 @@
+{
+  "packageId": "minimal-test-package",
+  "version": "1.2.0",
+  "locale": "zh-CN",
+  "manifest": {
+    "title": "最小联调内容包"
+  },
+  "attributes": {
+    "restraint": {
+      "label": "克制"
+    },
+    "authority": {
+      "label": "权威"
+    }
+  },
+  "cases": {
+    "case_001": {
+      "title": "第 001 号：夜间档案室事件",
+      "characters": {
+        "clerk_lin": {
+          "name": "林记录员",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "在档案室任职三年的记录员。"
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "一份未获授权带离的档案在次日清晨归还。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "记录员承认将档案带回住处补录，但否认复制或转交其中的内容。"
+        },
+        {
+          "type": "paragraph",
+          "text": "值班簿存在一处时间涂改，现有材料无法确认由谁修改。"
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "你如何评价现有材料？"
+        },
+        "disposition": {
+          "prompt": "确定最终处理方式。"
+        }
+      },
+      "choices": {
+        "insufficient_evidence": {
+          "text": "现有材料不足以支持进一步处分",
+          "annotation": {
+            "title": "材料限制",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "这一决定承认程序违规，但不推定存在材料以外的行为。"
+              }
+            ]
+          }
+        },
+        "confirm_violation": {
+          "text": "确认违规，继续确定处理方式"
+        },
+        "formal_warning": {
+          "text": "给予书面警告"
+        },
+        "suspend_access": {
+          "text": "暂停档案访问权限"
+        }
+      },
+      "resolutions": {
+        "close_with_note": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "保留程序违规记录，本次不追加处分。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "档案室接受了决定，同时提出修订外借登记流程。"
+            }
+          ]
+        },
+        "warning": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "给予书面警告，并要求完成内部流程培训。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "记录员继续留任，后续材料交接将由两人签字。"
+            }
+          ]
+        },
+        "suspension": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "暂停档案访问权限，等待后续内部安排。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "档案室调整了当周排班，一部分积压工作被转交其他记录员。"
+            }
+          ]
+        }
+      }
+    },
+    "case_002": {
+      "title": "第 002 号：调阅权限申请",
+      "characters": {
+        "analyst_zhou": {
+          "name": "周分析员",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "负责整理下一阶段案件材料的分析员。"
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "一份临时调阅申请缺少一项复核签名。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "申请人说明材料将在当天归档，但审批流程仍有一处待确认记录。"
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "你如何处理这份申请？"
+        }
+      },
+      "choices": {
+        "request_review": {
+          "text": "要求补充复核后再调阅"
+        },
+        "grant_access": {
+          "text": "允许本次临时调阅"
+        }
+      },
+      "resolutions": {
+        "review_required": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "补充复核记录后，方可继续调阅。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "申请被退回补充材料。"
+            }
+          ]
+        },
+        "temporary_access": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "在限定时间内允许临时调阅。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "材料按期归还，后续复核记录另行补齐。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "story_after_case_001": {
+      "title": "档案室流程调整",
+      "steps": {
+        "notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "档案室开始执行新的双人交接流程。"
+            }
+          ]
+        }
+      }
+    },
+    "ending_balanced": {
+      "title": "平衡的裁定",
+      "steps": {
+        "closing_video": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "终局影像暂时无法播放，但案件在克制中告一段落。"
+            }
+          ]
+        },
+        "closing_text": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "两份案件均已处理，档案流程保持稳定。"
+            }
+          ]
+        }
+      }
+    },
+    "ending_fallback": {
+      "title": "继续审视",
+      "steps": {
+        "closing_text": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "两份案件均已处理，仍有新的问题等待审视。"
+            }
+          ]
+        }
+      }
+    },
+    "inspection_after_case_001": {
+      "title": "第 001 案后的巡视",
+      "steps": {
+        "arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视员来到法庭，请准备迎接。"
+            }
+          ]
+        },
+        "salute_at_arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请输入“敬礼”迎接巡视员。挥手是另一种动作，会降低权威。"
+            }
+          ]
+        },
+        "inspection_notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视员检查了案件记录，准备离开。"
+            }
+          ]
+        },
+        "salute_at_departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请再次输入“敬礼”，向巡视员致意。"
+            }
+          ]
+        },
+        "departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视结束，你可以继续处理接下来的事务。"
+            }
+          ]
+        }
+      }
+    },
+    "inspection_after_case_002": {
+      "title": "第 002 案后的巡视",
+      "steps": {
+        "arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视员来到法庭，请准备迎接。"
+            }
+          ]
+        },
+        "salute_at_arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请输入“敬礼”迎接巡视员。挥手是另一种动作，会降低权威。"
+            }
+          ]
+        },
+        "inspection_notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视员检查了案件记录，准备离开。"
+            }
+          ]
+        },
+        "salute_at_departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请再次输入“敬礼”，向巡视员致意。"
+            }
+          ]
+        },
+        "departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "巡视结束，你可以继续处理接下来的事务。"
+            }
+          ]
+        }
+      }
+    },
+    "tutorial_voice_order": {
+      "title": "输入教程",
+      "steps": {
+        "intro": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "接下来请按照提示完成一个简单输入。"
+            }
+          ]
+        },
+        "order": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请敬礼。你可以直接输入“敬礼”，或在朗读结束后主动开始录音。"
+            }
+          ],
+          "narrationText": "请敬礼。"
+        },
+        "after_order": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "输入已完成。你可以继续。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {
+    "balanced": {
+      "title": "平衡的裁定"
+    },
+    "fallback": {
+      "title": "继续审视"
+    }
+  }
+}

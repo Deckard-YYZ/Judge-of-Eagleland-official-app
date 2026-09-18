@@ -61,3 +61,31 @@ it("rejects cancellation before queued invocation and unrecognized native labels
     code: "RECOGNITION_FAILED",
   });
 });
+it("whenIdle waits for both native inference and cancel acknowledgement", async () => {
+  let finishNative!: (value: unknown) => void;
+  let finishCancel!: (value: unknown) => void;
+  mocked.invoke.mockImplementation(
+    (name) =>
+      new Promise((resolve) => {
+        if (name === "voice_infer") finishNative = resolve;
+        else finishCancel = resolve;
+      }),
+  );
+  const { sherpaVoiceBackend } = await import("../../src/platform/sherpaVoiceBackend");
+  const abort = new AbortController();
+  const pending = sherpaVoiceBackend.infer(request(abort.signal)).catch((e) => e);
+  await Promise.resolve();
+  abort.abort();
+  await pending;
+  let idle = false;
+  const drained = sherpaVoiceBackend.whenIdle().then(() => {
+    idle = true;
+  });
+  finishNative({ type: "unknown" });
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(idle).toBe(false);
+  finishCancel(undefined);
+  await drained;
+  expect(idle).toBe(true);
+});

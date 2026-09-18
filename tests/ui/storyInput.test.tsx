@@ -231,6 +231,13 @@ async function setup() {
   const view = createGameSessionView(session, content);
   await session.load("save", "profile");
   for (const command of [
+    {
+      type: "submitStoryInput",
+      storyId: "tutorial_voice_order",
+      stepId: "order",
+      actionId: "salute",
+    },
+    { type: "completeStory", storyId: "tutorial_voice_order" },
     { type: "startCase", caseId: "case_001" },
     {
       type: "chooseOption",

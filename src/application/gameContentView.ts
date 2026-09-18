@@ -4,6 +4,8 @@ import type {
   ContentLocale,
   GameContentCatalog,
   LocalizedContentCatalog,
+  NarrationDefinition,
+  NarrationVoiceId,
   TextBlock,
 } from "../content/schema";
 
@@ -47,14 +49,45 @@ export interface ContentCaseView {
   >;
 }
 
+export interface ContentNarrationView {
+  readonly voiceId: NarrationVoiceId;
+  readonly locale: ContentLocale;
+  readonly text: string;
+}
+
+/** Pure presentation projection: use the loaded content locale, never the selected input locale. */
+export function projectNarration(
+  definition: Readonly<NarrationDefinition> | undefined,
+  source: Readonly<{ blocks: readonly Readonly<TextBlock>[]; narrationText?: string }>,
+  actualContentLocale: ContentLocale,
+): ContentNarrationView | undefined {
+  const dedicated = definition?.textSource === "narrationText";
+  if (!dedicated && source.narrationText !== undefined) throw new Error("NARRATION_TEXT_UNUSED");
+  if (definition === undefined) return undefined;
+  const text = dedicated
+    ? source.narrationText?.trim()
+    : source.blocks
+        .map((block) => block.text.trim())
+        .filter(Boolean)
+        .join("\n");
+  if (!text) throw new Error("NARRATION_TEXT_MISSING");
+  return Object.freeze({ voiceId: definition.voiceId, locale: actualContentLocale, text });
+}
+
 export type ContentStoryStepView =
   | Readonly<{
       id: string;
       type: "actionInput";
       targetActionId: ActionId;
       blocks: readonly Readonly<TextBlock>[];
+      narration?: ContentNarrationView;
     }>
-  | Readonly<{ id: string; type: "text"; blocks: readonly Readonly<TextBlock>[] }>
+  | Readonly<{
+      id: string;
+      type: "text";
+      blocks: readonly Readonly<TextBlock>[];
+      narration?: ContentNarrationView;
+    }>
   | Readonly<{
       id: string;
       type: "video";
@@ -135,13 +168,35 @@ export function createGameContentView(
                 type: step.type,
                 targetActionId: step.targetActionId,
                 blocks: copy.steps[step.id].blocks,
+                ...(step.narration === undefined
+                  ? {}
+                  : {
+                      narration: projectNarration(
+                        step.narration,
+                        copy.steps[step.id],
+                        localized.locale,
+                      ),
+                    }),
               };
             }
             if (step.type === "effect") return step;
             if (step.type === "video") {
               return { ...step, fallbackBlocks: copy.steps[step.id].blocks };
             }
-            return { ...step, blocks: copy.steps[step.id].blocks };
+            return {
+              id: step.id,
+              type: step.type,
+              blocks: copy.steps[step.id].blocks,
+              ...(step.narration === undefined
+                ? {}
+                : {
+                    narration: projectNarration(
+                      step.narration,
+                      copy.steps[step.id],
+                      localized.locale,
+                    ),
+                  }),
+            };
           }),
         },
       ];

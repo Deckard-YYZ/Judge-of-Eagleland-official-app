@@ -330,3 +330,76 @@ describe("explicit bounded voice capture", () => {
     expect(engine.infer).toHaveBeenCalledOnce();
   });
 });
+it("input occupancy survives cancelled permission until a late stream is released", async () => {
+  const { createAudioOccupancy } = await import("../../src/platform/audioOccupancy");
+  const occupancy = createAudioOccupancy(0);
+  const permission = deferred<MediaStream>();
+  getUserMedia.mockReturnValue(permission.promise);
+  const attempt = request();
+  const pending = createVoiceInputService(backend(), occupancy).recognize(attempt.options);
+  const failed = expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
+  await vi.advanceTimersByTimeAsync(1);
+  attempt.cancel.abort();
+  await failed;
+  expect(occupancy.reserveNarration({}, async () => {})).toBe(false);
+  permission.resolve(stream);
+  await flush();
+  expect(track.stop).toHaveBeenCalledOnce();
+  const output = {};
+  expect(occupancy.reserveNarration(output, async () => {})).toBe(true);
+  occupancy.releaseNarration(output);
+});
+it("input occupancy survives a logically finished backend until native drain", async () => {
+  const { createAudioOccupancy } = await import("../../src/platform/audioOccupancy");
+  const occupancy = createAudioOccupancy(0);
+  const drain = deferred<void>();
+  const engine = {
+    available: true,
+    infer: vi.fn(async () => ({ type: "unknown" as const })),
+    whenIdle: () => drain.promise,
+  };
+  const attempt = request();
+  const pending = createVoiceInputService(engine, occupancy).recognize(attempt.options);
+  await vi.advanceTimersByTimeAsync(1);
+  await flush();
+  Worklet.latest.emit({ type: "samples", samples: new Float32Array(480) });
+  attempt.stop.abort();
+  await pending;
+  expect(occupancy.reserveNarration({}, async () => {})).toBe(false);
+  drain.resolve();
+  await flush();
+  expect(occupancy.reserveNarration({}, async () => {})).toBe(true);
+});
+it("does not open microphone when narration silence cannot be confirmed", async () => {
+  const { createAudioOccupancy } = await import("../../src/platform/audioOccupancy");
+  const occupancy = createAudioOccupancy(0);
+  occupancy.reserveNarration({}, async () => {
+    throw Error("not silent");
+  });
+  await expect(
+    createVoiceInputService(backend(), occupancy).recognize(request().options),
+  ).rejects.toMatchObject({ code: "CAPTURE_FAILED" });
+  expect(getUserMedia).not.toHaveBeenCalled();
+});
+it("opens microphone only after output stop resolves and the tail guard elapses", async () => {
+  const { createAudioOccupancy } = await import("../../src/platform/audioOccupancy");
+  const occupancy = createAudioOccupancy(150);
+  const stopped = deferred<void>();
+  const stopOutput = vi.fn(() => stopped.promise);
+  occupancy.reserveNarration({}, stopOutput);
+  const attempt = request();
+  attempt.stop.abort();
+  const pending = createVoiceInputService(backend(), occupancy).recognize(attempt.options);
+  await flush();
+  expect(stopOutput).toHaveBeenCalledOnce();
+  expect(getUserMedia).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(500);
+  expect(getUserMedia).not.toHaveBeenCalled();
+  stopped.resolve();
+  await flush();
+  await vi.advanceTimersByTimeAsync(149);
+  expect(getUserMedia).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  await pending;
+  expect(getUserMedia).toHaveBeenCalledOnce();
+});

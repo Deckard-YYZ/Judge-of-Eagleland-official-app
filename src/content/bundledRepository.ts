@@ -7,7 +7,7 @@ import { ContentRefSchema, type ContentLocale, type ContentRef } from "./schema"
 /** Exact installed package used for new desktop saves; old saves retain their own ref. */
 export const DEFAULT_BUNDLED_CONTENT_REF: Readonly<ContentRef> = Object.freeze({
   packageId: "minimal-test-package",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 /** Read and validate the whole immutable package before exposing either catalog. */

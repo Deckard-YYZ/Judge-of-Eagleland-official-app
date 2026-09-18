@@ -46,7 +46,7 @@ describe("content and state contracts", () => {
       GameContentManifestSchema.parse({
         packageId: "pkg",
         version: "2.0.0",
-        contentSchemaVersion: 4,
+        contentSchemaVersion: 5,
         defaultLocale: "zh-CN",
         supportedLocales: ["zh-CN"],
       }),

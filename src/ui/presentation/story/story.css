@@ -525,3 +525,15 @@
 .story-text .case-text-block--paragraph {
   font-family: var(--ui-font-document);
 }
+.story-narration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.story-narration > p {
+  flex-basis: 100%;
+  margin: 0;
+}

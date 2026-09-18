@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createDemoSave, createDemoSession } from "../../src/app/demoSession";
 import { demoTransition } from "../../src/app/demoTransition";
 import { createGameSession } from "../../src/application/gameSession";
-import { createGameSessionView } from "../../src/application/gameSessionView";
+import { createGameSessionView, type GameSessionView } from "../../src/application/gameSessionView";
 import {
   MINIMAL_GAME_CONTENT,
   MINIMAL_LOCALIZATIONS,
@@ -10,6 +10,22 @@ import {
 import { FakeSplitContentRepository } from "../../src/content/repository";
 import { InMemorySaveRepository } from "../../src/storage/inMemorySaveRepository";
 import type { SaveRepository } from "../../src/storage/saveRepository";
+
+async function completeTutorial(view: GameSessionView) {
+  expect(
+    (
+      await view.dispatch({
+        type: "submitStoryInput",
+        storyId: "tutorial_voice_order",
+        stepId: "order",
+        actionId: "salute",
+      })
+    ).ok,
+  ).toBe(true);
+  expect((await view.dispatch({ type: "completeStory", storyId: "tutorial_voice_order" })).ok).toBe(
+    true,
+  );
+}
 
 describe("GameSessionView", () => {
   it("runs the complete demo identically in Chinese and English", async () => {
@@ -20,6 +36,7 @@ describe("GameSessionView", () => {
       const view = createGameSessionView(demo.session, demo.contentRepository, locale);
       await demo.reload();
       await view.setLocale(locale);
+      await completeTutorial(view);
       const completeInspection = async (storyId: string) => {
         for (const stepId of ["salute_at_arrival", "salute_at_departure"]) {
           expect(
@@ -74,6 +91,7 @@ describe("GameSessionView", () => {
     const view = createGameSessionView(session, contentRepository, "zh-CN");
     await reload();
     await view.setLocale("zh-CN");
+    await completeTutorial(view);
     view.selectCase("case_001");
     const before = view.getSnapshot();
     const beforeState = JSON.stringify(before.state);
@@ -140,6 +158,7 @@ describe("GameSessionView", () => {
     view.selectCase("case_001");
     expect(view.getSnapshot().selectedCaseId).toBe("case_001");
 
+    await completeTutorial(view);
     const starting = view.dispatch({ type: "startCase", caseId: "case_001" });
     expect(view.getSnapshot().status).toBe("saving");
     view.selectCase(null);

@@ -1,0 +1,369 @@
+{
+  "packageId": "minimal-test-package",
+  "version": "1.2.0",
+  "locale": "en-US",
+  "manifest": {
+    "title": "Minimal integration package"
+  },
+  "attributes": {
+    "restraint": {
+      "label": "Restraint"
+    },
+    "authority": {
+      "label": "Authority"
+    }
+  },
+  "cases": {
+    "case_001": {
+      "title": "Case 001: The Night Archive Incident",
+      "characters": {
+        "clerk_lin": {
+          "name": "Records Clerk Lin",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "A clerk who has worked in the archive for three years."
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "A file removed without authorization was returned the next morning."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "The clerk admits taking the file home to finish an entry, but denies copying or sharing it."
+        },
+        {
+          "type": "paragraph",
+          "text": "One time entry in the duty log was altered, and the available evidence does not identify who changed it."
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "How do you assess the available evidence?"
+        },
+        "disposition": {
+          "prompt": "Choose the final disposition."
+        }
+      },
+      "choices": {
+        "insufficient_evidence": {
+          "text": "The evidence does not support further discipline",
+          "annotation": {
+            "title": "Limits of the record",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "This ruling acknowledges the procedural breach without assuming conduct beyond the evidence."
+              }
+            ]
+          }
+        },
+        "confirm_violation": {
+          "text": "Confirm the breach and determine a disposition"
+        },
+        "formal_warning": {
+          "text": "Issue a written warning"
+        },
+        "suspend_access": {
+          "text": "Suspend archive access"
+        }
+      },
+      "resolutions": {
+        "close_with_note": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Record the procedural breach without additional discipline."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The archive accepts the ruling and proposes a revised checkout process."
+            }
+          ]
+        },
+        "warning": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Issue a written warning and require internal procedure training."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The clerk remains in post, with two signatures required for later transfers."
+            }
+          ]
+        },
+        "suspension": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Suspend archive access pending internal arrangements."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The archive revises the week's schedule and reassigns part of the backlog."
+            }
+          ]
+        }
+      }
+    },
+    "case_002": {
+      "title": "Case 002: Archive Access Request",
+      "characters": {
+        "analyst_zhou": {
+          "name": "Analyst Zhou",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "The analyst preparing materials for the next stage of review."
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "A temporary access request is missing one review signature."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "The applicant says the material will be returned today, but one approval record remains unconfirmed."
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "How will you handle this request?"
+        }
+      },
+      "choices": {
+        "request_review": {
+          "text": "Require review before granting access"
+        },
+        "grant_access": {
+          "text": "Allow temporary access this time"
+        }
+      },
+      "resolutions": {
+        "review_required": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Complete the review record before access may continue."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The request is returned for additional documentation."
+            }
+          ]
+        },
+        "temporary_access": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Allow temporary access within a limited period."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The material is returned on time and the review record will be completed separately."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "story_after_case_001": {
+      "title": "Archive Procedure Revised",
+      "steps": {
+        "notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The archive adopts a two-person transfer procedure."
+            }
+          ]
+        }
+      }
+    },
+    "ending_balanced": {
+      "title": "A Balanced Judgment",
+      "steps": {
+        "closing_video": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The ending video is unavailable, but the cases close with restraint."
+            }
+          ]
+        },
+        "closing_text": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Both cases are resolved and the archive remains stable."
+            }
+          ]
+        }
+      }
+    },
+    "ending_fallback": {
+      "title": "Continue the Review",
+      "steps": {
+        "closing_text": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Both cases are resolved, with further questions still to examine."
+            }
+          ]
+        }
+      }
+    },
+    "inspection_after_case_001": {
+      "title": "Inspection after case 001",
+      "steps": {
+        "arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspector arrives at court. Prepare to greet them."
+            }
+          ]
+        },
+        "salute_at_arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Type “salute” to greet the inspector. A wave is a different action and lowers authority."
+            }
+          ]
+        },
+        "inspection_notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspector checks the case record and prepares to leave."
+            }
+          ]
+        },
+        "salute_at_departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Type “salute” again to acknowledge the inspector."
+            }
+          ]
+        },
+        "departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspection is over. You may continue with your work."
+            }
+          ]
+        }
+      }
+    },
+    "inspection_after_case_002": {
+      "title": "Inspection after case 002",
+      "steps": {
+        "arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspector arrives at court. Prepare to greet them."
+            }
+          ]
+        },
+        "salute_at_arrival": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Type “salute” to greet the inspector. A wave is a different action and lowers authority."
+            }
+          ]
+        },
+        "inspection_notice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspector checks the case record and prepares to leave."
+            }
+          ]
+        },
+        "salute_at_departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Type “salute” again to acknowledge the inspector."
+            }
+          ]
+        },
+        "departure": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The inspection is over. You may continue with your work."
+            }
+          ]
+        }
+      }
+    },
+    "tutorial_voice_order": {
+      "title": "Input Tutorial",
+      "steps": {
+        "intro": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Follow the next prompt to complete a simple input."
+            }
+          ]
+        },
+        "order": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Please salute. Type 'salute', or start recording after the narration stops."
+            }
+          ],
+          "narrationText": "Please salute."
+        },
+        "after_order": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Input complete. You may continue."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {
+    "balanced": {
+      "title": "A Balanced Judgment"
+    },
+    "fallback": {
+      "title": "Continue the Review"
+    }
+  }
+}

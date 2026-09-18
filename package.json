@@ -28,6 +28,8 @@
     "voice:check": "tsx scripts/voice-keywords.ts --check",
     "voice:cli:build": "node scripts/build-voice-cli.mjs",
     "asr:prepare": "python -X utf8 scripts/prepare-asr.py",
+    "tts:prepare": "python -X utf8 scripts/prepare-tts.py",
+    "tts:smoke": "cargo run --locked --manifest-path src-tauri/Cargo.toml -- --tts-model-smoke",
     "asr:cli:build": "node scripts/build-asr-cli.mjs"
   },
   "dependencies": {

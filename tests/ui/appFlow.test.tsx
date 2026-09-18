@@ -109,6 +109,16 @@ afterEach(() => {
   document.documentElement.style.colorScheme = "";
 });
 
+async function completeTutorial(user: ReturnType<typeof userEvent.setup>) {
+  const english = document.documentElement.lang === "en-US";
+  await user.click(await screen.findByRole("button", { name: english ? "Continue" : "继续" }));
+  await user.type(screen.getByRole("textbox"), english ? "salute" : "敬礼");
+  await user.click(screen.getByRole("button", { name: english ? "Confirm action" : "确认动作" }));
+  await user.click(
+    await screen.findByRole("button", { name: english ? "Complete story" : "完成剧情" }),
+  );
+}
+
 describe("App mock workspace flow", () => {
   it("updates active choices, annotation, story, and resolved history without changing the run", async () => {
     const user = userEvent.setup();
@@ -118,6 +128,7 @@ describe("App mock workspace flow", () => {
 
     await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "登录" }));
+    await completeTutorial(user);
     await user.click(
       await screen.findByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }),
     );
@@ -170,6 +181,7 @@ describe("App mock workspace flow", () => {
 
     await user.click(screen.getByRole("button", { name: "Select profile 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await completeTutorial(user);
     expect(await screen.findByRole("heading", { name: "Awaiting case selection" })).toBeTruthy();
     expect(settingsButton("Switch to Simplified Chinese")).toBeTruthy();
     expect(screen.queryByText("等待调取案卷")).toBeNull();
@@ -198,6 +210,7 @@ describe("App mock workspace flow", () => {
 
     await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "登录" }));
+    await completeTutorial(user);
     expect(settingsButton("深色").getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -209,6 +222,7 @@ describe("App mock workspace flow", () => {
 
     await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
     await user.click(screen.getByRole("button", { name: "登录" }));
+    await completeTutorial(user);
     expect(await screen.findByRole("heading", { level: 1, name: "等待调取案卷" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }));
     expect(
@@ -299,6 +313,7 @@ describe("App mock workspace flow", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "确定" }));
+    await completeTutorial(user);
     expect(await screen.findByRole("heading", { level: 1, name: "等待调取案卷" })).toBeTruthy();
     expect(createObjectURL).toHaveBeenCalledTimes(2);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:profile-avatar-1");
@@ -320,6 +335,7 @@ it("makes recovery reachable after a story commit failure and permits retry afte
   );
   await user.click(screen.getByRole("button", { name: "选择档案员 演示档案员" }));
   await user.click(screen.getByRole("button", { name: "登录" }));
+  await completeTutorial(user);
   await user.click(
     await screen.findByRole("button", { name: "第 001 号：夜间档案室事件，待开始" }),
   );

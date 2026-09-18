@@ -1,0 +1,28 @@
+{
+  "modelId": "vits-melo-tts-zh_en",
+  "sherpaVersion": "1.13.8",
+  "voiceConfigVersion": 1,
+  "voiceId": "system",
+  "speakerId": 0,
+  "speed": 1.0,
+  "locales": [
+    "zh-CN",
+    "en-US"
+  ],
+  "minimumAppVersion": "0.1.0",
+  "model": {
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2",
+    "sha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514"
+  },
+  "files": [
+    "model.onnx",
+    "tokens.txt",
+    "lexicon.txt",
+    "date.fst",
+    "number.fst",
+    "phone.fst",
+    "LICENSE",
+    "README.md"
+  ],
+  "licenseStatus": "Archive LICENSE retained; full weights/pronunciation redistribution review pending."
+}

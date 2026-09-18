@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { LocaleSwitch } from "./LocaleSwitch";
 import { ThemeSwitch } from "./ThemeSwitch";
+import { useNarration } from "./narration/NarrationProvider";
 import { useI18n } from "./i18n";
 import type { UiThemeMode } from "./theme";
 import "./interface-settings.css";
@@ -12,6 +13,7 @@ export interface InterfaceSettingsProps {
 
 export function InterfaceSettings({ themeMode, onThemeChange }: InterfaceSettingsProps) {
   const { t } = useI18n();
+  const narration = useNarration();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -94,6 +96,14 @@ export function InterfaceSettings({ themeMode, onThemeChange }: InterfaceSetting
           <ThemeSwitch mode={themeMode} onChange={onThemeChange} />
           <p>{t("locale.label")}</p>
           <LocaleSwitch />
+          <label>
+            <input
+              type="checkbox"
+              checked={narration.enabled}
+              onChange={(event) => narration.setEnabled(event.target.checked)}
+            />
+            {t("narration.enabled")}
+          </label>
         </div>
       )}
     </div>

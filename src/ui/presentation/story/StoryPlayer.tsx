@@ -6,6 +6,7 @@ import type { StoryId } from "../../../content/schema";
 import { useI18n, type MessageKey } from "../../i18n";
 import { StoryBlocks } from "./StoryBlocks";
 import { ActionInputPanel } from "./ActionInputPanel";
+import { NarrationControls } from "../../narration/NarrationControls";
 import "./story.css";
 
 export type StoryCompletionReason = "completed" | "skipped";
@@ -17,6 +18,7 @@ export interface StoryPlayerProps {
   attributes: Readonly<Record<string, ContentAttributeView>>;
   resumeStepId?: string | null;
   busy?: boolean;
+  narrationReady?: boolean;
   completionError?: string | null;
   onComplete(reason: StoryCompletionReason): void | Promise<void>;
 }
@@ -37,6 +39,7 @@ export function StoryPlayer({
   attributes,
   resumeStepId = null,
   busy = false,
+  narrationReady = true,
   completionError = null,
   onComplete,
 }: StoryPlayerProps) {
@@ -135,6 +138,15 @@ export function StoryPlayer({
       </header>
 
       <div className="story-player__stage" key={stepIndex}>
+        {(step.type === "text" || step.type === "actionInput") && (
+          <NarrationControls
+            storyId={storyId}
+            stepId={step.id}
+            key={step.id}
+            narration={step.narration}
+            ready={narrationReady}
+          />
+        )}
         {step.type === "actionInput" ? (
           <ActionInputPanel
             sessionView={sessionView}
