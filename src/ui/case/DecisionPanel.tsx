@@ -5,6 +5,7 @@ import type { CaseId, ChoiceId, NodeId } from "../../content/schema";
 import { translateSessionError, useI18n } from "../i18n";
 import { observeReviewVisibility } from "./observeReviewVisibility";
 import { AnnotationPopover } from "./AnnotationPopover";
+import encryptAiIcon from "../assets/icons/interlocked_rectangular_rings_v4.svg";
 
 export interface DecisionPanelProps {
   caseId: CaseId;
@@ -263,7 +264,15 @@ export function DecisionPanel({
                 );
               })}
             </fieldset>
-            <p className="decision-panel__attribution">{t("decision.poweredBy")}</p>
+            <p className="decision-panel__attribution">
+              <span>{t("decision.poweredBy")}</span>
+              <img
+                className="decision-panel__attribution-icon"
+                src={encryptAiIcon}
+                alt=""
+                aria-hidden="true"
+              />
+            </p>
           </div>
         ) : (
           <div className={`decision-thinking decision-thinking--${revealPhase}`} role="status">

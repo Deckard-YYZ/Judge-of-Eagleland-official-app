@@ -171,8 +171,9 @@ unknown 原因为 empty_audio（前端未收到帧）、too_short、no_keyword�
 本次仅增强观测，没有调整识别阈值、规则或保存语义；尚不能据此确认用户实录持续 unknown 的根因。
 
 本轮主审验证：类型、词表一致性、模块边界、Prettier、Rust fmt 和 diff 检查通过；Rust 19 tests 通过。
-全量前端 429 tests 中 428 通过，1 个既有失败：decisionReveal.test.tsx 期待 powered by GPT，
-而 HEAD 的中英文文案均已是 powered by EncryptAI；本次未修改该 UI 或断言。
+此前一次主审记录的全量前端统计为 429 tests 中 428 通过；唯一失败来自
+decisionReveal.test.tsx 仍期待旧版提供商署名。中英文文案已统一为 powered by EncryptAI，
+该断言现已同步更新，以上失败不再代表当前状态。
 最新 debug no-bundle 构建及双语静音模型 smoke 通过；未操作麦克风，人工识别准确率仍待测。
 下次人工测试：分别在对应语言下录入“敬礼”和“salute”，结束后导出诊断报告，按 operationId 对照三处 PCM 摘要和 decode_summary。
 

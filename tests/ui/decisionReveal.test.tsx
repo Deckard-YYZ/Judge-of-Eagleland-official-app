@@ -68,7 +68,7 @@ describe("DecisionPanel viewport reveal", () => {
 
     expect(screen.getByRole("button", { name: /现有材料不足/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /确认违规/ })).toBeTruthy();
-    expect(screen.getByText("powered by GPT")).toBeTruthy();
+    expect(screen.getByText("powered by EncryptAI")).toBeTruthy();
 
     rerender(
       <DecisionPanel

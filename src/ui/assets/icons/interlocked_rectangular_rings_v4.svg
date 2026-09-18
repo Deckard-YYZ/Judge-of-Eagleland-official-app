@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="white"/>
+  <defs>
+    <clipPath id="cross-0" clipPathUnits="userSpaceOnUse"><rect x="243.706" y="286.910" width="89.110" height="64.966"/></clipPath>
+    <clipPath id="cross-1" clipPathUnits="userSpaceOnUse"><rect x="195.195" y="272.563" width="67.096" height="88.123"/></clipPath>
+    <clipPath id="cross-2" clipPathUnits="userSpaceOnUse"><rect x="160.123" y="243.706" width="64.966" height="89.110"/></clipPath>
+    <clipPath id="cross-3" clipPathUnits="userSpaceOnUse"><rect x="151.315" y="195.195" width="88.123" height="67.096"/></clipPath>
+    <clipPath id="cross-4" clipPathUnits="userSpaceOnUse"><rect x="179.185" y="160.123" width="89.110" height="64.966"/></clipPath>
+    <clipPath id="cross-5" clipPathUnits="userSpaceOnUse"><rect x="249.709" y="151.315" width="67.096" height="88.123"/></clipPath>
+    <clipPath id="cross-6" clipPathUnits="userSpaceOnUse"><rect x="286.910" y="179.185" width="64.966" height="89.110"/></clipPath>
+    <clipPath id="cross-7" clipPathUnits="userSpaceOnUse"><rect x="272.563" y="249.709" width="88.123" height="67.096"/></clipPath>
+  </defs>
+  <g fill="#000" fill-rule="evenodd">
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(325.282 296.000) rotate(160.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(276.706 333.274) rotate(205.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(216.000 325.282) rotate(250.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(178.726 276.706) rotate(295.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(186.718 216.000) rotate(340.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(235.294 178.726) rotate(385.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(296.000 186.718) rotate(430.000)"/>
+    <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(333.274 235.294) rotate(475.000)"/>
+    <g clip-path="url(#cross-0)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(325.282 296.000) rotate(160.000)"/>    </g>
+    <g clip-path="url(#cross-1)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(276.706 333.274) rotate(205.000)"/>    </g>
+    <g clip-path="url(#cross-2)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(216.000 325.282) rotate(250.000)"/>    </g>
+    <g clip-path="url(#cross-3)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(178.726 276.706) rotate(295.000)"/>    </g>
+    <g clip-path="url(#cross-4)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(186.718 216.000) rotate(340.000)"/>    </g>
+    <g clip-path="url(#cross-5)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(235.294 178.726) rotate(385.000)"/>    </g>
+    <g clip-path="url(#cross-6)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(296.000 186.718) rotate(430.000)"/>    </g>
+    <g clip-path="url(#cross-7)">      <path d="M-72.0,-29.0 H72.0 V29.0 H-72.0 Z M-57.0,-14.0 V14.0 H57.0 V-14.0 Z" transform="translate(333.274 235.294) rotate(475.000)"/>    </g>
+  </g>
+</svg>
