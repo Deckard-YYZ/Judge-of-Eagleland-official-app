@@ -5,7 +5,7 @@ import type { CaseId, ChoiceId, NodeId } from "../../content/schema";
 import { translateSessionError, useI18n } from "../i18n";
 import { observeReviewVisibility } from "./observeReviewVisibility";
 import { AnnotationPopover } from "./AnnotationPopover";
-import encryptAiIcon from "../assets/icons/interlocked_rectangular_rings_v4.svg";
+import encryptAiIcon from "../assets/icons/interlocked_rectangular_rings_small.svg";
 
 export interface DecisionPanelProps {
   caseId: CaseId;

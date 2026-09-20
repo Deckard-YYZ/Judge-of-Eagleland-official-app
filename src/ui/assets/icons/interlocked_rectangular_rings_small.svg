@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 100 312 312">
+  <!-- Small-size variant: 10-unit bands with wider openings, without duplicate overpainting. -->
+  <g fill="#000" fill-rule="evenodd">
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(325.282 296.000) rotate(160)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(276.706 333.274) rotate(205)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(216.000 325.282) rotate(250)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(178.726 276.706) rotate(295)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(186.718 216.000) rotate(340)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(235.294 178.726) rotate(385)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(296.000 186.718) rotate(430)"/>
+    <path d="M-72,-29 H72 V29 H-72 Z M-62,-19 V19 H62 V-19 Z" transform="translate(333.274 235.294) rotate(475)"/>
+  </g>
+</svg>
