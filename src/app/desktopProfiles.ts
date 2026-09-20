@@ -22,6 +22,7 @@ import { normalizeProfileLoginName, type ProfileRecord } from "../storage/profil
 import type { SaveRepository } from "../storage/saveRepository";
 import type { StorageRepositories } from "../storage";
 import { transition as gameTransition } from "../game/transition";
+import { configureInitialTutorial } from "./tutorialPolicy";
 
 /** Profile-scoped setting used to select a save when a profile has more than one. */
 export const CURRENT_SAVE_ID_SETTING_KEY = "currentSaveId";
@@ -50,6 +51,8 @@ export interface DesktopProfileEntryOptions {
   content?: Readonly<GameContentCatalog>;
   contentRepository?: SplitContentRepository;
   transition?: Transition;
+  /** Temporary launch policy; tutorial content remains installed for later re-enabling. */
+  tutorialEnabled?: boolean;
 }
 
 type ListableSaveRepository = SaveRepository & {
@@ -162,8 +165,9 @@ export async function createDesktopProfileEntry(
   const clock = options.clock ?? defaultClock;
   const contentRepository = options.contentRepository ?? new BundledSplitContentRepository();
   // Bootstrap must fail visibly if installed content is missing or invalid.
-  const content =
+  const loadedContent =
     options.content ?? (await contentRepository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF));
+  const content = configureInitialTutorial(loadedContent, options.tutorialEnabled ?? true);
   const transition = options.transition ?? gameTransition;
   const makeProfileId = options.createProfileId ?? (() => defaultProfileId());
   const makeSaveId = options.createSaveId ?? defaultSaveIdForProfile;

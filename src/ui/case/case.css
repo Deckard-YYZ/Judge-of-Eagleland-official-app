@@ -696,13 +696,11 @@
 .decision-panel__attribution-icon {
   display: block;
   width: auto;
-  height: 1.4em;
+  height: 1.85em;
   flex: 0 0 auto;
-  opacity: 0.7;
-  mix-blend-mode: multiply;
+  opacity: 0.78;
 }
 
 :root[data-theme="dark"] .decision-panel__attribution-icon {
   filter: invert(1);
-  mix-blend-mode: screen;
 }

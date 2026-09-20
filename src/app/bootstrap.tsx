@@ -64,7 +64,9 @@ async function bootstrapApplicationInternal(
     return Object.freeze({
       runtime,
       storageMode: "memory-preview" as const,
-      profileEntry: (dependencies.createDemoProfileEntry ?? createDemoProfileEntry)(),
+      profileEntry: dependencies.createDemoProfileEntry
+        ? dependencies.createDemoProfileEntry()
+        : createDemoProfileEntry({ tutorialEnabled: false }),
     });
   }
 
@@ -73,9 +75,13 @@ async function bootstrapApplicationInternal(
   );
   let profileEntry: ProfileEntry;
   try {
+    const desktopProfileOptions = {
+      tutorialEnabled: false,
+      ...dependencies.desktopProfileOptions,
+    };
     profileEntry = await (dependencies.createDesktopProfileEntry ?? createDesktopProfileEntry)(
       storage,
-      dependencies.desktopProfileOptions,
+      desktopProfileOptions,
     );
   } catch (error) {
     // Profile loading is part of this attempt. Close only the connection opened

@@ -48,7 +48,9 @@ describe("application bootstrap", () => {
       profileEntry,
       storage: desktopStorage,
     } satisfies Partial<ApplicationBootstrapResult>);
-    expect(createDesktopProfileEntry).toHaveBeenCalledWith(desktopStorage, undefined);
+    expect(createDesktopProfileEntry).toHaveBeenCalledWith(desktopStorage, {
+      tutorialEnabled: false,
+    });
   });
 
   it("propagates storage failures instead of falling back to memory preview", async () => {

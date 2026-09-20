@@ -13,14 +13,23 @@ import { FakeSplitContentRepository } from "../content/repository";
 import { InMemorySaveRepository } from "../storage/inMemorySaveRepository";
 import { createDemoSave } from "./demoSession";
 import { demoTransition } from "./demoTransition";
+import { configureInitialTutorial } from "./tutorialPolicy";
 
 interface DemoProfile extends LocalProfileSummary {
   readonly saveId: string;
 }
 
+export interface DemoProfileEntryOptions {
+  /** Tests can opt back into the installed tutorial while the app entry is temporarily disabled. */
+  tutorialEnabled?: boolean;
+}
+
 /** In-memory Profile entry for frontend work. Refreshing the app resets all profiles. */
-export const createDemoProfileEntry = (): ProfileEntry => {
-  const content = ACTION_INPUT_GAME_CONTENT;
+export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): ProfileEntry => {
+  const content = configureInitialTutorial(
+    ACTION_INPUT_GAME_CONTENT,
+    options.tutorialEnabled ?? true,
+  );
   const clock = () => new Date().toISOString();
   const initialProfile: DemoProfile = {
     profileId: "demo-profile",

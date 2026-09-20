@@ -48,6 +48,7 @@ async function boot(database: NodeSqliteTestDatabase) {
     storageOptions: { loadDatabase: async () => database },
     desktopProfileOptions: {
       contentRepository: new BundledSplitContentRepository(readInstalledPackage),
+      tutorialEnabled: true,
     },
   });
   if (app.runtime !== "desktop") throw new Error("Expected real desktop bootstrap.");
