@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "主窗口所需的最小路径解析与 SQLite 存储权限。",
+  "description": "主窗口所需的最小路径解析、SQLite 存储与原生窗口主题权限。",
   "windows": ["main"],
   "permissions": [
     "core:path:allow-resolve-directory",
+    "core:window:allow-set-theme",
     "sql:allow-close",
     "sql:allow-load",
     "sql:allow-select",

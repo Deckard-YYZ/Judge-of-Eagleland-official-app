@@ -12,6 +12,8 @@ import { WorkspaceStudy } from "./workspace-study/WorkspaceStudy";
 import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme";
 
 export interface AppProps {
+  /** Composition-root hook; UI has no native-window dependency. */
+  onThemeApplied?(mode: UiThemeMode): void;
   profileEntry: ProfileEntry;
   /** Tells the profile surface whether this is the persistent desktop path or preview memory. */
   storageMode?: "sqlite" | "memory-preview";
@@ -108,6 +110,7 @@ function AuthenticatedWorkspace({
 function LocalizedApp({
   profileEntry,
   storageMode = "memory-preview",
+  onThemeApplied,
   caseOpenDelayMs,
   decisionRevealDelayMs,
 }: AppProps) {
@@ -127,7 +130,8 @@ function LocalizedApp({
   useLayoutEffect(() => {
     // The document attribute is the single theme boundary shared by the shell and portalled overlays.
     applyThemeMode(themeMode);
-  }, [themeMode]);
+    onThemeApplied?.(themeMode);
+  }, [themeMode, onThemeApplied]);
 
   useEffect(
     () => () => {

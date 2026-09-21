@@ -92,6 +92,7 @@ describe("Tauri resource and permission configuration", () => {
     expect(capability.windows).toEqual(["main"]);
     expect(capability.permissions).toEqual([
       "core:path:allow-resolve-directory",
+      "core:window:allow-set-theme",
       "sql:allow-close",
       "sql:allow-load",
       "sql:allow-select",

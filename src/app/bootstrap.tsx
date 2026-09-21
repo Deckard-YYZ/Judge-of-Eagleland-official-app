@@ -9,6 +9,7 @@ import {
   type StorageRepositories,
 } from "../storage";
 import type { ProfileEntry } from "../application/profileEntry";
+import { syncWindowTheme } from "../platform/windowAppearance";
 import { detectRuntime, type RuntimeInfo } from "../platform/runtime";
 
 export type ApplicationRuntime = "desktop" | "browser";
@@ -239,6 +240,7 @@ export function BootstrapApp({
 
   return (
     <App
+      onThemeApplied={syncWindowTheme}
       profileEntry={view.result.profileEntry}
       storageMode={view.result.storageMode}
       caseOpenDelayMs={caseOpenDelayMs}
