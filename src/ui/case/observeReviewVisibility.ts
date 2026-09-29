@@ -1,19 +1,14 @@
 /** One-shot visibility gate shared by pending review and committed decision nodes. */
-export function observeReviewVisibility(element: HTMLElement, onVisible: () => void): () => void {
+export function observeReviewPresence(
+  element: HTMLElement,
+  onPresence: (visible: boolean) => void,
+): () => void {
   let live = true;
-  let reached = false;
-  const reveal = () => {
-    if (!live || reached) return;
-    reached = true;
-    onVisible();
-  };
   if (typeof window.IntersectionObserver === "function") {
     const observer = new window.IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0)) {
-          observer.disconnect();
-          reveal();
-        }
+        const latest = entries.at(-1);
+        if (live && latest) onPresence(latest.isIntersecting && latest.intersectionRatio > 0);
       },
       { threshold: 0.15 },
     );
@@ -27,7 +22,7 @@ export function observeReviewVisibility(element: HTMLElement, onVisible: () => v
   // Older WebViews must still wait for visibility, including clipping by the
   // scrollable workspace. Do not dispatch merely because an observer is absent.
   const check = () => {
-    if (!live || reached || !element.isConnected) return;
+    if (!live || !element.isConnected) return;
     const bounds = element.getBoundingClientRect();
     let top = Math.max(0, bounds.top);
     let bottom = Math.min(window.innerHeight, bounds.bottom);
@@ -45,7 +40,7 @@ export function observeReviewVisibility(element: HTMLElement, onVisible: () => v
         right = Math.min(right, rect.right);
       }
     }
-    if (bottom > top && right > left) reveal();
+    onPresence(bottom > top && right > left);
   };
   check();
   window.addEventListener("scroll", check, true);
@@ -58,4 +53,18 @@ export function observeReviewVisibility(element: HTMLElement, onVisible: () => v
     window.removeEventListener("resize", check);
     resize?.disconnect();
   };
+}
+
+/** One-shot start gate; presence observation also serves candidate reveal. */
+export function observeReviewVisibility(element: HTMLElement, onVisible: () => void): () => void {
+  let reached = false;
+  let stop: (() => void) | undefined;
+  stop = observeReviewPresence(element, (visible) => {
+    if (!visible || reached) return;
+    reached = true;
+    stop?.();
+    onVisible();
+  });
+  if (reached) stop();
+  return stop;
 }

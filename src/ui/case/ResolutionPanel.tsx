@@ -47,6 +47,11 @@ export function ResolutionPanel({
       <h2 ref={headingRef} id={headingId} className="resolution-panel__title" tabIndex={-1}>
         {t("resolution.title")}
       </h2>
+      <p className="resolution-panel__meta">
+        {t("resolution.meta", { order: formatNumber(resolution.resolvedOrder) })}
+        <time dateTime={resolution.resolvedAt}>{resolvedDate}</time>
+      </p>
+      <p className="resolution-panel__readonly">{t("resolution.readonly")}</p>
       <p className="resolution-panel__choice">
         <span>{t("resolution.finalChoice")}</span>
         {finalChoiceText}
@@ -95,11 +100,6 @@ export function ResolutionPanel({
           <p className="resolution-panel__empty-change">{t("resolution.noChanges")}</p>
         )}
       </section>
-
-      <p className="resolution-panel__meta">
-        {t("resolution.meta", { order: formatNumber(resolution.resolvedOrder) })}
-        <time dateTime={resolution.resolvedAt}>{resolvedDate}</time>
-      </p>
     </section>
   );
 }

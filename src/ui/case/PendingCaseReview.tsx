@@ -83,13 +83,6 @@ export function PendingCaseReview({
             <span className="decision-thinking__label">
               {t(starting ? "decision.thinking" : "decision.waiting")}
             </span>
-            {starting && (
-              <span className="decision-thinking__dots" aria-label={t("decision.thinkingAria")}>
-                <i />
-                <i />
-                <i />
-              </span>
-            )}
           </div>
         )}
       </div>

@@ -35,6 +35,7 @@ async function createPendingAndResolvedSnapshot(): Promise<GameSessionViewSnapsh
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("CaseWorkspace document handoff", () => {
@@ -55,7 +56,7 @@ describe("CaseWorkspace document handoff", () => {
     expect(screen.getByText(/选择一份未处理或已处理文档/)).toBeTruthy();
   });
 
-  it("loads pending and resolved documents before presenting either one", async () => {
+  it("presents pending and archived documents on the next turn without artificial delay", async () => {
     const snapshot = await createPendingAndResolvedSnapshot();
     vi.useFakeTimers();
     const { rerender } = render(
@@ -63,14 +64,13 @@ describe("CaseWorkspace document handoff", () => {
         snapshot={{ ...snapshot, selectedCaseId: "case_002" }}
         dispatch={vi.fn()}
         reload={vi.fn()}
-        caseOpenDelayMs={1_500}
       />,
       { wrapper: TestI18nProvider },
     );
 
     expect(screen.getByRole("status", { name: "" }).getAttribute("aria-busy")).toBe("true");
     expect(screen.queryByRole("heading", { name: "第 002 号：调阅权限申请" })).toBeNull();
-    act(() => vi.advanceTimersByTime(1_500));
+    act(() => vi.advanceTimersByTime(0));
     expect(screen.getByRole("heading", { name: "第 002 号：调阅权限申请" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "开始案件" })).toBeNull();
     expect(screen.getByText("滚动至此以准备裁定选项")).toBeTruthy();
@@ -80,12 +80,11 @@ describe("CaseWorkspace document handoff", () => {
         snapshot={{ ...snapshot, selectedCaseId: "case_001" }}
         dispatch={vi.fn()}
         reload={vi.fn()}
-        caseOpenDelayMs={1_500}
       />,
     );
     expect(screen.getByRole("heading", { name: "正在调取案卷" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "裁定已经归档" })).toBeNull();
-    act(() => vi.advanceTimersByTime(1_500));
+    act(() => vi.advanceTimersByTime(0));
     expect(screen.getByRole("heading", { name: "第 001 号：夜间档案室事件" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "裁定已经归档" })).toBeTruthy();
   });
@@ -145,3 +144,22 @@ it.each(["needsReload", "error"] as const)(
     expect(reload).toHaveBeenCalledWith();
   },
 );
+
+it("rejects an already queued old handoff callback after a newer selection", async () => {
+  const snapshot = await createPendingAndResolvedSnapshot();
+  vi.useFakeTimers();
+  const timer = vi.spyOn(window, "setTimeout");
+  const props = { dispatch: vi.fn(), reload: vi.fn() };
+  const view = render(
+    <CaseWorkspace {...props} snapshot={{ ...snapshot, selectedCaseId: "case_001" }} />,
+    { wrapper: TestI18nProvider },
+  );
+  const staleCallback = timer.mock.calls.find((call) => call[1] === 0)?.[0] as () => void;
+  view.rerender(
+    <CaseWorkspace {...props} snapshot={{ ...snapshot, selectedCaseId: "case_002" }} />,
+  );
+  act(() => staleCallback());
+  expect(screen.queryByRole("heading", { name: "第 001 号：夜间档案室事件" })).toBeNull();
+  act(() => vi.advanceTimersByTime(0));
+  expect(screen.getByRole("heading", { name: "第 002 号：调阅权限申请" })).toBeTruthy();
+});

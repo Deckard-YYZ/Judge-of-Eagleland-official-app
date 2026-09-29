@@ -8,7 +8,7 @@
   --ui-surface: #ffffff;
   --ui-surface-raised: #e9e9e6;
   --ui-ink: #0a0b0c;
-  --ui-muted: #626467;
+  --ui-muted: #56595d;
   --ui-line: #d1d2cf;
   --ui-emphasis: #111214;
   --ui-inverse: #fafaf8;
@@ -21,6 +21,8 @@
   --ui-shadow: none;
   --ui-content-max: 80rem;
   --ui-reading-width: 56rem;
+  --ui-font-control: Inter, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --ui-font-numeric: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --ui-font-document: "Noto Serif SC", "Songti SC", SimSun, Georgia, serif;
   --ui-rule: color-mix(in srgb, var(--ui-ink) 22%, transparent);
   --motion-fast: 120ms;
@@ -55,7 +57,7 @@
   --ui-surface: #0f1011;
   --ui-surface-raised: #181a1c;
   --ui-ink: #f3f3f0;
-  --ui-muted: #999c9f;
+  --ui-muted: #a8adb2;
   --ui-line: #2b2d30;
   --ui-emphasis: #ffffff;
   --ui-inverse: #08090a;
@@ -115,8 +117,7 @@ button {
     color var(--motion-fast) var(--motion-ease),
     background-color var(--motion-fast) var(--motion-ease),
     border-color var(--motion-fast) var(--motion-ease),
-    opacity var(--motion-fast) var(--motion-ease),
-    transform var(--motion-fast) var(--motion-ease);
+    opacity var(--motion-fast) var(--motion-ease);
 }
 
 button:disabled,
@@ -159,8 +160,8 @@ h2,
 .kicker {
   margin-bottom: 0.75rem;
   color: var(--ui-muted);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.64rem;
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -183,8 +184,8 @@ h2,
   border: 0;
   color: var(--ui-muted);
   background: transparent;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.61rem;
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -204,7 +205,9 @@ h2,
 .locale-switch button:active:not(:disabled),
 .button:active:not(:disabled),
 .avatar-action:active:not(:disabled) {
-  transform: translateY(1px);
+  color: var(--ui-inverse);
+  background: var(--ui-emphasis);
+  border-color: var(--ui-emphasis);
 }
 
 .wordmark {
@@ -236,10 +239,10 @@ h2,
 
 .wordmark small {
   margin-top: 0.2rem;
-  opacity: 0.62;
-  color: currentColor;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.55rem;
+  opacity: 1;
+  color: var(--ui-muted);
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
   letter-spacing: 0.12em;
 }
 
@@ -290,7 +293,7 @@ h2,
   border: 1px solid var(--ui-line);
   color: var(--ui-ink) !important;
   overflow-wrap: anywhere;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--ui-font-control);
   font-size: 0.72rem !important;
 }
 
@@ -400,8 +403,8 @@ h2,
   display: block;
   margin-bottom: 0.55rem;
   color: var(--ui-muted);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.64rem;
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -460,8 +463,9 @@ h2,
   color: var(--ui-ink);
 }
 
-.profile-choice[aria-pressed="true"] {
-  transform: translateY(-2px);
+.profile-choice[aria-pressed="true"] .profile-avatar {
+  border-color: var(--ui-emphasis);
+  background: var(--ui-surface-raised);
 }
 
 .profile-avatar,
@@ -474,12 +478,11 @@ h2,
   border-radius: 50%;
   color: var(--ui-ink);
   background: var(--ui-quiet);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--ui-font-control);
   font-weight: 750;
   transition:
     border-color var(--motion-standard) var(--motion-ease),
-    background-color var(--motion-standard) var(--motion-ease),
-    transform var(--motion-standard) var(--motion-ease);
+    background-color var(--motion-standard) var(--motion-ease);
 }
 
 .profile-avatar {
@@ -506,7 +509,7 @@ h2,
 .profile-choice__name {
   width: 100%;
   overflow: hidden;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -544,8 +547,8 @@ h2,
 .avatar-editor__controls > p:first-child {
   margin: 0 0 0.55rem;
   color: var(--ui-muted);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.64rem;
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -563,7 +566,7 @@ h2,
   border: 1px solid var(--ui-line);
   color: var(--ui-ink);
   background: transparent;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -574,7 +577,7 @@ h2,
 .avatar-editor__error {
   margin: 0.5rem 0 0;
   color: var(--ui-danger);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -587,7 +590,7 @@ h2,
   padding: 0.68rem 1rem;
   border: 1px solid transparent;
   border-radius: 0;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 750;
   letter-spacing: 0.04em;
 }
@@ -654,12 +657,10 @@ h2,
 @keyframes profile-stage-enter {
   from {
     opacity: 0;
-    transform: translateY(0.35rem);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -721,7 +722,7 @@ h2,
   border: 1px solid var(--ui-line);
   color: var(--ui-muted);
   background: var(--ui-canvas);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 .diagnostics-launcher:hover {
   color: var(--ui-ink);

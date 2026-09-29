@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useId, useRef, useState, type Ref } from "react";
+import type { DecisionPresentationHistory, PresentationMode } from "./presentationPolicy";
+import { useCallback, useEffect, useMemo, useId, useRef, useState, type Ref } from "react";
 import type { GameSessionView } from "../../application/gameSessionView";
 import type { ContentNodeView } from "../../application/gameContentView";
 import type { CaseId, ChoiceId, NodeId } from "../../content/schema";
 import { translateSessionError, useI18n } from "../i18n";
-import { observeReviewVisibility } from "./observeReviewVisibility";
+import { observeReviewPresence } from "./observeReviewVisibility";
 import { AnnotationPopover } from "./AnnotationPopover";
 import encryptAiIcon from "../assets/icons/interlocked_rectangular_rings_small.svg";
 
@@ -14,12 +15,15 @@ export interface DecisionPanelProps {
   dispatch: GameSessionView["dispatch"];
   disabled?: boolean;
   revealDelayMs?: number;
+  presentationMode?: PresentationMode;
+  presentationHistory?: DecisionPresentationHistory;
+  presentationIdentity?: string;
   thinkingStartedAt?: number;
   headingRef?: Ref<HTMLHeadingElement>;
   onCommandError?(message: string | null): void;
 }
 
-export const DECISION_REVEAL_DELAY_MS = 2_500;
+export const DECISION_REVEAL_DELAY_MS = 750;
 
 type RevealPhase = "waiting" | "thinking" | "ready";
 
@@ -39,6 +43,9 @@ export function DecisionPanel({
   dispatch,
   disabled = false,
   revealDelayMs = DECISION_REVEAL_DELAY_MS,
+  presentationMode = "normal",
+  presentationHistory,
+  presentationIdentity,
   thinkingStartedAt,
   headingRef,
   onCommandError,
@@ -50,48 +57,64 @@ export function DecisionPanel({
   const submittingRef = useRef(false);
   const revealGateRef = useRef<HTMLDivElement>(null);
   const [submittingChoiceId, setSubmittingChoiceId] = useState<ChoiceId | null>(null);
+  const [commandError, setCommandError] = useState<string | null>(null);
+  const failedChoiceRef = useRef<ChoiceId | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<ActiveAnnotation | null>(null);
-  const revealIdentity = `${caseId}:${nodeId}`;
-  const [revealState, setRevealState] = useState<{
-    identity: string;
-    phase: RevealPhase;
-  }>({ identity: revealIdentity, phase: "waiting" });
-  const revealPhase =
-    revealState.identity === revealIdentity ? revealState.phase : ("waiting" as const);
+  const revealIdentity = presentationIdentity ?? JSON.stringify([caseId, nodeId]);
+  const revealScope = useMemo(
+    () => ({ identity: revealIdentity }),
+    [revealIdentity, presentationHistory],
+  );
+  const [presence, setPresence] = useState<{
+    identity: typeof revealScope;
+    visible: boolean;
+  } | null>(null);
+  const visible = presence?.identity === revealScope && presence.visible;
+  const [preparation, setPreparation] = useState<{
+    identity: typeof revealScope;
+    complete: boolean;
+  } | null>(null);
+  const [shownIdentity, setShownIdentity] = useState<typeof revealScope | null>(null);
+  const startedAt = useRef<{ identity: typeof revealScope; time: number } | null>(null);
+  const alreadyShown = presentationHistory?.has(revealIdentity) ?? false;
+  const delayMs = presentationMode === "immediate" || alreadyShown ? 0 : revealDelayMs;
+  const prepared = preparation?.identity === revealScope && preparation.complete;
+  const revealPhase: RevealPhase =
+    shownIdentity === revealScope || (prepared && visible && !disabled)
+      ? "ready"
+      : preparation?.identity === revealScope
+        ? "thinking"
+        : "waiting";
   const interactionLocked = disabled || submittingChoiceId !== null;
   const annotationPopoverId = `${panelId}-annotation`;
 
   useEffect(() => {
     const gate = revealGateRef.current;
-    let timerId: number | null = null;
-    let active = true;
-    setRevealState({ identity: revealIdentity, phase: "waiting" });
-    const beginThinking = () => {
-      if (!active) return;
-      setRevealState({ identity: revealIdentity, phase: "thinking" });
-      // Pending review already started this single delay before the save. Only
-      // the first committed node inherits it; restored/later nodes gate afresh.
-      const elapsed =
-        thinkingStartedAt === undefined ? 0 : Math.max(0, Date.now() - thinkingStartedAt);
-      timerId = window.setTimeout(
-        () => {
-          if (active) setRevealState({ identity: revealIdentity, phase: "ready" });
-        },
-        Math.max(0, revealDelayMs - elapsed),
-      );
-    };
-    let stopObserving: (() => void) | undefined;
-    if (thinkingStartedAt !== undefined) {
-      beginThinking();
-    } else if (gate) {
-      stopObserving = observeReviewVisibility(gate, beginThinking);
+    return gate
+      ? observeReviewPresence(gate, (visible) => setPresence({ identity: revealScope, visible }))
+      : undefined;
+  }, [revealScope]);
+
+  useEffect(() => {
+    if (!visible || disabled || shownIdentity === revealScope || prepared) return;
+    if (startedAt.current?.identity !== revealScope) {
+      startedAt.current = { identity: revealScope, time: thinkingStartedAt ?? Date.now() };
     }
-    return () => {
-      active = false;
-      stopObserving?.();
-      if (timerId !== null) window.clearTimeout(timerId);
-    };
-  }, [revealDelayMs, revealIdentity, thinkingStartedAt]);
+    setPreparation({ identity: revealScope, complete: false });
+    const remaining = Math.max(0, delayMs - Math.max(0, Date.now() - startedAt.current.time));
+    const timerId = window.setTimeout(() => {
+      setPreparation({ identity: revealScope, complete: true });
+    }, remaining);
+    return () => window.clearTimeout(timerId);
+  }, [visible, disabled, revealScope, delayMs, thinkingStartedAt, shownIdentity, prepared]);
+
+  // Effects run after candidate DOM has committed. Timer completion alone never
+  // marks a node; hidden, failed or uncommitted work cannot suppress a later wait.
+  useEffect(() => {
+    if (revealPhase !== "ready" || !visible || disabled) return;
+    setShownIdentity(revealScope);
+    presentationHistory?.mark(revealIdentity);
+  }, [revealPhase, visible, disabled, revealScope, revealIdentity, presentationHistory]);
 
   const registerChoiceElement =
     (choiceId: ChoiceId) =>
@@ -108,6 +131,7 @@ export function DecisionPanel({
     anchorElement: HTMLElement,
     source: "hover" | "focus",
   ): void => {
+    if (interactionLocked || submittingRef.current) return;
     transientSignals.current.add(`${source}:${choiceId}`);
     setActiveAnnotation((current) => {
       if (current?.choiceId === choiceId && current.anchorElement === anchorElement) {
@@ -168,7 +192,10 @@ export function DecisionPanel({
       return;
     }
 
+    transientSignals.current.clear();
     setActiveAnnotation(null);
+    setCommandError(null);
+    failedChoiceRef.current = null;
     submittingRef.current = true;
     setSubmittingChoiceId(choiceId);
     onCommandError?.(null);
@@ -176,21 +203,36 @@ export function DecisionPanel({
     try {
       const result = await dispatch({ type: "chooseOption", caseId, nodeId, choiceId });
       if (!result.ok) {
-        onCommandError?.(translateSessionError(t, result.code));
+        const message = translateSessionError(t, result.code);
+        setCommandError(message);
+        failedChoiceRef.current = choiceId;
+        onCommandError?.(message);
       }
+    } catch {
+      const message = t("decision.submitFailed");
+      setCommandError(message);
+      failedChoiceRef.current = choiceId;
+      onCommandError?.(message);
     } finally {
       submittingRef.current = false;
       setSubmittingChoiceId(null);
     }
   };
 
+  useEffect(() => {
+    if (submittingChoiceId === null && failedChoiceRef.current) {
+      choiceElements.current.get(failedChoiceRef.current)?.focus();
+      failedChoiceRef.current = null;
+    }
+  }, [submittingChoiceId, commandError]);
+
   return (
     <section
       className="decision-panel"
       aria-labelledby={panelId}
-      aria-busy={submittingChoiceId !== null}
       data-case-id={caseId}
       data-node-id={nodeId}
+      data-submitting={submittingChoiceId !== null}
     >
       <p className="kicker">{t("decision.kicker")}</p>
       <h2 ref={headingRef} id={panelId} className="decision-panel__title" tabIndex={-1}>
@@ -200,7 +242,11 @@ export function DecisionPanel({
       <div className="decision-reveal" ref={revealGateRef} data-reveal-phase={revealPhase}>
         {revealPhase === "ready" ? (
           <div className="decision-options-revealed">
-            <fieldset className="decision-panel__choices" disabled={interactionLocked}>
+            <fieldset
+              className="decision-panel__choices"
+              disabled={interactionLocked}
+              aria-busy={submittingChoiceId !== null}
+            >
               <legend className="sr-only">{t("decision.optionsLegend")}</legend>
               {node.choices.map((choice) => {
                 const choiceDomId = `${panelId}-choice-${domToken(choice.id)}`;
@@ -234,6 +280,7 @@ export function DecisionPanel({
                       className="decision-option__button"
                       type="button"
                       onClick={() => void choose(choice.id)}
+                      data-submitting={submittingChoiceId === choice.id}
                       data-choice-anchor="true"
                       data-case-id={caseId}
                       data-node-id={nodeId}
@@ -279,24 +326,24 @@ export function DecisionPanel({
             <span className="decision-thinking__label">
               {t(revealPhase === "waiting" ? "decision.waiting" : "decision.thinking")}
             </span>
-            {revealPhase === "thinking" ? (
-              <span className="decision-thinking__dots" aria-label={t("decision.thinkingAria")}>
-                <i />
-                <i />
-                <i />
-              </span>
-            ) : null}
           </div>
         )}
       </div>
 
-      {submittingChoiceId ? (
-        <p className="decision-panel__status" role="status">
-          {t("decision.saving")}
-        </p>
-      ) : null}
+      <p
+        hidden={revealPhase !== "ready"}
+        className="decision-panel__status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {submittingChoiceId ? t("decision.saving") : ""}
+      </p>
+      {commandError && !onCommandError ? <p role="alert">{commandError}</p> : null}
 
-      {activeAnnotation?.caseId === caseId && activeAnnotation.nodeId === nodeId
+      {!interactionLocked &&
+      activeAnnotation?.caseId === caseId &&
+      activeAnnotation.nodeId === nodeId
         ? (() => {
             const choice = node.choices.find(
               (candidate) => candidate.id === activeAnnotation.choiceId,

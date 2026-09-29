@@ -110,6 +110,8 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
                   <dt>{attribute.label}</dt>
                   <dd>
                     <strong>{formatNumber(attribute.value)}</strong>
+                  </dd>
+                  <dd className="case-sidebar__measurement">
                     <span className="case-sidebar__scale" aria-hidden="true">
                       <i
                         style={{
@@ -117,11 +119,15 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
                         }}
                       />
                     </span>
-                    <span>
+                    <span className="sr-only">
                       {t("sidebar.attributeRange", {
                         min: formatNumber(attribute.min),
                         max: formatNumber(attribute.max),
                       })}
+                    </span>
+                    <span className="case-sidebar__endpoints" aria-hidden="true">
+                      <span>{formatNumber(attribute.min)}</span>
+                      <span>{formatNumber(attribute.max)}</span>
                     </span>
                   </dd>
                 </div>

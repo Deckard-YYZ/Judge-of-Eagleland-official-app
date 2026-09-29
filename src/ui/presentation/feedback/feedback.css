@@ -15,7 +15,7 @@
   color: var(--ui-ink);
   background: var(--ui-surface);
   box-shadow: var(--ui-shadow);
-  animation: feedback-notice-enter 160ms ease-out both;
+  animation: feedback-commit-rule var(--motion-emphasized) var(--motion-ease) both;
 }
 
 .feedback-notice__title {
@@ -88,15 +88,12 @@
   color: var(--ui-muted);
 }
 
-@keyframes feedback-notice-enter {
+@keyframes feedback-commit-rule {
   from {
-    opacity: 0;
-    transform: translateY(-0.45rem);
+    border-top-color: var(--ui-emphasis);
   }
-
   to {
-    opacity: 1;
-    transform: translateY(0);
+    border-top-color: var(--ui-rule);
   }
 }
 

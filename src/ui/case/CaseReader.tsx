@@ -1,3 +1,8 @@
+import {
+  decisionPresentationIdentity,
+  type DecisionPresentationHistory,
+  type PresentationMode,
+} from "./presentationPolicy";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
 import { translateSessionError, useI18n } from "../i18n";
@@ -12,9 +17,18 @@ export interface CaseReaderProps {
   dispatch: GameSessionView["dispatch"];
   reload: GameSessionView["reload"];
   decisionRevealDelayMs?: number;
+  presentationMode?: PresentationMode;
+  presentationHistory?: DecisionPresentationHistory;
 }
 
-export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }: CaseReaderProps) {
+export function CaseReader({
+  snapshot,
+  dispatch,
+  reload,
+  decisionRevealDelayMs,
+  presentationMode,
+  presentationHistory,
+}: CaseReaderProps) {
   const { t } = useI18n();
   const titleId = useId();
   const panelHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -178,13 +192,29 @@ export function CaseReader({ snapshot, dispatch, reload, decisionRevealDelayMs }
           ) : progress.status === "active" ? (
             currentNode ? (
               <DecisionPanel
-                key={progress.currentNodeId}
+                key={JSON.stringify([
+                  snapshot.envelope?.contentRef,
+                  selectedCaseId,
+                  progress.currentNodeId,
+                ])}
                 caseId={selectedCaseId}
                 nodeId={progress.currentNodeId}
                 node={currentNode}
                 dispatch={dispatch}
                 disabled={interactionLocked}
                 revealDelayMs={decisionRevealDelayMs}
+                presentationMode={presentationMode}
+                presentationHistory={presentationHistory}
+                presentationIdentity={
+                  snapshot.envelope
+                    ? decisionPresentationIdentity(
+                        snapshot.envelope.contentRef.packageId,
+                        snapshot.envelope.contentRef.version,
+                        selectedCaseId,
+                        progress.currentNodeId,
+                      )
+                    : undefined
+                }
                 thinkingStartedAt={
                   autoStart?.caseId === selectedCaseId &&
                   (autoStart.nodeId === null || autoStart.nodeId === progress.currentNodeId)

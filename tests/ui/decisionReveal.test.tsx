@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createGameContentView } from "../../src/application/gameContentView";
 import { MINIMAL_GAME_CONTENT, MINIMAL_ZH_CN } from "../../src/content/fixtures/minimalCatalog";
@@ -14,6 +14,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(window, "IntersectionObserver");
 });
 
@@ -45,13 +46,7 @@ describe("DecisionPanel viewport reveal", () => {
 
     const node = CONTENT.cases.case_001.nodes.assessment;
     const { rerender } = render(
-      <DecisionPanel
-        caseId="case_001"
-        nodeId="assessment"
-        node={node}
-        dispatch={vi.fn()}
-        revealDelayMs={2_500}
-      />,
+      <DecisionPanel caseId="case_001" nodeId="assessment" node={node} dispatch={vi.fn()} />,
       { wrapper: TestI18nProvider },
     );
 
@@ -61,8 +56,9 @@ describe("DecisionPanel viewport reveal", () => {
     act(() => {
       callback?.([{ isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry]);
     });
-    expect(screen.getByText("推演中")).toBeTruthy();
-    act(() => vi.advanceTimersByTime(2_499));
+    expect(screen.getByRole("status").textContent).toBe("正在推理裁决方向 . . .");
+    expect(screen.queryByText("powered by EncryptAI")).toBeNull();
+    act(() => vi.advanceTimersByTime(749));
     expect(screen.queryByRole("button", { name: /现有材料不足/ })).toBeNull();
     act(() => vi.advanceTimersByTime(1));
 
@@ -76,7 +72,6 @@ describe("DecisionPanel viewport reveal", () => {
         nodeId="disposition"
         node={CONTENT.cases.case_001.nodes.disposition}
         dispatch={vi.fn()}
-        revealDelayMs={2_500}
       />,
     );
     expect(screen.getByText("滚动至此以准备裁定选项")).toBeTruthy();
@@ -109,8 +104,80 @@ describe("DecisionPanel viewport reveal", () => {
       { wrapper: TestI18nProvider },
     );
 
-    expect(screen.getByText("推演中")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("正在推理裁决方向 . . .");
     act(() => vi.runOnlyPendingTimers());
     expect(screen.getAllByRole("button")).toHaveLength(node.choices.length);
+  });
+});
+
+it("locks the submitted row until dispatch settles, suppresses notes, and restores retry after rejection", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    top: 10,
+    bottom: 110,
+    left: 10,
+    right: 310,
+    width: 300,
+    height: 100,
+    x: 10,
+    y: 10,
+    toJSON: () => ({}),
+  });
+  let rejectSave!: (reason: Error) => void;
+  const dispatch = vi.fn(
+    () =>
+      new Promise<never>((_resolve, reject) => {
+        rejectSave = reject;
+      }),
+  );
+  const node = CONTENT.cases.case_001.nodes.assessment;
+  render(
+    <DecisionPanel
+      caseId="case_001"
+      nodeId="assessment"
+      node={node}
+      dispatch={dispatch}
+      thinkingStartedAt={Date.now()}
+      revealDelayMs={0}
+    />,
+    { wrapper: TestI18nProvider },
+  );
+  act(() => vi.runOnlyPendingTimers());
+  const choices = screen.getAllByRole("button") as HTMLButtonElement[];
+  const selected = choices[0];
+  fireEvent.focus(selected);
+  expect(screen.getByRole("tooltip", { hidden: true })).toBeTruthy();
+  fireEvent.click(selected);
+  expect(dispatch).toHaveBeenCalledTimes(1);
+  expect(selected.dataset.submitting).toBe("true");
+  expect(choices.every((choice) => choice.matches(":disabled"))).toBe(true);
+  expect(screen.getByRole("status").textContent).toBe("正在归档裁定…");
+  expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
+  fireEvent.mouseEnter(selected.parentElement!);
+  fireEvent.focus(selected);
+  fireEvent.click(selected);
+  fireEvent.click(choices[1]);
+  expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
+  expect(dispatch).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText("裁定已经归档")).toBeNull();
+  await act(async () => {
+    rejectSave(new Error("storage unavailable"));
+  });
+  expect(screen.getByRole("alert").textContent).toBe("裁定未能提交，请重试。");
+  expect(selected.dataset.submitting).toBe("false");
+  expect(choices.every((choice) => !choice.matches(":disabled"))).toBe(true);
+  expect(document.activeElement).toBe(selected);
+  fireEvent.click(selected);
+  expect(dispatch).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    rejectSave(new Error("still unavailable"));
   });
 });

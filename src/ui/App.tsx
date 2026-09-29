@@ -1,4 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  createDecisionPresentationHistory,
+  type PresentationMode,
+} from "./case/presentationPolicy";
+import { useEffect, useMemo, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSessionView } from "../application/gameSessionView";
 import type { LocalProfileSummary, ProfileEntry } from "../application/profileEntry";
 import { InterfaceSettings } from "./InterfaceSettings";
@@ -19,6 +23,7 @@ export interface AppProps {
   storageMode?: "sqlite" | "memory-preview";
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  presentationMode?: PresentationMode;
 }
 
 interface AuthenticatedWorkspaceProps {
@@ -27,6 +32,7 @@ interface AuthenticatedWorkspaceProps {
   themeMode: UiThemeMode;
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  presentationMode?: PresentationMode;
   onThemeChange(mode: UiThemeMode): void;
   onExit: () => void;
 }
@@ -37,10 +43,12 @@ function AuthenticatedWorkspace({
   themeMode,
   caseOpenDelayMs,
   decisionRevealDelayMs,
+  presentationMode,
   onThemeChange,
   onExit,
 }: AuthenticatedWorkspaceProps) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const presentationHistory = useMemo(() => createDecisionPresentationHistory(), [session]);
   const [dismissedEnding, setDismissedEnding] = useState<{
     session: GameSessionView;
     endingId: string;
@@ -79,11 +87,14 @@ function AuthenticatedWorkspace({
         onExit={onExit}
       >
         <CaseWorkspace
+          key={presentationHistory.scopeId}
           snapshot={snapshot}
           dispatch={session.dispatch}
           reload={session.reload}
           caseOpenDelayMs={caseOpenDelayMs}
           decisionRevealDelayMs={decisionRevealDelayMs}
+          presentationMode={presentationMode}
+          presentationHistory={presentationHistory}
         />
       </AppShell>
       <FeedbackLayer sessionView={session} />
@@ -113,6 +124,7 @@ function LocalizedApp({
   onThemeApplied,
   caseOpenDelayMs,
   decisionRevealDelayMs,
+  presentationMode,
 }: AppProps) {
   const { locale } = useI18n();
   const [themeMode, setThemeMode] = useState<UiThemeMode>(readInitialThemeMode);
@@ -191,6 +203,7 @@ function LocalizedApp({
       themeMode={themeMode}
       caseOpenDelayMs={caseOpenDelayMs}
       decisionRevealDelayMs={decisionRevealDelayMs}
+      presentationMode={presentationMode}
       onThemeChange={setThemeMode}
       onExit={() => setActive(null)}
     />

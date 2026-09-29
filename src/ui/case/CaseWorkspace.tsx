@@ -1,10 +1,11 @@
+import type { DecisionPresentationHistory, PresentationMode } from "./presentationPolicy";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
 import type { CaseId } from "../../content/schema";
 import { useI18n } from "../i18n";
 import { CaseReader } from "./CaseReader";
 
-export const CASE_OPEN_DELAY_MS = 1_500;
+export const CASE_OPEN_DELAY_MS = 0;
 
 export interface CaseWorkspaceProps {
   snapshot: GameSessionViewSnapshot;
@@ -12,6 +13,8 @@ export interface CaseWorkspaceProps {
   reload: GameSessionView["reload"];
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  presentationMode?: PresentationMode;
+  presentationHistory?: DecisionPresentationHistory;
 }
 
 /** UI-only document handoff. Selection remains immediate; document presentation is deferred. */
@@ -21,9 +24,16 @@ export function CaseWorkspace({
   reload,
   caseOpenDelayMs = CASE_OPEN_DELAY_MS,
   decisionRevealDelayMs,
+  presentationMode,
+  presentationHistory,
 }: CaseWorkspaceProps) {
   const { t } = useI18n();
   const requestedCaseId = snapshot.selectedCaseId;
+  const contentIdentity = JSON.stringify([
+    snapshot.envelope?.contentRef.packageId,
+    snapshot.envelope?.contentRef.version,
+  ]);
+  const [presentedContentIdentity, setPresentedContentIdentity] = useState(contentIdentity);
   const [presentedCaseId, setPresentedCaseId] = useState<CaseId | null>(null);
   const requestVersion = useRef(0);
 
@@ -40,6 +50,7 @@ export function CaseWorkspace({
         // A later sidebar choice owns a newer version. The old timer must never
         // restore a document that is no longer the selected destination.
         if (requestVersion.current === version) {
+          setPresentedContentIdentity(contentIdentity);
           setPresentedCaseId(requestedCaseId);
         }
       },
@@ -49,11 +60,14 @@ export function CaseWorkspace({
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [caseOpenDelayMs, requestedCaseId]);
+  }, [caseOpenDelayMs, requestedCaseId, contentIdentity]);
 
   // Effects run after paint, so derive visibility synchronously from both IDs.
   // This prevents the previously presented document from flashing for one frame.
-  const visibleCaseId = requestedCaseId === presentedCaseId ? presentedCaseId : null;
+  const visibleCaseId =
+    requestedCaseId === presentedCaseId && contentIdentity === presentedContentIdentity
+      ? presentedCaseId
+      : null;
   const loadingCaseId = requestedCaseId && visibleCaseId === null ? requestedCaseId : null;
 
   const presentedSnapshot = useMemo(
@@ -75,10 +89,13 @@ export function CaseWorkspace({
 
   return (
     <CaseReader
+      key={JSON.stringify([contentIdentity, visibleCaseId])}
       snapshot={presentedSnapshot}
       dispatch={dispatch}
       reload={reload}
       decisionRevealDelayMs={decisionRevealDelayMs}
+      presentationMode={presentationMode}
+      presentationHistory={presentationHistory}
     />
   );
 }
