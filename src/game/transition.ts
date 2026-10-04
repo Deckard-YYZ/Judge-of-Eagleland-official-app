@@ -11,6 +11,8 @@ import type {
 import { checkGameStateInvariants, type GameStateInvariantIssue } from "./invariants";
 import type { GameState } from "./model";
 import { resolveFinalChoice, type ResolutionIssue } from "./resolution";
+import { applyConfigurationEvent } from "./configuration";
+import { applyMainFlowChoice, executeMainFlowCommand } from "./mainFlow";
 
 const reject = (code: TransitionErrorCode, message: string): TransitionResult => ({
   ok: false,
@@ -88,7 +90,7 @@ const startCase = (
     );
   }
 
-  return accept(
+  const configured = applyConfigurationEvent(
     {
       ...state,
       cases: {
@@ -101,7 +103,11 @@ const startCase = (
       },
     },
     content,
+    { type: "caseStarted", caseId: command.caseId },
   );
+  return configured.ok
+    ? accept(configured.value, content)
+    : reject("CONTENT_INVALID", configured.issues[0].message);
 };
 
 type ResolutionChoiceHandler = (
@@ -203,7 +209,7 @@ const chooseOption = (
     );
   }
 
-  return accept(
+  const configured = applyConfigurationEvent(
     {
       ...state,
       cases: {
@@ -216,7 +222,16 @@ const chooseOption = (
       },
     },
     content,
+    {
+      type: "choiceCompleted",
+      caseId: command.caseId,
+      nodeId: command.nodeId,
+      choiceId: command.choiceId,
+    },
   );
+  return configured.ok
+    ? accept(configured.value, content)
+    : reject("CONTENT_INVALID", configured.issues[0].message);
 };
 
 const completeStory = (
@@ -265,14 +280,24 @@ export const transition: Transition = (state, command, content, context) => {
   }
 
   switch (command.type) {
+    case "replyChat":
+    case "readNews":
+    case "dismissTutorial": {
+      const result = executeMainFlowCommand(state, command, content);
+      return result.ok ? accept(result.nextState, content, result.feedback) : result;
+    }
     case "submitStoryInput": {
       const result = submitStoryInput(state, command, content);
       return result.ok ? accept(result.nextState, content, result.feedback) : result;
     }
     case "startCase":
       return startCase(state, command, content);
-    case "chooseOption":
-      return chooseOption(state, command, content, context);
+    case "chooseOption": {
+      const result = chooseOption(state, command, content, context);
+      return result.ok
+        ? accept(applyMainFlowChoice(result.nextState, content), content, result.feedback)
+        : result;
+    }
     case "completeStory":
       return completeStory(state, command, content);
   }

@@ -1,5 +1,6 @@
 import {
   ContentRefSchema,
+  CaseEventSchema,
   type AttributeId,
   type CaseId,
   type ChoiceId,
@@ -16,7 +17,7 @@ const IntegerSchema = z.number().int().finite();
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
 /** 当前支持的存档 Schema 版本。改变存档形状时必须提供迁移路径。 */
-export const SUPPORTED_SAVE_SCHEMA_VERSION = 3;
+export const SUPPORTED_SAVE_SCHEMA_VERSION = 5;
 
 export const ChoiceRecordSchema = z.strictObject({
   nodeId: IdSchema,
@@ -92,12 +93,91 @@ export type RunPhase = z.infer<typeof RunPhaseSchema>;
 
 const uniqueIds = (ids: readonly string[]): boolean => new Set(ids).size === ids.length;
 
+export const refineStoryQueues = (
+  state: { pendingStoryIds: string[]; completedStoryIds: string[] },
+  context: z.RefinementCtx,
+): void => {
+  if (!uniqueIds(state.pendingStoryIds))
+    context.addIssue({
+      code: "custom",
+      path: ["pendingStoryIds"],
+      message: "pendingStoryIds must not contain duplicates",
+    });
+  if (!uniqueIds(state.completedStoryIds))
+    context.addIssue({
+      code: "custom",
+      path: ["completedStoryIds"],
+      message: "completedStoryIds must not contain duplicates",
+    });
+  const completed = new Set(state.completedStoryIds);
+  if (state.pendingStoryIds.some((id) => completed.has(id)))
+    context.addIssue({
+      code: "custom",
+      path: ["pendingStoryIds"],
+      message: "pendingStoryIds and completedStoryIds must not overlap",
+    });
+};
+
 /** 最近一次输入提交的恢复位置；不是普通内容的实时播放游标。 */
 export const StoryCheckpointSchema = z.strictObject({
   storyId: IdSchema,
   resumeStepId: IdSchema,
 });
 export type StoryCheckpoint = z.infer<typeof StoryCheckpointSchema>;
+
+export const DispatchFactSchema = z.discriminatedUnion("status", [
+  z.strictObject({ status: z.literal("none") }),
+  z.strictObject({ status: z.literal("dispatched"), ruleId: IdSchema, caseId: IdSchema }),
+  z.strictObject({
+    status: z.literal("needsDecision"),
+    reason: z.enum(["ruleConflict", "emptyPool"]),
+    ruleIds: z.array(IdSchema).min(1),
+    candidateCaseIds: z.array(IdSchema),
+  }),
+]);
+export type DispatchFact = z.infer<typeof DispatchFactSchema>;
+export const ConfigurationFactSchema = z.strictObject({
+  eventId: IdSchema,
+  event: CaseEventSchema,
+  hookIds: z.array(IdSchema),
+  dispatch: DispatchFactSchema,
+});
+export type ConfigurationFact = z.infer<typeof ConfigurationFactSchema>;
+
+export const MainFlowStateSchema = z.strictObject({
+  currentNodeId: IdSchema,
+  enteredNodeIds: z.array(IdSchema),
+  openPoolIds: z.array(IdSchema),
+  chats: z.record(
+    IdSchema,
+    z.strictObject({
+      chatId: IdSchema,
+      currentNodeId: IdSchema,
+      history: z.array(z.strictObject({ nodeId: IdSchema, replyId: IdSchema })),
+      inactivityChoices: IntegerSchema.nonnegative(),
+    }),
+  ),
+  chatResults: z.record(
+    IdSchema,
+    z.strictObject({
+      chatId: IdSchema,
+      resultId: IdSchema,
+      terminalNodeId: IdSchema.nullable(),
+      reason: z.enum(["normal", "inactivity"]),
+    }),
+  ),
+  publishedNewsIds: z.array(IdSchema),
+  readNewsIds: z.array(IdSchema),
+  dispatches: z.array(z.strictObject({ nodeId: IdSchema, caseId: IdSchema })),
+  needsDecision: z
+    .strictObject({
+      reason: z.enum(["transitionConflict", "emptyPool"]),
+      nodeId: IdSchema,
+      candidateIds: z.array(IdSchema),
+    })
+    .nullable(),
+});
+export type MainFlowState = z.infer<typeof MainFlowStateSchema>;
 
 /**
  * 一局运行时的唯一业务状态。Schema 只负责可序列化结构和局部不变量；
@@ -112,33 +192,11 @@ export const GameStateSchema = z
     storyCheckpoint: StoryCheckpointSchema.nullable(),
     pendingStoryIds: z.array(IdSchema),
     completedStoryIds: z.array(IdSchema),
+    // Legacy catalogs have no configuration ledger; schema-v5 runs require it in invariants.
+    configurationFacts: z.array(ConfigurationFactSchema).optional(),
+    mainFlow: MainFlowStateSchema.optional(),
   })
-  .superRefine((state, context) => {
-    if (!uniqueIds(state.pendingStoryIds)) {
-      context.addIssue({
-        code: "custom",
-        path: ["pendingStoryIds"],
-        message: "pendingStoryIds must not contain duplicates",
-      });
-    }
-
-    if (!uniqueIds(state.completedStoryIds)) {
-      context.addIssue({
-        code: "custom",
-        path: ["completedStoryIds"],
-        message: "completedStoryIds must not contain duplicates",
-      });
-    }
-
-    const completed = new Set(state.completedStoryIds);
-    if (state.pendingStoryIds.some((storyId) => completed.has(storyId))) {
-      context.addIssue({
-        code: "custom",
-        path: ["pendingStoryIds"],
-        message: "pendingStoryIds and completedStoryIds must not overlap",
-      });
-    }
-  });
+  .superRefine(refineStoryQueues);
 
 export type GameState = z.infer<typeof GameStateSchema>;
 

@@ -1,0 +1,626 @@
+{
+  "manifest": {
+    "packageId": "mainflow-short",
+    "version": "0.1.0",
+    "contentSchemaVersion": 6,
+    "defaultLocale": "zh-CN",
+    "supportedLocales": [
+      "zh-CN",
+      "en-US"
+    ]
+  },
+  "unlockRules": [],
+  "storyRules": [],
+  "stories": {
+    "news-ack": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "ack",
+          "type": "actionInput",
+          "targetActionId": "salute"
+        }
+      ]
+    },
+    "tutorial": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "welcome",
+          "type": "text"
+        },
+        {
+          "id": "practice",
+          "type": "actionInput",
+          "targetActionId": "wave"
+        }
+      ]
+    }
+  },
+  "endings": {},
+  "assets": {},
+  "initial": {
+    "storyIds": [],
+    "flags": {},
+    "caseIds": []
+  },
+  "attributes": {
+    "authority": {
+      "initial": 0,
+      "min": 0,
+      "max": 10
+    }
+  },
+  "cases": {
+    "case-a": {
+      "id": "case-a",
+      "order": 1,
+      "startNodeId": "case-a-1",
+      "characters": [
+        {
+          "id": "clerk"
+        }
+      ],
+      "nodes": {
+        "case-a-1": {
+          "choices": [
+            {
+              "id": "case-a-choose-1",
+              "hasAnnotation": true,
+              "target": {
+                "type": "node",
+                "nodeId": "case-a-2"
+              }
+            }
+          ]
+        },
+        "case-a-2": {
+          "choices": [
+            {
+              "id": "case-a-choose-2",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "case-a-3"
+              }
+            }
+          ]
+        },
+        "case-a-3": {
+          "choices": [
+            {
+              "id": "case-a-choose-3",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "case-a-closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "case-a-closed": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {}
+          }
+        }
+      }
+    },
+    "case-b": {
+      "id": "case-b",
+      "order": 2,
+      "startNodeId": "case-b-1",
+      "characters": [
+        {
+          "id": "clerk"
+        }
+      ],
+      "nodes": {
+        "case-b-1": {
+          "choices": [
+            {
+              "id": "case-b-choose-1",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "case-b-2"
+              }
+            }
+          ]
+        },
+        "case-b-2": {
+          "choices": [
+            {
+              "id": "case-b-choose-2",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "case-b-3"
+              }
+            }
+          ]
+        },
+        "case-b-3": {
+          "choices": [
+            {
+              "id": "case-b-choose-3",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "case-b-closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "case-b-closed": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {}
+          }
+        }
+      }
+    },
+    "case-c": {
+      "id": "case-c",
+      "order": 3,
+      "startNodeId": "case-c-1",
+      "characters": [
+        {
+          "id": "clerk"
+        }
+      ],
+      "nodes": {
+        "case-c-1": {
+          "choices": [
+            {
+              "id": "case-c-choose-1",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "case-c-2"
+              }
+            }
+          ]
+        },
+        "case-c-2": {
+          "choices": [
+            {
+              "id": "case-c-choose-2",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "case-c-3"
+              }
+            }
+          ]
+        },
+        "case-c-3": {
+          "choices": [
+            {
+              "id": "case-c-choose-3",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "case-c-closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "case-c-closed": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {}
+          }
+        }
+      }
+    }
+  },
+  "configuration": {
+    "interactionOnly": {
+      "attributeIds": [],
+      "flagIds": []
+    },
+    "instructions": {
+      "first-instruction": {
+        "caseId": "case-a",
+        "nodeId": "case-a-1",
+        "choiceId": "case-a-choose-1",
+        "delayMs": 1200
+      }
+    },
+    "actionInputHooks": [],
+    "casePools": {},
+    "dispatchRules": []
+  },
+  "mainFlow": {
+    "initialNodeId": "start",
+    "tutorialStoryId": "tutorial",
+    "nodes": {
+      "start": {
+        "stageId": "intake",
+        "onEnter": [
+          {
+            "type": "dispatchCase",
+            "caseId": "case-a"
+          },
+          {
+            "type": "startChat",
+            "instanceId": "instance-a",
+            "chatId": "chat-a"
+          },
+          {
+            "type": "publishNews",
+            "newsId": "news-n"
+          }
+        ],
+        "transitions": [
+          {
+            "id": "normal-result",
+            "when": {
+              "all": [
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-a",
+                  "resultId": "normal"
+                }
+              ]
+            },
+            "targetNodeId": "normal"
+          },
+          {
+            "id": "ignored-result",
+            "when": {
+              "all": [
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-a",
+                  "resultId": "ignored"
+                }
+              ]
+            },
+            "targetNodeId": "ignored"
+          }
+        ]
+      },
+      "normal": {
+        "stageId": "review",
+        "onEnter": [
+          {
+            "type": "openPool",
+            "poolId": "pool-p"
+          },
+          {
+            "type": "dispatchPool",
+            "poolId": "pool-p",
+            "strategy": {
+              "type": "ordered",
+              "caseIds": [
+                "case-b"
+              ]
+            }
+          },
+          {
+            "type": "publishNews",
+            "newsId": "news-normal"
+          }
+        ],
+        "transitions": [
+          {
+            "id": "normal-to-special",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-a"
+                }
+              ]
+            },
+            "targetNodeId": "special"
+          }
+        ]
+      },
+      "ignored": {
+        "stageId": "review",
+        "onEnter": [
+          {
+            "type": "openPool",
+            "poolId": "pool-p"
+          },
+          {
+            "type": "dispatchPool",
+            "poolId": "pool-p",
+            "strategy": {
+              "type": "ordered",
+              "caseIds": [
+                "case-b"
+              ]
+            }
+          },
+          {
+            "type": "publishNews",
+            "newsId": "news-ignored"
+          }
+        ],
+        "transitions": [
+          {
+            "id": "ignored-to-special",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-a"
+                }
+              ]
+            },
+            "targetNodeId": "special"
+          }
+        ]
+      },
+      "special": {
+        "stageId": "review",
+        "onEnter": [
+          {
+            "type": "startChat",
+            "instanceId": "instance-b",
+            "chatId": "chat-b"
+          },
+          {
+            "type": "startChat",
+            "instanceId": "instance-c",
+            "chatId": "chat-c"
+          }
+        ],
+        "transitions": [
+          {
+            "id": "both-finished",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-b"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-b",
+                  "resultId": "ignored"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-c",
+                  "resultId": "ignored"
+                }
+              ]
+            },
+            "targetNodeId": "followup"
+          },
+          {
+            "id": "both-normal-normal",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-b"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-b",
+                  "resultId": "normal"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-c",
+                  "resultId": "normal"
+                }
+              ]
+            },
+            "targetNodeId": "followup"
+          },
+          {
+            "id": "both-normal-ignored",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-b"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-b",
+                  "resultId": "normal"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-c",
+                  "resultId": "ignored"
+                }
+              ]
+            },
+            "targetNodeId": "followup"
+          },
+          {
+            "id": "both-ignored-normal",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-b"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-b",
+                  "resultId": "ignored"
+                },
+                {
+                  "type": "chatResult",
+                  "instanceId": "instance-c",
+                  "resultId": "normal"
+                }
+              ]
+            },
+            "targetNodeId": "followup"
+          }
+        ]
+      },
+      "followup": {
+        "stageId": "followup",
+        "onEnter": [
+          {
+            "type": "dispatchCase",
+            "caseId": "case-c"
+          }
+        ],
+        "transitions": [
+          {
+            "id": "c-finished",
+            "when": {
+              "all": [
+                {
+                  "type": "caseResolved",
+                  "caseId": "case-c"
+                }
+              ]
+            },
+            "targetNodeId": "done"
+          }
+        ]
+      },
+      "done": {
+        "stageId": "followup",
+        "onEnter": [],
+        "transitions": []
+      }
+    },
+    "chats": {
+      "chat-a": {
+        "characterId": "clerk",
+        "startNodeId": "hello",
+        "nodes": {
+          "hello": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "ack",
+                "targetNodeId": "detail"
+              }
+            ]
+          },
+          "detail": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "finish",
+                "targetNodeId": "closed"
+              }
+            ]
+          },
+          "closed": {
+            "type": "terminal",
+            "resultId": "normal"
+          }
+        },
+        "inactivity": {
+          "choiceThreshold": 2,
+          "resultId": "ignored"
+        }
+      },
+      "chat-b": {
+        "characterId": "clerk",
+        "startNodeId": "hello",
+        "nodes": {
+          "hello": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "ack",
+                "targetNodeId": "detail"
+              }
+            ]
+          },
+          "detail": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "finish",
+                "targetNodeId": "closed"
+              }
+            ]
+          },
+          "closed": {
+            "type": "terminal",
+            "resultId": "normal"
+          }
+        },
+        "inactivity": {
+          "choiceThreshold": 2,
+          "resultId": "ignored"
+        }
+      },
+      "chat-c": {
+        "characterId": "clerk",
+        "startNodeId": "hello",
+        "nodes": {
+          "hello": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "ack",
+                "targetNodeId": "detail"
+              }
+            ]
+          },
+          "detail": {
+            "type": "message",
+            "replies": [
+              {
+                "id": "finish",
+                "targetNodeId": "closed"
+              }
+            ]
+          },
+          "closed": {
+            "type": "terminal",
+            "resultId": "normal"
+          }
+        },
+        "inactivity": {
+          "choiceThreshold": 2,
+          "resultId": "ignored"
+        }
+      }
+    },
+    "casePools": {
+      "pool-p": {
+        "members": [
+          {
+            "caseId": "case-b",
+            "when": {
+              "any": [
+                {
+                  "type": "mainNode",
+                  "nodeId": "normal"
+                },
+                {
+                  "type": "mainNode",
+                  "nodeId": "ignored"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "news": {
+      "news-n": {
+        "actionStoryId": "news-ack"
+      },
+      "news-normal": {},
+      "news-ignored": {}
+    }
+  }
+}

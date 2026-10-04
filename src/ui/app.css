@@ -738,3 +738,17 @@ h2,
   color: var(--ui-ink);
   background: var(--ui-surface);
 }
+.news-panel {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.news-panel__item {
+  padding: 1rem;
+  border: 1px solid var(--ui-rule);
+  background: var(--ui-surface);
+  margin-bottom: 0.5rem;
+}
+.news-panel__item summary {
+  cursor: pointer;
+  font-weight: 700;
+}

@@ -3,6 +3,11 @@ import type { ProfileEntryError } from "../../application/profileEntry";
 import type { MessageKey, Translate } from "./translator";
 
 const sessionErrorKeys = {
+  STALE_CHAT_REPLY: "sessionError.STALE_CHAT_REPLY",
+  INVALID_CHAT_REPLY: "sessionError.INVALID_CHAT_REPLY",
+  NEWS_NOT_AVAILABLE: "sessionError.NEWS_NOT_AVAILABLE",
+  NEWS_ALREADY_READ: "sessionError.NEWS_ALREADY_READ",
+  INVALID_TUTORIAL_DISMISSAL: "sessionError.INVALID_TUTORIAL_DISMISSAL",
   BUSY: "sessionError.BUSY",
   NOT_LOADED: "sessionError.NOT_LOADED",
   RELOAD_REQUIRED: "sessionError.RELOAD_REQUIRED",

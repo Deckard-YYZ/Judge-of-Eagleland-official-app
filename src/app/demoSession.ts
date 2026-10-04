@@ -25,7 +25,7 @@ export const createDemoSave = (
     saveId,
     profileId,
     revision: 0,
-    saveSchemaVersion: 3,
+    saveSchemaVersion: 5,
     contentRef: {
       packageId: content.manifest.packageId,
       version: content.manifest.version,

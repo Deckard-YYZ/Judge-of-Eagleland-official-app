@@ -38,7 +38,7 @@ export interface BootstrapDependencies {
     storage: Pick<StorageRepositories, "profiles" | "saves" | "settings">,
     options?: DesktopProfileEntryOptions,
   ) => Promise<ProfileEntry>;
-  createDemoProfileEntry?: () => ProfileEntry;
+  createDemoProfileEntry?: () => ProfileEntry | Promise<ProfileEntry>;
   storageOptions?: DatabaseInitializationOptions;
   desktopProfileOptions?: DesktopProfileEntryOptions;
 }
@@ -66,7 +66,7 @@ async function bootstrapApplicationInternal(
       runtime,
       storageMode: "memory-preview" as const,
       profileEntry: dependencies.createDemoProfileEntry
-        ? dependencies.createDemoProfileEntry()
+        ? await dependencies.createDemoProfileEntry()
         : createDemoProfileEntry({ tutorialEnabled: false }),
     });
   }
@@ -149,6 +149,7 @@ const describeBootstrapError = (error: unknown): string => {
 };
 
 export interface BootstrapAppProps {
+  mainFlowPreview?: boolean;
   bootstrap?: () => Promise<ApplicationBootstrapResult>;
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
@@ -195,6 +196,7 @@ export function StorageStartupScreen({
  */
 export function BootstrapApp({
   bootstrap = bootstrapApplication,
+  mainFlowPreview = false,
   caseOpenDelayMs,
   decisionRevealDelayMs,
 }: BootstrapAppProps) {
@@ -240,6 +242,7 @@ export function BootstrapApp({
 
   return (
     <App
+      mainFlowPreview={mainFlowPreview}
       onThemeApplied={syncWindowTheme}
       profileEntry={view.result.profileEntry}
       storageMode={view.result.storageMode}

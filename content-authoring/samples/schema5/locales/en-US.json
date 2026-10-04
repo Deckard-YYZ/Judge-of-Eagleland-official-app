@@ -1,0 +1,196 @@
+{
+  "packageId": "configuration-pilot",
+  "version": "0.1.0",
+  "locale": "en-US",
+  "manifest": {
+    "title": "Configuration pilot"
+  },
+  "attributes": {
+    "authority": {
+      "label": "Verdict record"
+    },
+    "input_errors": {
+      "label": "Action errors"
+    }
+  },
+  "cases": {
+    "intake": {
+      "title": "Intake review",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The intake record and review are on file."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Read the record and choose each round. Instructions advise you; the decision remains yours."
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "Check the intake record first."
+        },
+        "disposition": {
+          "prompt": "Issue a verdict based on the review."
+        }
+      },
+      "choices": {
+        "comply": {
+          "text": "Confirm the intake as instructed",
+          "annotation": {
+            "title": "Review basis",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "The intake record is complete."
+              }
+            ]
+          }
+        },
+        "review": {
+          "text": "Review the intake independently"
+        },
+        "approve": {
+          "text": "Confirm the intake is valid"
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Verdict: the record is valid."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The case is settled. Related information follows."
+            }
+          ]
+        }
+      }
+    },
+    "followup": {
+      "title": "Follow-up hearing",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The intake record and review are on file."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Read the record and choose each round. Instructions advise you; the decision remains yours."
+        }
+      ],
+      "nodes": {
+        "followup_judgment": {
+          "prompt": "Issue the follow-up verdict."
+        }
+      },
+      "choices": {
+        "finish_followup": {
+          "text": "Complete the follow-up hearing"
+        }
+      },
+      "resolutions": {
+        "followup_closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Verdict: the record is valid."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The case is settled. Related information follows."
+            }
+          ]
+        }
+      }
+    },
+    "deferred": {
+      "title": "Deferred review",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The intake record and review are on file."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Read the record and choose each round. Instructions advise you; the decision remains yours."
+        }
+      ],
+      "nodes": {
+        "deferred_judgment": {
+          "prompt": "Issue the deferred verdict."
+        }
+      },
+      "choices": {
+        "finish_deferred": {
+          "text": "Complete the deferred review"
+        }
+      },
+      "resolutions": {
+        "deferred_closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "Verdict: the record is valid."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The case is settled. Related information follows."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "judgment_notice": {
+      "title": "Post-verdict notice",
+      "steps": {
+        "information": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Your verdict is on file. Read the notice, then salute to acknowledge it."
+            }
+          ]
+        },
+        "required_action": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Salute to acknowledge. A wrong action is recorded; you must still salute."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {},
+  "instructions": {
+    "assessment_instruction": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Instruction: confirm the intake. You may still choose an independent review."
+        }
+      ]
+    }
+  }
+}

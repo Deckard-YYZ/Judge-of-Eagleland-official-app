@@ -1,0 +1,3 @@
+##,id,caseId,resolutionId,kind,key,amount,enabled
+,approve_restraint,sample_case,approved,AttributeDelta,restraint,5,false
+,decline_flag,sample_case,declined,SetFlag,declined,0,true

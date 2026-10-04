@@ -15,6 +15,19 @@ const storage = (close: () => Promise<void>): StorageRepositories =>
   }) as StorageRepositories;
 
 describe("application bootstrap", () => {
+  it("preserves the original demo without automatic tutorial at the ordinary browser entry", async () => {
+    const result = await bootstrapApplication({ detectRuntime: () => "browser" });
+    const entered = await result.profileEntry.register("Default demo");
+    if (!entered.ok) throw new Error(entered.error.message);
+    expect(entered.session.getSnapshot().envelope!.contentRef).toEqual({
+      packageId: "minimal-test-package",
+      version: "1.2.0",
+    });
+    expect(entered.session.getSnapshot().state!.pendingStoryIds).not.toContain(
+      "tutorial_voice_order",
+    );
+    expect(entered.session.getSnapshot().state!.mainFlow).toBeUndefined();
+  });
   it("uses the explicit memory preview without opening desktop storage", async () => {
     const initializeStorage = vi.fn();
     const result = await bootstrapApplication({

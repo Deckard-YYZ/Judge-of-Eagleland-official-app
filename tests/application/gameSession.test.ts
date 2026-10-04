@@ -41,7 +41,7 @@ const makeSave = (overrides: Partial<SaveEnvelope> = {}): SaveEnvelope => ({
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 3,
+  saveSchemaVersion: 5,
   contentRef: {
     packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
     version: MINIMAL_GAME_CONTENT.manifest.version,

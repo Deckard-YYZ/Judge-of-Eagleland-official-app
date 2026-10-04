@@ -9,6 +9,7 @@ import type {
 import type { GameState } from "./model";
 
 export type ProgressionIssueCode =
+  | "CONFIGURATION_INVALID"
   | "CASE_REFERENCE_INVALID"
   | "RESOLUTION_REFERENCE_INVALID"
   | "ATTRIBUTE_REFERENCE_INVALID"

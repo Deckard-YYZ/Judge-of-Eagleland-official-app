@@ -1,6 +1,14 @@
 # 鹰国法官：开发骨架
 
-项目提供纯 TypeScript Game Core、内容校验、Application 与 UI，以及本地 SQLite 存储实现。产品需求和业务规则以 [架构设计](Desktop_Case_Game_Architecture_v1.0.md) 为依据；Storage / Tauri 当前进展、验证结果及未包含事项见 [存储实施记录](Desktop_Case_Game_Storage_Tauri_Implementation.md)。
+2026-10-05 回退前历史验收（不代表当前默认入口）：默认切换后普通回归 617 项通过；五项真实 Luban 集成独立全部通过，合计 622 项唯一测试执行通过。双 TypeScript、voice、边界、格式和前端构建通过，普通默认入口及两条三案浏览器路径已实际验证。TTS 资源缺失仍限制完整桌面验证；具体证据与范围见 [实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
+
+项目提供纯 TypeScript Game Core、内容校验、Application 与 UI，以及本地 SQLite 存储实现。产品行为以 [产品需求与核心流程](Desktop_Case_Game_Product_Requirements.md) 为准，优先于历史默认行为与 Demo 配置；[原架构设计](Desktop_Case_Game_Architecture_v1.0.md) 保留既有实现背景。Storage / Tauri 当前进展、验证结果及未包含事项见 [存储实施记录](Desktop_Case_Game_Storage_Tauri_Implementation.md)。
+
+配置制作、生成、运行时消费和版本管理的边界，见 [配置系统架构](Desktop_Case_Game_Configuration_Architecture.md)。表格通过固定版本 Luban 导出，再与文案和分支规则组装为严格校验的内容包。作者操作见 [内容制作说明](content-authoring/README.md)，各阶段验收及剩余业务边界见 [配置系统实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
+
+当前确认的目标是案件与聊天平行运行，由主控剧情图读取案件判决、聊天最终结果及已明确状态条件，推进节点并开放池、派发特定案件或启动聊天。聊天被动出现、内部交互推进局部树、被动结束；玩家可搁置聊天继续判案，主控不读取进行中的聊天节点。普通场景一段聊天，特殊多段由策划显式配置，没有主动打开、收起或关闭操作。无交互计数只统计有效推进案件的选项选择，回复当前聊天重置其计数；达到配置阈值发布结束结果，现实时间与离线时间不推进。
+
+主流程底层已交付（内容 schema 6、存档 schema 5）：主控、独立聊天计数与结果、池开放与派发、新闻动作、教程账号标记、Core/Session/SQLite 与真实 Luban 作者链均保留。正式 UI 接入暂缓，普通入口恢复原演示与排版：桌面新存档使用 `minimal-test-package@1.2.0`，浏览器使用原内存 Demo，自动教程关闭。开发时点击右下角“诊断”→“主流程验证（内存，刷新清空）”体验新流程；该入口在浏览器与桌面开发环境都强制独立内存仓库，刷新/退出清空，不读写 SQLite。进入/退出会重载页面并重置浏览器当前内存档案；桌面存档不受影响。诊断内“退出主流程验证”返回普通入口，`?mainFlowPreview=1` 也仅在 DEV 有效。聊天/新闻为 debug 实验呈现，正式布局另行适配。旧存档保持原 contentRef，不重绑；已有主流程测试档仍保留，但普通 UI 暂不接入其聊天/新闻。结局业务和正式池策略仍后置。
 
 ## 启动与检查
 
@@ -15,7 +23,7 @@ npm run build         # 前端生产构建
 npm run tauri:build   # 桌面可执行文件；目前关闭安装器打包
 ```
 
-两个开发启动命令择一运行，它们都使用 1420 端口。项目要求 Node 22.12+；当前工作区使用 Node 22 验证。若本机终端仍指向旧版 Node，请先切换到满足 `engines.node` 的版本，不修改系统全局配置：
+两个开发启动命令择一运行，它们都使用 1420 端口。项目要求 Node 22.12+；本轮配置系统使用 Node 24 验证。若本机终端仍指向旧版 Node，请先切换到满足 `engines.node` 的版本，不修改系统全局配置：
 
 ```powershell
 $env:Path = "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;" + $env:Path
@@ -26,9 +34,19 @@ node --version
 
 代码由 Prettier 统一格式；修改后运行 `npm run format`。Rust 代码使用 `cargo fmt --manifest-path src-tauri/Cargo.toml`。
 
+内容作者还需安装 .NET 8 或兼容 SDK，并准备 `content-authoring/luban.lock.json` 指定的 Luban checkout。游戏玩家不需要这些工具。
+
+```powershell
+$env:LUBAN_ROOT = '你的 Luban checkout 路径'
+npm run content:check-all  # 实际重新导出全部注册样本，核对模型、JSON 与媒体字节
+npm test -- --maxWorkers=1 # 设置 LUBAN_ROOT 后包含真实导表测试，避免并行构建工具
+```
+
+`content:check-all` 缺少工具配置会明确失败。编辑、生成新版本及诊断位置的说明见作者文档；生成结果不作为人工编辑来源。
+
 ## 固定声音旁白（TTS）
 
-新游戏使用内容包 `1.2.0`（content schema v4），进入教程可自动朗读，支持停止、重播和设置中的旁白开关。
+新游戏使用内容包 `1.2.0`（content schema v4）；教程内容具备自动朗读、停止、重播和设置中的旁白开关，当前启动装配默认关闭教程自动出现。
 旧存档仍读取原绑定版本。浏览器预览保留文字并显示旁白不可用；正式输出使用 Windows Tauri + sherpa 本地合成。
 
 ```powershell
@@ -43,15 +61,15 @@ TTS 使用 `system` 固定声音（Melo 中英模型、speaker 0、speed 1），
 
 ## 模块边界
 
-| 目录 | 职责 | 允许的项目依赖 |
-| --- | --- | --- |
-| `src/game` | JSON 状态、命令与同步纯规则契约 | game、content 类型；model 复用纯内容 Schema |
-| `src/content` | 内容 Schema、精确版本读取、固定样本 | content、资源读取用的 platform |
-| `src/storage` | 存档契约、内存替身、SQLite 接入 | storage、game、content |
-| `src/application` | 会话加载、提交锁、保存后发布 | application、game、content、storage |
-| `src/input` | 双语动作词典、纯文字匹配与能力校验 | input、shared |
-| `src/ui` | 展示和用户交互 | ui、application、content 类型、input、shared |
-| `src/platform` | Tauri 环境与平台能力 | platform、必要的 Tauri API |
+| 目录              | 职责                                | 允许的项目依赖                               |
+| ----------------- | ----------------------------------- | -------------------------------------------- |
+| `src/game`        | JSON 状态、命令与同步纯规则契约     | game、content 类型；model 复用纯内容 Schema  |
+| `src/content`     | 内容 Schema、精确版本读取、固定样本 | content、资源读取用的 platform               |
+| `src/storage`     | 存档契约、内存替身、SQLite 接入     | storage、game、content                       |
+| `src/application` | 会话加载、提交锁、保存后发布        | application、game、content、storage          |
+| `src/input`       | 双语动作词典、纯文字匹配与能力校验  | input、shared                                |
+| `src/ui`          | 展示和用户交互                      | ui、application、content 类型、input、shared |
+| `src/platform`    | Tauri 环境与平台能力                | platform、必要的 Tauri API                   |
 
 `src/main.tsx` 是装配入口：在这里选择实现并传给会话或页面。后续装配代码增多时可以移至 `src/app`。UI 不导入 SQL、具体案件文件或规则实现；规则不依赖 React、DOM 或 Tauri。目录中只保留实际使用的模块。
 
@@ -69,17 +87,17 @@ TTS 使用 `system` 固定声音（Melo 中英模型、speaker 0、speed 1），
 
 实现位于 [gameSession.ts](src/application/gameSession.ts)，装配实例见 [demoSession.ts](src/app/demoSession.ts)。`createGameSession` 接受 `saveRepository`、`contentRepository`、`transition` 与 `clock: () => string`，不绑定某个仓储或具体规则实现。
 
-| 接口 | 语义 |
-| --- | --- |
-| `load(saveId, profileId)` | 加载已存在存档及其精确内容版本；失败不创建新局 |
-| `getSnapshot()` | 返回引用稳定且递归冻结的快照，可直接供 `useSyncExternalStore` 使用 |
-| `subscribe(listener)` | 订阅加载、保存与已提交状态变化；返回取消订阅函数 |
-| `dispatch(command)` | 同步取得锁，计算、条件保存、发布；重复点击返回 `BUSY` |
-| `subscribeFeedback(listener)` | 保存成功后通知临时反馈；返回取消订阅函数 |
+| 接口                          | 语义                                                               |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `load(saveId, profileId)`     | 加载已存在存档及其精确内容版本；失败不创建新局                     |
+| `getSnapshot()`               | 返回引用稳定且递归冻结的快照，可直接供 `useSyncExternalStore` 使用 |
+| `subscribe(listener)`         | 订阅加载、保存与已提交状态变化；返回取消订阅函数                   |
+| `dispatch(command)`           | 同步取得锁，计算、条件保存、发布；重复点击返回 `BUSY`              |
+| `subscribeFeedback(listener)` | 保存成功后通知临时反馈；返回取消订阅函数                           |
 
 会话状态为 `idle / loading / ready / saving / needsReload / error`。只有 `ready` 接受命令；`saving` 仍展示旧的已提交封套。`load` 与 `dispatch` 的返回值均以 `ok` 判别，失败提供 `code / message`。UI 在 `loading / saving` 期间禁用会话切换操作。
 
-未知写入异常与 revision 冲突进入 `needsReload`，必须显式 `load` 后才能继续；不会自动重放命令。订阅与反馈回调应为同步通知，异常与保存事实分开处理。当前没有正式新游戏入口；开发页直接为内存仓储提供一份明确的样本封套。
+未知写入异常与 revision 冲突进入 `needsReload`，必须显式 `load` 后才能继续；不会自动重放命令。订阅与反馈回调应为同步通知，异常与保存事实分开处理。档案入口通过 `ProfileEntry.register/enter` 协调新建与进入；浏览器使用内存预览，桌面使用 SQLite，默认新游戏内容恢复为 minimal-test-package@1.2.0（自动教程关闭），旧存档保持原版本。
 
 ## 最初开发骨架验证记录（历史）
 
@@ -91,11 +109,11 @@ TTS 使用 `system` 固定声音（Melo 中英模型、speaker 0、speed 1），
 
 最终复查：2026-09-15，Windows、Node 24.19.0、Rust 1.94.0。
 
-| 阶段 | 检查结果 |
-| --- | --- |
+| 阶段            | 检查结果                                                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Storage / Tauri | 真实 `node:sqlite` 执行 Rust 注册的 `001_initial.sql`；Profile、Save、Settings、v1→v2、CAS 并发、备份、资源解析与 capability 均有回归覆盖 |
-| 桌面装配 | 浏览器只走内存预览；桌面初始化失败可见且不回退内存；Profile 装配失败会关闭数据库连接 |
-| 全量自动化 | 34 个测试文件、287 项测试通过；typecheck、依赖边界、Prettier、生产 build 与 Rust check/fmt 通过 |
+| 桌面装配        | 浏览器只走内存预览；桌面初始化失败可见且不回退内存；Profile 装配失败会关闭数据库连接                                                      |
+| 全量自动化      | 34 个测试文件、287 项测试通过；typecheck、依赖边界、Prettier、生产 build 与 Rust check/fmt 通过                                           |
 
 全套 `npm run check` 通过；Tauri 与 SQL 插件的 JS / Rust 依赖已对齐，npm 和 Cargo 锁文件均已生成。详细 slice、决策和后期 TODO 见 [Storage / Tauri 实施记录](Desktop_Case_Game_Storage_Tauri_Implementation.md)。
 
@@ -107,20 +125,22 @@ TTS 使用 `system` 固定声音（Melo 中英模型、speaker 0、speed 1），
 
 正式 Game Core 的固定样本六路径预期如下：
 
-| case_001 结果 | case_002 结果 | 最终 restraint / authority | 结局 |
-| --- | --- | --- | --- |
-| close_with_note | review_required | 58 / 48 | balanced |
-| warning | review_required | 56 / 51 | balanced |
-| suspension | review_required | 53 / 53 | balanced |
-| close_with_note | temporary_access | 48 / 48 | fallback |
-| warning | temporary_access | 46 / 51 | fallback |
-| suspension | temporary_access | 43 / 53 | fallback |
+| case_001 结果   | case_002 结果    | 最终 restraint / authority | 结局     |
+| --------------- | ---------------- | -------------------------- | -------- |
+| close_with_note | review_required  | 58 / 48                    | balanced |
+| warning         | review_required  | 56 / 51                    | balanced |
+| suspension      | review_required  | 53 / 53                    | balanced |
+| close_with_note | temporary_access | 48 / 48                    | fallback |
+| warning         | temporary_access | 46 / 51                    | fallback |
+| suspension      | temporary_access | 43 / 53                    | fallback |
 
-第一案结算应同时解锁 `case_002` 并排入 `story_after_case_001`；确认该剧情完成前不得处理第二案。`confirm_violation` 是用于中途恢复测试的中间选项，不应改变属性。
+该历史固定样本中，第一案结算同时解锁 `case_002` 并排入 `story_after_case_001`；确认该剧情完成前不得处理第二案。此阻塞规则描述旧 Story 样本，不用于新聊天支线。`confirm_violation` 是用于中途恢复测试的中间选项，不应改变属性。
 
 各分线已在骨架之后继续实施，最新范围以对应 `Desktop_Case_Game_*_Implementation.md` 为准。Storage / Tauri 不包含联网账号、远程内容下载或实际安装包人工验收。
 
-## ActionInput 固定架构样本
+## ActionInput 固定架构样本（历史）
+
+以下错误处罚是旧版本实际能力，错误机制现已搁置，可能不保留；不作为本次新产品模型的交付前提。
 
 `minimal-test-package@1.1.0` 使用 content schema v3，保留两案，并在每案后安排一次检查：
 文字 A → 敬礼输入 B → 文字 C → 敬礼输入 D → 文字 E。B、D 均要求 `salute`，输入
@@ -137,7 +157,6 @@ Save schema v3 增加 `storyCheckpoint`：正确后从下一步恢复，错误�
 运行 `npm run validate:content` 同时检查新旧包及所有发布语言的文字完成路径。
 恢复、失败与 CAS 的固定回归见 `tests/app/storyInputVerticalSlice.test.ts`；
 进度、审核证据与后期 TODO 见 [Content / Validator 实施记录](Desktop_Case_Game_Content_Validator_Implementation.md)。
-
 
 ## 本地诊断与符号归档
 

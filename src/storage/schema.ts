@@ -23,10 +23,11 @@ export interface StorageSchemaTable {
 }
 
 /** The migration version registered by `src-tauri/src/lib.rs`. */
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 
 /** Core tables required by Profile, Save and Settings repositories. */
 export const STORAGE_SCHEMA_TABLES: readonly StorageSchemaTable[] = Object.freeze([
+  { name: "profile_tutorials", columns: ["profile_id", "completed"] },
   {
     name: "profiles",
     columns: ["profile_id", "login_name", "display_name", "created_at"],

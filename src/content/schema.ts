@@ -23,7 +23,7 @@ export type EndingId = z.infer<typeof IdSchema>;
 export type AssetId = z.infer<typeof IdSchema>;
 
 /** 当前骨架支持的内容 Schema 版本。升级时需显式增加迁移或兼容策略。 */
-export const SUPPORTED_CONTENT_SCHEMA_VERSION = 4;
+export const SUPPORTED_CONTENT_SCHEMA_VERSION = 6;
 
 export const TextBlockSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -153,6 +153,8 @@ export const GameContentManifestSchema = z
     contentSchemaVersion: z.union([
       z.literal(2),
       z.literal(3),
+      z.literal(4),
+      z.literal(5),
       z.literal(SUPPORTED_CONTENT_SCHEMA_VERSION),
     ]),
     defaultLocale: AppLocaleSchema.default(DEFAULT_LOCALE),
@@ -192,7 +194,10 @@ export const GameAttributeDefinitionSchema = z
     }
   });
 
-export const GameCharacterDefinitionSchema = z.strictObject({ id: IdSchema });
+export const GameCharacterDefinitionSchema = z.strictObject({
+  id: IdSchema,
+  portraitAssetId: IdSchema.optional(),
+});
 export type GameCharacterDefinition = z.infer<typeof GameCharacterDefinitionSchema>;
 
 export const GameChoiceDefinitionSchema = z.strictObject({
@@ -269,6 +274,211 @@ export const GameEndingDefinitionSchema = z.strictObject({
 });
 export type GameEndingDefinition = z.infer<typeof GameEndingDefinitionSchema>;
 
+/** Finite business events are derived from successful case transitions, never UI timers. */
+export const CaseEventSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("caseStarted"), caseId: IdSchema }),
+  z.strictObject({
+    type: z.literal("choiceCompleted"),
+    caseId: IdSchema,
+    nodeId: IdSchema,
+    choiceId: IdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("caseResolved"),
+    caseId: IdSchema,
+    resolutionId: IdSchema,
+  }),
+]);
+export type CaseEvent = z.infer<typeof CaseEventSchema>;
+
+/** Stage/chat rules read supplied facts; this contract does not auto-advance Session. */
+export const FlowPredicateSchema = z.discriminatedUnion("type", [
+  ...PredicateSchema.options,
+  z.strictObject({ type: z.literal("currentStage"), stageId: IdSchema }),
+  z.strictObject({ type: z.literal("chatLastNode"), chatId: IdSchema, nodeId: IdSchema }),
+]);
+export type FlowPredicate = z.infer<typeof FlowPredicateSchema>;
+export const FlowConditionSchema = z.union([
+  z.strictObject({ all: z.array(FlowPredicateSchema).min(1) }),
+  z.strictObject({ any: z.array(FlowPredicateSchema).min(1) }),
+]);
+export type FlowCondition = z.infer<typeof FlowConditionSchema>;
+export const FlowConsequenceSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("unlockCases"), caseIds: z.array(IdSchema).min(1) }),
+  z.strictObject({ type: z.literal("unlockChats"), chatIds: z.array(IdSchema).min(1) }),
+  z.strictObject({ type: z.literal("enterStage"), stageId: IdSchema }),
+]);
+export type FlowConsequence = z.infer<typeof FlowConsequenceSchema>;
+export const ChatTargetSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("node"), nodeId: IdSchema }),
+  z.strictObject({ type: z.literal("event"), eventId: IdSchema }),
+]);
+export type ChatTarget = z.infer<typeof ChatTargetSchema>;
+export const FlowConfigurationSchema = z.strictObject({
+  initialStageId: IdSchema,
+  stages: z.record(
+    IdSchema,
+    z.strictObject({
+      when: FlowConditionSchema,
+      transitions: z.array(
+        z.strictObject({ id: IdSchema, when: FlowConditionSchema, targetStageId: IdSchema }),
+      ),
+    }),
+  ),
+  chats: z.record(
+    IdSchema,
+    z.strictObject({
+      characterId: IdSchema,
+      when: FlowConditionSchema,
+      startNodeId: IdSchema,
+      nodes: z.record(
+        IdSchema,
+        z.discriminatedUnion("type", [
+          z.strictObject({
+            type: z.literal("message"),
+            externalBranches: z
+              .array(
+                z.strictObject({
+                  id: IdSchema,
+                  event: CaseEventSchema,
+                  when: FlowConditionSchema,
+                  targetNodeId: IdSchema,
+                  consequences: z.array(FlowConsequenceSchema),
+                }),
+              )
+              .optional(),
+            replies: z
+              .array(
+                z.strictObject({
+                  id: IdSchema,
+                  when: FlowConditionSchema,
+                  target: ChatTargetSchema,
+                }),
+              )
+              .min(1),
+          }),
+          z.strictObject({
+            type: z.literal("terminal"),
+            consequences: z.array(FlowConsequenceSchema),
+          }),
+        ]),
+      ),
+    }),
+  ),
+  events: z.record(
+    IdSchema,
+    z.strictObject({
+      when: FlowConditionSchema,
+      consequences: z.array(FlowConsequenceSchema).min(1),
+    }),
+  ),
+});
+export type FlowConfiguration = z.infer<typeof FlowConfigurationSchema>;
+export const FlowFactsSchema = z.strictObject({
+  currentStageId: IdSchema,
+  lastChatNodeIds: z.record(IdSchema, IdSchema),
+  activeChatNodeIds: z.record(IdSchema, IdSchema).optional(),
+});
+export type FlowFacts = z.infer<typeof FlowFactsSchema>;
+
+export const GameConfigurationSchema = z.strictObject({
+  flow: FlowConfigurationSchema.optional(),
+  interactionOnly: z.strictObject({ attributeIds: z.array(IdSchema), flagIds: z.array(IdSchema) }),
+  instructions: z.record(
+    IdSchema,
+    z.strictObject({
+      caseId: IdSchema,
+      nodeId: IdSchema,
+      choiceId: IdSchema,
+      delayMs: IntegerSchema.min(1000).max(2000),
+    }),
+  ),
+  actionInputHooks: z.array(
+    z.strictObject({ id: IdSchema, event: CaseEventSchema, storyId: IdSchema }),
+  ),
+  casePools: z.record(
+    IdSchema,
+    z.strictObject({
+      members: z.array(z.strictObject({ caseId: IdSchema, when: ConditionSchema })).min(1),
+    }),
+  ),
+  dispatchRules: z.array(
+    z.strictObject({
+      id: IdSchema,
+      event: CaseEventSchema,
+      when: ConditionSchema,
+      poolId: IdSchema,
+      strategy: z.strictObject({ type: z.literal("ordered"), caseIds: z.array(IdSchema).min(1) }),
+    }),
+  ),
+});
+export type GameConfiguration = z.infer<typeof GameConfigurationSchema>;
+
+/** Main-flow predicates deliberately cannot inspect an active chat's local node. */
+export const MainFlowPredicateSchema = z.discriminatedUnion("type", [
+  ...PredicateSchema.options,
+  z.strictObject({ type: z.literal("mainNode"), nodeId: IdSchema }),
+  z.strictObject({ type: z.literal("chatResult"), instanceId: IdSchema, resultId: IdSchema }),
+]);
+export const MainFlowConditionSchema = z.union([
+  z.strictObject({ all: z.array(MainFlowPredicateSchema).min(1) }),
+  z.strictObject({ any: z.array(MainFlowPredicateSchema).min(1) }),
+]);
+export type MainFlowCondition = z.infer<typeof MainFlowConditionSchema>;
+export const MainFlowIntentSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("openPool"), poolId: IdSchema }),
+  z.strictObject({ type: z.literal("dispatchCase"), caseId: IdSchema }),
+  z.strictObject({
+    type: z.literal("dispatchPool"),
+    poolId: IdSchema,
+    strategy: z.strictObject({ type: z.literal("ordered"), caseIds: z.array(IdSchema).min(1) }),
+  }),
+  z.strictObject({ type: z.literal("startChat"), instanceId: IdSchema, chatId: IdSchema }),
+  z.strictObject({ type: z.literal("publishNews"), newsId: IdSchema }),
+]);
+export const MainFlowDefinitionSchema = z.strictObject({
+  initialNodeId: IdSchema,
+  tutorialStoryId: IdSchema.optional(),
+  nodes: z.record(
+    IdSchema,
+    z.strictObject({
+      stageId: IdSchema,
+      onEnter: z.array(MainFlowIntentSchema),
+      transitions: z.array(
+        z.strictObject({ id: IdSchema, when: MainFlowConditionSchema, targetNodeId: IdSchema }),
+      ),
+    }),
+  ),
+  chats: z.record(
+    IdSchema,
+    z.strictObject({
+      characterId: IdSchema,
+      startNodeId: IdSchema,
+      nodes: z.record(
+        IdSchema,
+        z.discriminatedUnion("type", [
+          z.strictObject({
+            type: z.literal("message"),
+            replies: z.array(z.strictObject({ id: IdSchema, targetNodeId: IdSchema })).min(1),
+          }),
+          z.strictObject({ type: z.literal("terminal"), resultId: IdSchema }),
+        ]),
+      ),
+      inactivity: z
+        .strictObject({ choiceThreshold: IntegerSchema.positive(), resultId: IdSchema })
+        .optional(),
+    }),
+  ),
+  casePools: z.record(
+    IdSchema,
+    z.strictObject({
+      members: z.array(z.strictObject({ caseId: IdSchema, when: MainFlowConditionSchema })).min(1),
+    }),
+  ),
+  news: z.record(IdSchema, z.strictObject({ actionStoryId: IdSchema.optional() })),
+});
+export type MainFlowDefinition = z.infer<typeof MainFlowDefinitionSchema>;
+
 export const GameContentCatalogSchema = z
   .strictObject({
     manifest: GameContentManifestSchema,
@@ -280,8 +490,41 @@ export const GameContentCatalogSchema = z
     stories: z.record(IdSchema, GameStoryDefinitionSchema),
     endings: z.record(IdSchema, GameEndingDefinitionSchema),
     assets: z.record(IdSchema, AssetDefinitionSchema),
+    configuration: GameConfigurationSchema.optional(),
+    mainFlow: MainFlowDefinitionSchema.optional(),
   })
   .superRefine((content, context) => {
+    if (content.manifest.contentSchemaVersion < 5)
+      for (const [caseId, definition] of Object.entries(content.cases))
+        definition.characters.forEach((character, index) => {
+          if (character.portraitAssetId !== undefined)
+            context.addIssue({
+              code: "custom",
+              path: ["cases", caseId, "characters", index, "portraitAssetId"],
+              message: "Character portraits require content schema v5.",
+            });
+        });
+    if (content.manifest.contentSchemaVersion >= 5 !== (content.configuration !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["configuration"],
+        message: "configuration is required exclusively by content schema v5 and v6.",
+      });
+    }
+    if ((content.manifest.contentSchemaVersion === 6) !== (content.mainFlow !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["mainFlow"],
+        message: "mainFlow is required exclusively by content schema v6.",
+      });
+    }
+    if (content.mainFlow && content.configuration?.flow) {
+      context.addIssue({
+        code: "custom",
+        path: ["configuration", "flow"],
+        message: "Legacy flow cannot be combined with mainFlow.",
+      });
+    }
     if (content.manifest.contentSchemaVersion < 4) {
       for (const [storyId, story] of Object.entries(content.stories)) {
         story.steps.forEach((step, index) => {
@@ -352,6 +595,48 @@ export const LocalizedStorySchema = z.strictObject({
 });
 
 export const LocalizedContentCatalogSchema = z.strictObject({
+  mainFlow: z
+    .strictObject({
+      chats: z.record(
+        IdSchema,
+        z.strictObject({
+          title: TextSchema,
+          nodes: z.record(
+            IdSchema,
+            z.strictObject({
+              blocks: z.array(TextBlockSchema).min(1),
+              replies: z.record(IdSchema, TextSchema),
+            }),
+          ),
+        }),
+      ),
+      news: z.record(
+        IdSchema,
+        z.strictObject({ title: TextSchema, blocks: z.array(TextBlockSchema).min(1) }),
+      ),
+    })
+    .optional(),
+  flow: z
+    .strictObject({
+      stages: z.record(
+        IdSchema,
+        z.strictObject({ title: TextSchema, blocks: z.array(TextBlockSchema).min(1) }),
+      ),
+      chats: z.record(
+        IdSchema,
+        z.strictObject({
+          title: TextSchema,
+          nodes: z.record(
+            IdSchema,
+            z.strictObject({
+              blocks: z.array(TextBlockSchema).min(1),
+              replies: z.record(IdSchema, z.strictObject({ text: TextSchema })),
+            }),
+          ),
+        }),
+      ),
+    })
+    .optional(),
   packageId: IdSchema,
   version: IdSchema,
   locale: AppLocaleSchema,
@@ -360,6 +645,9 @@ export const LocalizedContentCatalogSchema = z.strictObject({
   cases: z.record(IdSchema, LocalizedCaseSchema),
   stories: z.record(IdSchema, LocalizedStorySchema),
   endings: z.record(IdSchema, z.strictObject({ title: TextSchema })),
+  instructions: z
+    .record(IdSchema, z.strictObject({ blocks: z.array(TextBlockSchema).min(1) }))
+    .optional(),
 });
 
 export type LocalizedContentCatalog = z.infer<typeof LocalizedContentCatalogSchema>;

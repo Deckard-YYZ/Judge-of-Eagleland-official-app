@@ -13,7 +13,9 @@ import { FakeSplitContentRepository } from "../content/repository";
 import { InMemorySaveRepository } from "../storage/inMemorySaveRepository";
 import { createDemoSave } from "./demoSession";
 import { demoTransition } from "./demoTransition";
-import { configureInitialTutorial } from "./tutorialPolicy";
+import { configureInitialTutorial, withAccountTutorial } from "./tutorialPolicy";
+import type { ContentLocale, GameContentCatalog, LocalizedContentCatalog } from "../content/schema";
+import type { Transition } from "../game/commands";
 
 interface DemoProfile extends LocalProfileSummary {
   readonly saveId: string;
@@ -25,11 +27,14 @@ export interface DemoProfileEntryOptions {
 }
 
 /** In-memory Profile entry for frontend work. Refreshing the app resets all profiles. */
-export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): ProfileEntry => {
-  const content = configureInitialTutorial(
-    ACTION_INPUT_GAME_CONTENT,
-    options.tutorialEnabled ?? true,
-  );
+export interface MemoryProfileEntryOptions extends DemoProfileEntryOptions {
+  gameContent: Readonly<GameContentCatalog>;
+  localizations: Readonly<Record<ContentLocale, LocalizedContentCatalog>>;
+  transition: Transition;
+}
+
+export const createMemoryProfileEntry = (options: MemoryProfileEntryOptions): ProfileEntry => {
+  const content = configureInitialTutorial(options.gameContent, options.tutorialEnabled ?? true);
   const clock = () => new Date().toISOString();
   const initialProfile: DemoProfile = {
     profileId: "demo-profile",
@@ -38,12 +43,17 @@ export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): P
   };
   const profiles = new Map<string, DemoProfile>([[initialProfile.profileId, initialProfile]]);
   const saveRepository = new InMemorySaveRepository([
-    createDemoSave(initialProfile.profileId, initialProfile.saveId, content, clock()),
+    withAccountTutorial(
+      createDemoSave(initialProfile.profileId, initialProfile.saveId, content, clock()),
+      content,
+      options.tutorialEnabled ?? true,
+    ),
   ]);
   const contentRepository = new FakeSplitContentRepository([
-    { gameContent: content, localizations: ACTION_INPUT_LOCALIZATIONS },
+    { gameContent: content, localizations: options.localizations },
   ]);
   const listeners = new Set<() => void>();
+  const tutorialCompletedProfiles = new Set<string>();
   let nextProfileNumber = 1;
   let busy = false;
 
@@ -86,13 +96,28 @@ export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): P
     const session = createGameSession({
       saveRepository,
       contentRepository,
-      transition: demoTransition,
+      transition: options.transition,
       clock,
     });
     const sessionView = createGameSessionView(session, contentRepository);
     const loaded = await session.load(profile.saveId, profile.profileId);
     if (!loaded.ok) {
       return failure({ code: "LOAD_FAILED", message: loaded.message });
+    }
+
+    const tutorialId = content.mainFlow?.tutorialStoryId;
+    if (tutorialId) {
+      if (
+        tutorialCompletedProfiles.has(profile.profileId) &&
+        session.getSnapshot().state!.pendingStoryIds.includes(tutorialId)
+      ) {
+        const dismissed = await session.dispatch({ type: "dismissTutorial", storyId: tutorialId });
+        if (!dismissed.ok) return failure({ code: "LOAD_FAILED", message: dismissed.message });
+      }
+      await sessionView.setLocale(content.manifest.defaultLocale);
+      if (!sessionView.getSnapshot().content)
+        return failure({ code: "LOAD_FAILED", message: "Tutorial content could not be loaded." });
+      tutorialCompletedProfiles.add(profile.profileId);
     }
 
     publish("ready", null);
@@ -158,10 +183,23 @@ export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): P
           saveId: `demo-save-${sequence}`,
         };
         await saveRepository.create(
-          createDemoSave(profile.profileId, profile.saveId, content, clock()),
+          withAccountTutorial(
+            createDemoSave(profile.profileId, profile.saveId, content, clock()),
+            content,
+            options.tutorialEnabled ?? true,
+          ),
         );
         profiles.set(profile.profileId, profile);
         return enterProfile(profile);
       }),
   };
 };
+
+/** Existing browser demo keeps its published package and development transition. */
+export const createDemoProfileEntry = (options: DemoProfileEntryOptions = {}): ProfileEntry =>
+  createMemoryProfileEntry({
+    ...options,
+    gameContent: ACTION_INPUT_GAME_CONTENT,
+    localizations: ACTION_INPUT_LOCALIZATIONS,
+    transition: demoTransition,
+  });

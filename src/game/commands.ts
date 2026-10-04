@@ -15,6 +15,14 @@ const IdSchema = z.string().min(1);
  */
 export const GameCommandSchema = z.discriminatedUnion("type", [
   z.strictObject({
+    type: z.literal("replyChat"),
+    instanceId: IdSchema,
+    nodeId: IdSchema,
+    replyId: IdSchema,
+  }),
+  z.strictObject({ type: z.literal("readNews"), newsId: IdSchema }),
+  z.strictObject({ type: z.literal("dismissTutorial"), storyId: IdSchema }),
+  z.strictObject({
     type: z.literal("submitStoryInput"),
     storyId: IdSchema,
     stepId: IdSchema,
@@ -64,6 +72,11 @@ export const FeedbackRequestSchema = z.discriminatedUnion("type", [
 export type FeedbackRequest = z.infer<typeof FeedbackRequestSchema>;
 
 export const TransitionErrorCodeSchema = z.enum([
+  "STALE_CHAT_REPLY",
+  "INVALID_CHAT_REPLY",
+  "NEWS_NOT_AVAILABLE",
+  "NEWS_ALREADY_READ",
+  "INVALID_TUTORIAL_DISMISSAL",
   "CASE_LOCKED",
   "CASE_ALREADY_RESOLVED",
   "CASE_ALREADY_STARTED",

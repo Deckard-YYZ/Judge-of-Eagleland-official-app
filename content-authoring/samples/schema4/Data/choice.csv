@@ -1,0 +1,3 @@
+##,id,caseId,nodeId,targetKind,targetId,hasAnnotation
+,approve,sample_case,opening,Resolution,approved,false
+,decline,sample_case,opening,Resolution,declined,false

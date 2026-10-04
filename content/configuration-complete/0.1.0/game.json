@@ -1,0 +1,632 @@
+{
+  "manifest": {
+    "packageId": "configuration-complete",
+    "version": "0.1.0",
+    "contentSchemaVersion": 5,
+    "defaultLocale": "zh-CN",
+    "supportedLocales": [
+      "zh-CN",
+      "en-US"
+    ]
+  },
+  "unlockRules": [],
+  "storyRules": [],
+  "stories": {
+    "judgment_notice": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "information",
+          "type": "text"
+        },
+        {
+          "id": "required_action",
+          "type": "actionInput",
+          "targetActionId": "salute",
+          "wrongEffects": {
+            "attributeDeltas": {
+              "input_errors": 1
+            },
+            "setFlags": {
+              "action_mistake": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "endings": {},
+  "assets": {
+    "portrait": {
+      "kind": "image",
+      "path": "media/portrait.png"
+    },
+    "notification": {
+      "kind": "audio",
+      "path": "media/notification.wav"
+    }
+  },
+  "initial": {
+    "storyIds": [],
+    "flags": {
+      "judged": false,
+      "action_mistake": false
+    },
+    "caseIds": [
+      "intake"
+    ]
+  },
+  "attributes": {
+    "authority": {
+      "initial": 0,
+      "min": 0,
+      "max": 10
+    },
+    "input_errors": {
+      "initial": 0,
+      "min": 0,
+      "max": 10
+    }
+  },
+  "cases": {
+    "intake": {
+      "id": "intake",
+      "order": 1,
+      "startNodeId": "assessment",
+      "characters": [
+        {
+          "id": "clerk",
+          "portraitAssetId": "portrait"
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "choices": [
+            {
+              "id": "comply",
+              "hasAnnotation": true,
+              "target": {
+                "type": "node",
+                "nodeId": "disposition"
+              }
+            },
+            {
+              "id": "review",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "disposition"
+              }
+            }
+          ]
+        },
+        "disposition": {
+          "choices": [
+            {
+              "id": "approve",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "approved"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "effects": {
+            "attributeDeltas": {
+              "authority": 1
+            },
+            "setFlags": {
+              "judged": true
+            }
+          }
+        }
+      }
+    },
+    "followup": {
+      "id": "followup",
+      "order": 2,
+      "startNodeId": "followup_judgment",
+      "characters": [
+        {
+          "id": "judge",
+          "portraitAssetId": "portrait"
+        }
+      ],
+      "nodes": {
+        "followup_judgment": {
+          "choices": [
+            {
+              "id": "finish_followup",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "followup_closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "followup_closed": {
+          "effects": {
+            "attributeDeltas": {
+              "authority": 1
+            },
+            "setFlags": {}
+          }
+        }
+      }
+    },
+    "deferred": {
+      "id": "deferred",
+      "order": 3,
+      "startNodeId": "deferred_judgment",
+      "characters": [
+        {
+          "id": "clerk",
+          "portraitAssetId": "portrait"
+        }
+      ],
+      "nodes": {
+        "deferred_judgment": {
+          "choices": [
+            {
+              "id": "finish_deferred",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "deferred_closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "deferred_closed": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {}
+          }
+        }
+      }
+    }
+  },
+  "configuration": {
+    "flow": {
+      "initialStageId": "registration",
+      "stages": {
+        "registration": {
+          "when": {
+            "all": [
+              {
+                "type": "attributeAtLeast",
+                "attributeId": "authority",
+                "value": 0
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "id": "review_after_verdict",
+              "when": {
+                "all": [
+                  {
+                    "type": "currentStage",
+                    "stageId": "registration"
+                  },
+                  {
+                    "type": "caseResolved",
+                    "caseId": "intake",
+                    "resolutionId": "approved"
+                  }
+                ]
+              },
+              "targetStageId": "review"
+            },
+            {
+              "id": "appeal_qualified",
+              "when": {
+                "all": [
+                  {
+                    "type": "attributeAtLeast",
+                    "attributeId": "authority",
+                    "value": 5
+                  }
+                ]
+              },
+              "targetStageId": "appeal"
+            }
+          ]
+        },
+        "review": {
+          "when": {
+            "all": [
+              {
+                "type": "attributeAtLeast",
+                "attributeId": "authority",
+                "value": 1
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "id": "review_complete",
+              "when": {
+                "all": [
+                  {
+                    "type": "caseResolved",
+                    "caseId": "followup",
+                    "resolutionId": "followup_closed"
+                  },
+                  {
+                    "type": "chatLastNode",
+                    "chatId": "clerk_intro",
+                    "nodeId": "done"
+                  }
+                ]
+              },
+              "targetStageId": "completed"
+            },
+            {
+              "id": "review_appeal",
+              "when": {
+                "any": [
+                  {
+                    "type": "attributeAtLeast",
+                    "attributeId": "authority",
+                    "value": 5
+                  },
+                  {
+                    "type": "chatLastNode",
+                    "chatId": "appeal_chat",
+                    "nodeId": "done"
+                  }
+                ]
+              },
+              "targetStageId": "appeal"
+            }
+          ]
+        },
+        "appeal": {
+          "when": {
+            "any": [
+              {
+                "type": "attributeAtLeast",
+                "attributeId": "authority",
+                "value": 5
+              },
+              {
+                "type": "chatLastNode",
+                "chatId": "clerk_intro",
+                "nodeId": "done"
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "id": "appeal_complete",
+              "when": {
+                "all": [
+                  {
+                    "type": "chatLastNode",
+                    "chatId": "appeal_chat",
+                    "nodeId": "done"
+                  }
+                ]
+              },
+              "targetStageId": "completed"
+            }
+          ]
+        },
+        "completed": {
+          "when": {
+            "all": [
+              {
+                "type": "resolvedCountAtLeast",
+                "count": 2
+              }
+            ]
+          },
+          "transitions": []
+        }
+      },
+      "chats": {
+        "clerk_intro": {
+          "characterId": "clerk",
+          "when": {
+            "all": [
+              {
+                "type": "currentStage",
+                "stageId": "review"
+              },
+              {
+                "type": "attributeAtLeast",
+                "attributeId": "authority",
+                "value": 1
+              }
+            ]
+          },
+          "startNodeId": "greeting",
+          "nodes": {
+            "greeting": {
+              "type": "message",
+              "externalBranches": [
+                {
+                  "id": "followup_received",
+                  "event": {
+                    "type": "caseResolved",
+                    "caseId": "followup",
+                    "resolutionId": "followup_closed"
+                  },
+                  "when": {
+                    "all": [
+                      {
+                        "type": "resolvedCountAtLeast",
+                        "count": 2
+                      }
+                    ]
+                  },
+                  "targetNodeId": "done",
+                  "consequences": [
+                    {
+                      "type": "unlockChats",
+                      "chatIds": [
+                        "appeal_chat"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "replies": [
+                {
+                  "id": "accept",
+                  "when": {
+                    "all": [
+                      {
+                        "type": "attributeAtLeast",
+                        "attributeId": "authority",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  "target": {
+                    "type": "node",
+                    "nodeId": "done"
+                  }
+                },
+                {
+                  "id": "ask",
+                  "when": {
+                    "all": [
+                      {
+                        "type": "flagEquals",
+                        "flagId": "judged",
+                        "value": true
+                      }
+                    ]
+                  },
+                  "target": {
+                    "type": "node",
+                    "nodeId": "details"
+                  }
+                },
+                {
+                  "id": "schedule",
+                  "when": {
+                    "all": [
+                      {
+                        "type": "attributeAtLeast",
+                        "attributeId": "authority",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  "target": {
+                    "type": "event",
+                    "eventId": "schedule_followup"
+                  }
+                }
+              ]
+            },
+            "details": {
+              "type": "message",
+              "replies": [
+                {
+                  "id": "acknowledge",
+                  "when": {
+                    "all": [
+                      {
+                        "type": "attributeAtLeast",
+                        "attributeId": "authority",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  "target": {
+                    "type": "node",
+                    "nodeId": "done"
+                  }
+                }
+              ]
+            },
+            "done": {
+              "type": "terminal",
+              "consequences": [
+                {
+                  "type": "unlockChats",
+                  "chatIds": [
+                    "appeal_chat"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "appeal_chat": {
+          "characterId": "judge",
+          "when": {
+            "any": [
+              {
+                "type": "currentStage",
+                "stageId": "appeal"
+              },
+              {
+                "type": "chatLastNode",
+                "chatId": "clerk_intro",
+                "nodeId": "done"
+              }
+            ]
+          },
+          "startNodeId": "notice",
+          "nodes": {
+            "notice": {
+              "type": "message",
+              "replies": [
+                {
+                  "id": "understood",
+                  "when": {
+                    "all": [
+                      {
+                        "type": "attributeAtLeast",
+                        "attributeId": "authority",
+                        "value": 0
+                      }
+                    ]
+                  },
+                  "target": {
+                    "type": "node",
+                    "nodeId": "done"
+                  }
+                }
+              ]
+            },
+            "done": {
+              "type": "terminal",
+              "consequences": [
+                {
+                  "type": "unlockCases",
+                  "caseIds": [
+                    "deferred"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "events": {
+        "schedule_followup": {
+          "when": {
+            "all": [
+              {
+                "type": "attributeAtLeast",
+                "attributeId": "authority",
+                "value": 1
+              }
+            ]
+          },
+          "consequences": [
+            {
+              "type": "unlockCases",
+              "caseIds": [
+                "followup"
+              ]
+            },
+            {
+              "type": "enterStage",
+              "stageId": "review"
+            }
+          ]
+        }
+      }
+    },
+    "interactionOnly": {
+      "attributeIds": [
+        "input_errors"
+      ],
+      "flagIds": [
+        "action_mistake"
+      ]
+    },
+    "instructions": {
+      "assessment_instruction": {
+        "caseId": "intake",
+        "nodeId": "assessment",
+        "choiceId": "comply",
+        "delayMs": 1500
+      }
+    },
+    "actionInputHooks": [
+      {
+        "id": "after_intake",
+        "event": {
+          "type": "caseResolved",
+          "caseId": "intake",
+          "resolutionId": "approved"
+        },
+        "storyId": "judgment_notice"
+      }
+    ],
+    "casePools": {
+      "review_pool": {
+        "members": [
+          {
+            "caseId": "deferred",
+            "when": {
+              "all": [
+                {
+                  "type": "attributeAtLeast",
+                  "attributeId": "authority",
+                  "value": 5
+                }
+              ]
+            }
+          },
+          {
+            "caseId": "followup",
+            "when": {
+              "all": [
+                {
+                  "type": "attributeAtLeast",
+                  "attributeId": "authority",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "dispatchRules": [
+      {
+        "id": "after_intake_dispatch",
+        "event": {
+          "type": "caseResolved",
+          "caseId": "intake",
+          "resolutionId": "approved"
+        },
+        "when": {
+          "all": [
+            {
+              "type": "caseResolved",
+              "caseId": "intake",
+              "resolutionId": "approved"
+            }
+          ]
+        },
+        "poolId": "review_pool",
+        "strategy": {
+          "type": "ordered",
+          "caseIds": [
+            "deferred",
+            "followup"
+          ]
+        }
+      }
+    ]
+  }
+}

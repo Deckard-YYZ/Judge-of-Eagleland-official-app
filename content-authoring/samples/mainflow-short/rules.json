@@ -1,0 +1,102 @@
+{
+  "stories": {
+    "news-ack": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "ack",
+          "type": "actionInput"
+        }
+      ]
+    },
+    "tutorial": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "welcome",
+          "type": "text"
+        },
+        {
+          "id": "practice",
+          "type": "actionInput"
+        }
+      ]
+    }
+  },
+  "endings": {},
+  "assets": {},
+  "chatNodes": {
+    "chat-a": {
+      "hello": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "ack",
+            "targetNodeId": "detail"
+          }
+        ]
+      },
+      "detail": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "finish",
+            "targetNodeId": "closed"
+          }
+        ]
+      },
+      "closed": {
+        "type": "terminal",
+        "resultId": "normal"
+      }
+    },
+    "chat-b": {
+      "hello": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "ack",
+            "targetNodeId": "detail"
+          }
+        ]
+      },
+      "detail": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "finish",
+            "targetNodeId": "closed"
+          }
+        ]
+      },
+      "closed": {
+        "type": "terminal",
+        "resultId": "normal"
+      }
+    },
+    "chat-c": {
+      "hello": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "ack",
+            "targetNodeId": "detail"
+          }
+        ]
+      },
+      "detail": {
+        "type": "message",
+        "replies": [
+          {
+            "id": "finish",
+            "targetNodeId": "closed"
+          }
+        ]
+      },
+      "closed": {
+        "type": "terminal",
+        "resultId": "normal"
+      }
+    }
+  }
+}

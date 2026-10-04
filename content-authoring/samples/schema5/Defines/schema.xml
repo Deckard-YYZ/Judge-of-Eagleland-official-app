@@ -1,0 +1,166 @@
+<module name="">
+  <enum name="TargetKind">
+    <var name="Node" value="1" />
+    <var name="Resolution" value="2" />
+  </enum>
+  <enum name="EffectKind">
+    <var name="AttributeDelta" value="1" />
+    <var name="SetFlag" value="2" />
+  </enum>
+  <enum name="EffectOwner">
+    <var name="Resolution" value="1" />
+    <var name="ActionInput" value="2" />
+  </enum>
+  <enum name="PredicateKind">
+    <var name="CaseResolved" value="1" />
+    <var name="ResolvedCountAtLeast" value="2" />
+    <var name="AttributeAtLeast" value="3" />
+    <var name="AttributeAtMost" value="4" />
+    <var name="FlagEquals" value="5" />
+  </enum>
+  <enum name="CaseEventKind">
+    <var name="CaseStarted" value="1" />
+    <var name="ChoiceCompleted" value="2" />
+    <var name="CaseResolved" value="3" />
+  </enum>
+  <enum name="DispatchStrategy">
+    <var name="Ordered" value="1" />
+  </enum>
+  <enum name="ActionKind">
+    <var name="Salute" value="1" />
+    <var name="Wave" value="2" />
+  </enum>
+  <bean name="Attribute">
+    <var name="id" type="string" />
+    <var name="initial" type="int" />
+    <var name="min" type="int" />
+    <var name="max" type="int" />
+    <var name="interactionOnly" type="bool" />
+  </bean>
+  <table name="TbAttribute" value="Attribute" input="attribute@sample.xlsx" />
+  <bean name="Case">
+    <var name="id" type="string" />
+    <var name="order" type="int" />
+    <var name="startNodeId" type="string" />
+    <var name="initial" type="bool" />
+  </bean>
+  <table name="TbCase" value="Case" input="case@sample.xlsx" />
+  <bean name="Node">
+    <var name="id" type="string" />
+    <var name="caseId" type="string" />
+  </bean>
+  <table name="TbNode" value="Node" input="node@sample.xlsx" />
+  <bean name="Choice">
+    <var name="id" type="string" />
+    <var name="caseId" type="string" />
+    <var name="nodeId" type="string" />
+    <var name="targetKind" type="TargetKind" />
+    <var name="targetId" type="string" />
+    <var name="hasAnnotation" type="bool" />
+  </bean>
+  <table name="TbChoice" value="Choice" input="choice@sample.xlsx" />
+  <bean name="Resolution">
+    <var name="id" type="string" />
+    <var name="caseId" type="string" />
+  </bean>
+  <table name="TbResolution" value="Resolution" input="resolution@sample.xlsx" />
+  <bean name="Effect">
+    <var name="id" type="string" />
+    <var name="ownerKind" type="EffectOwner" />
+    <var name="caseId" type="string" />
+    <var name="resolutionId" type="string" />
+    <var name="storyId" type="string" />
+    <var name="stepId" type="string" />
+    <var name="kind" type="EffectKind" />
+    <var name="key" type="string" />
+    <var name="amount" type="int" />
+    <var name="enabled" type="bool" />
+  </bean>
+  <table name="TbEffect" value="Effect" input="effect@sample.xlsx" />
+  <bean name="Flag">
+    <var name="id" type="string" />
+    <var name="initial" type="bool" />
+    <var name="interactionOnly" type="bool" />
+  </bean>
+  <table name="TbFlag" value="Flag" input="flag@sample.xlsx" />
+  <bean name="Predicate">
+    <var name="id" type="string" />
+    <var name="conditionId" type="string" />
+    <var name="kind" type="PredicateKind" />
+    <var name="caseId" type="string" />
+    <var name="resolutionId" type="string" />
+    <var name="attributeId" type="string" />
+    <var name="flagId" type="string" />
+    <var name="count" type="int" />
+    <var name="value" type="int" />
+    <var name="enabled" type="bool" />
+  </bean>
+  <table name="TbPredicate" value="Predicate" input="predicate@sample.xlsx" />
+  <bean name="Instruction">
+    <var name="id" type="string" />
+    <var name="caseId" type="string" />
+    <var name="nodeId" type="string" />
+    <var name="choiceId" type="string" />
+    <var name="delayMs" type="int" />
+  </bean>
+  <table name="TbInstruction" value="Instruction" input="instruction@sample.xlsx" />
+  <bean name="Hook">
+    <var name="id" type="string" />
+    <var name="eventKind" type="CaseEventKind" />
+    <var name="caseId" type="string" />
+    <var name="nodeId" type="string" />
+    <var name="choiceId" type="string" />
+    <var name="resolutionId" type="string" />
+    <var name="storyId" type="string" />
+  </bean>
+  <table name="TbHook" value="Hook" input="hook@sample.xlsx" />
+  <bean name="PoolMember">
+    <var name="id" type="string" />
+    <var name="poolId" type="string" />
+    <var name="caseId" type="string" />
+    <var name="conditionId" type="string" />
+    <var name="rank" type="int" />
+  </bean>
+  <table name="TbPoolMember" value="PoolMember" input="poolMember@sample.xlsx" />
+  <bean name="Dispatch">
+    <var name="id" type="string" />
+    <var name="eventKind" type="CaseEventKind" />
+    <var name="caseId" type="string" />
+    <var name="nodeId" type="string" />
+    <var name="choiceId" type="string" />
+    <var name="resolutionId" type="string" />
+    <var name="conditionId" type="string" />
+    <var name="poolId" type="string" />
+    <var name="strategyKind" type="DispatchStrategy" />
+  </bean>
+  <table name="TbDispatch" value="Dispatch" input="dispatch@sample.xlsx" />
+  <bean name="ActionInput">
+    <var name="id" type="string" />
+    <var name="storyId" type="string" />
+    <var name="stepId" type="string" />
+    <var name="targetActionId" type="ActionKind" />
+  </bean>
+  <table name="TbActionInput" value="ActionInput" input="actionInput@sample.xlsx" />
+  <enum name="AssetKind">
+    <var name="Image" value="1" />
+    <var name="Audio" value="2" />
+    <var name="Video" value="3" />
+  </enum>
+  <bean name="Character">
+    <var name="id" type="string" />
+    <var name="portraitAssetId" type="string" />
+  </bean>
+  <table name="TbCharacter" value="Character" input="character@sample.xlsx" />
+  <bean name="CaseCharacter">
+    <var name="id" type="string" />
+    <var name="caseId" type="string" />
+    <var name="characterId" type="string" />
+  </bean>
+  <table name="TbCaseCharacter" value="CaseCharacter" input="caseCharacter@sample.xlsx" />
+  <bean name="Asset">
+    <var name="id" type="string" />
+    <var name="kind" type="AssetKind" />
+    <var name="path" type="string" />
+  </bean>
+  <table name="TbAsset" value="Asset" input="asset@sample.xlsx" />
+</module>

@@ -1,0 +1,10 @@
+{
+  "packageId": "configuration-complete",
+  "version": "0.1.0",
+  "contentSchemaVersion": 5,
+  "defaultLocale": "zh-CN",
+  "supportedLocales": [
+    "zh-CN",
+    "en-US"
+  ]
+}

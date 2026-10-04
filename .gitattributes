@@ -1,6 +1,11 @@
 * text=auto eol=lf
 *.png binary
 *.ico binary
+*.xlsx binary
+
+# Authored and generated media are compared and published as exact bytes.
+content-authoring/samples/**/media/** binary
+content/**/media/** binary
 
 # Markdown uses trailing spaces for intentional hard line breaks.
 *.md whitespace=-blank-at-eol

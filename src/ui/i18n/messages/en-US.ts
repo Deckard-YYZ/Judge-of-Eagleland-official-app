@@ -1,6 +1,19 @@
 import type { MessageCatalog } from "../translator";
 
 export const EN_US_MESSAGES = {
+  "chat.label": "Story messages",
+  "chat.you": "You: ",
+  "chat.replies": "Choose a reply",
+  "chat.canWait": "You can reply later and continue reviewing cases.",
+  "news.label": "News bulletins",
+  "news.read": "Read",
+  "news.complete": "Finish reading",
+  "tutorial.exit": "Leave tutorial and sign out",
+  "sessionError.STALE_CHAT_REPLY": "The conversation has changed. Use a current reply.",
+  "sessionError.INVALID_CHAT_REPLY": "This reply is unavailable.",
+  "sessionError.NEWS_NOT_AVAILABLE": "This bulletin has not been published.",
+  "sessionError.NEWS_ALREADY_READ": "This bulletin has already been read.",
+  "sessionError.INVALID_TUTORIAL_DISMISSAL": "This content cannot be dismissed as a tutorial.",
   "narration.label": "Story narration",
   "narration.replay": "Replay narration",
   "narration.stop": "Stop narration",
@@ -23,6 +36,10 @@ export const EN_US_MESSAGES = {
     "Reload and read the saved progress. Verify any in-flight operation against the saved state; it will not be retried automatically.",
   "diagnostics.reload": "Reload",
 
+  "diagnostics.mainFlowNotice":
+    "Navigation resets current browser memory profiles; desktop saves are unaffected.",
+  "diagnostics.mainFlowPreview": "Main flow debug (memory; resets on reload)",
+  "diagnostics.mainFlowExit": "Exit main flow debug",
   "diagnostics.open": "Diagnostics",
   "diagnostics.title": "Diagnostics",
   "diagnostics.close": "Close",
@@ -285,6 +302,7 @@ export const EN_US_MESSAGES = {
   "story.saveFailed": "Save failed: {message}",
   "story.skip": "Skip story",
   "story.required": "This story cannot be skipped",
+  "tutorial.optional": "You can exit the tutorial at any time",
   "story.effectRunning": "Presentation in progress…",
   "story.complete": "Complete story",
   "story.continue": "Continue",

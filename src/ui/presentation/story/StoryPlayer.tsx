@@ -19,6 +19,7 @@ export interface StoryPlayerProps {
   resumeStepId?: string | null;
   busy?: boolean;
   narrationReady?: boolean;
+  tutorial?: boolean;
   completionError?: string | null;
   onComplete(reason: StoryCompletionReason): void | Promise<void>;
 }
@@ -40,6 +41,7 @@ export function StoryPlayer({
   resumeStepId = null,
   busy = false,
   narrationReady = true,
+  tutorial = false,
   completionError = null,
   onComplete,
 }: StoryPlayerProps) {
@@ -228,7 +230,9 @@ export function StoryPlayer({
             {t("story.skip")}
           </button>
         ) : (
-          <span className="story-player__required">{t("story.required")}</span>
+          <span className="story-player__required">
+            {t(tutorial ? "tutorial.optional" : "story.required")}
+          </span>
         )}
 
         {step.type !== "actionInput" ? (

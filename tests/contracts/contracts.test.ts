@@ -24,7 +24,7 @@ const baseSave = {
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 3,
+  saveSchemaVersion: 5,
   contentRef: {
     packageId: MINIMAL_GAME_CONTENT.manifest.packageId,
     version: MINIMAL_GAME_CONTENT.manifest.version,
@@ -46,7 +46,7 @@ describe("content and state contracts", () => {
       GameContentManifestSchema.parse({
         packageId: "pkg",
         version: "2.0.0",
-        contentSchemaVersion: 5,
+        contentSchemaVersion: 7,
         defaultLocale: "zh-CN",
         supportedLocales: ["zh-CN"],
       }),

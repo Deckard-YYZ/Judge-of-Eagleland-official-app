@@ -180,7 +180,7 @@ describe("action-input fixed fixture through GameSession and disk SQLite", () =>
     const passedB = persisted(database);
     expect(passedB).toMatchObject({
       revision: before.revision + 1,
-      schema: 3,
+      schema: 5,
       state: { storyCheckpoint: { storyId: firstStory, resumeStepId: "inspection_notice" } },
     });
     await database.close();

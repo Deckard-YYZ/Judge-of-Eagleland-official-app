@@ -37,6 +37,12 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // Tauri watches src-tauri itself; keeping it out of Vite's watcher avoids
+    // EBUSY failures on Windows network/mounted drives during Rust builds.
+    watch: {
+      // Authoring scratch packages include link fixtures and atomic directory renames.
+      ignored: ["**/src-tauri/**", "**/artifacts/**"],
+    },
   },
   build: {
     target: "es2022",

@@ -6,6 +6,7 @@ import type { CaseId, ChoiceId, NodeId } from "../../content/schema";
 import { translateSessionError, useI18n } from "../i18n";
 import { observeReviewPresence } from "./observeReviewVisibility";
 import { AnnotationPopover } from "./AnnotationPopover";
+import { TextBlockList } from "./TextBlocks";
 import encryptAiIcon from "../assets/icons/interlocked_rectangular_rings_small.svg";
 
 export interface DecisionPanelProps {
@@ -50,6 +51,8 @@ export function DecisionPanel({
   headingRef,
   onCommandError,
 }: DecisionPanelProps) {
+  // CaseReader mounts this component with a content/case/node key. Local presentation state
+  // lasts for that round; localization replaces its copy without changing the key.
   const { t } = useI18n();
   const panelId = useId();
   const choiceElements = useRef(new Map<ChoiceId, HTMLButtonElement>());
@@ -58,6 +61,10 @@ export function DecisionPanel({
   const revealGateRef = useRef<HTMLDivElement>(null);
   const [submittingChoiceId, setSubmittingChoiceId] = useState<ChoiceId | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
+  const [instructionVisible, setInstructionVisible] = useState(false);
+  const [choiceCommitted, setChoiceCommitted] = useState(false);
+  const instructionId = node.instruction?.id;
+  const instructionDelayMs = node.instruction?.delayMs;
   const failedChoiceRef = useRef<ChoiceId | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<ActiveAnnotation | null>(null);
   const revealIdentity = presentationIdentity ?? JSON.stringify([caseId, nodeId]);
@@ -87,6 +94,20 @@ export function DecisionPanel({
         : "waiting";
   const interactionLocked = disabled || submittingChoiceId !== null;
   const annotationPopoverId = `${panelId}-annotation`;
+  const instructionDomId = `${panelId}-instruction`;
+
+  useEffect(() => {
+    if (
+      revealPhase !== "ready" ||
+      instructionId === undefined ||
+      instructionDelayMs === undefined ||
+      choiceCommitted
+    )
+      return;
+    // Scalar dependencies keep a language projection from restarting this round's timer.
+    const timer = window.setTimeout(() => setInstructionVisible(true), instructionDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [revealPhase, instructionId, instructionDelayMs, choiceCommitted]);
 
   useEffect(() => {
     const gate = revealGateRef.current;
@@ -207,6 +228,9 @@ export function DecisionPanel({
         setCommandError(message);
         failedChoiceRef.current = choiceId;
         onCommandError?.(message);
+      } else {
+        setChoiceCommitted(true);
+        setInstructionVisible(false);
       }
     } catch {
       const message = t("decision.submitFailed");
@@ -251,11 +275,15 @@ export function DecisionPanel({
               {node.choices.map((choice) => {
                 const choiceDomId = `${panelId}-choice-${domToken(choice.id)}`;
                 const isAnnotationActive = activeAnnotation?.choiceId === choice.id;
+                const showInstruction =
+                  instructionVisible &&
+                  !choiceCommitted &&
+                  node.instruction?.choiceId === choice.id;
 
                 return (
                   <div
                     key={choice.id}
-                    className="decision-option"
+                    className={`decision-option${showInstruction ? " decision-option--instructed" : ""}`}
                     data-choice-container="true"
                     data-choice-id={choice.id}
                     onMouseEnter={() => {
@@ -286,7 +314,14 @@ export function DecisionPanel({
                       data-node-id={nodeId}
                       data-choice-id={choice.id}
                       data-has-annotation={choice.annotation ? "true" : "false"}
-                      aria-describedby={isAnnotationActive ? annotationPopoverId : undefined}
+                      aria-describedby={
+                        [
+                          isAnnotationActive ? annotationPopoverId : "",
+                          showInstruction ? instructionDomId : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
                       onFocus={(event) => {
                         if (choice.annotation) {
                           showTransientAnnotation(choice.id, event.currentTarget, "focus");
@@ -307,6 +342,16 @@ export function DecisionPanel({
                         )}
                       </span>
                     </button>
+                    {showInstruction && node.instruction ? (
+                      <aside
+                        id={instructionDomId}
+                        className="decision-instruction"
+                        role="note"
+                        data-instruction-id={node.instruction.id}
+                      >
+                        <TextBlockList blocks={node.instruction.blocks} />
+                      </aside>
+                    ) : null}
                   </div>
                 );
               })}

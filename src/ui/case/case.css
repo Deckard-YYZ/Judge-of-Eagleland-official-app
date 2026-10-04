@@ -561,6 +561,23 @@
   color: var(--ui-danger);
 }
 
+.decision-option--instructed {
+  outline: 2px solid var(--ui-emphasis);
+  outline-offset: 3px;
+}
+
+.decision-instruction {
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--ui-emphasis);
+  background: var(--ui-surface-raised);
+  color: var(--ui-ink);
+  font-size: 0.85rem;
+}
+
+.decision-instruction .case-text-block {
+  margin: 0;
+}
+
 @keyframes case-interaction-enter {
   from {
     opacity: 0;

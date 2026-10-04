@@ -1,7 +1,11 @@
 import type { GameCaseDefinition, GameContentCatalog } from "../content/schema";
 import { GameStateSchema, type GameState } from "./model";
+import { configurationInvariantErrors } from "./configurationInvariants";
+import { mainFlowInvariantErrors } from "./mainFlowInvariants";
 
 export type GameStateInvariantIssueCode =
+  | "MAIN_FLOW_INVALID"
+  | "CONFIGURATION_FACT_INVALID"
   | "STORY_CHECKPOINT_INVALID"
   | "STATE_SHAPE_INVALID"
   | "ATTRIBUTE_SET_INVALID"
@@ -237,6 +241,10 @@ export const checkGameStateInvariants = (
   const addIssue: IssueCollector = (code, path, message) => {
     issues.push({ code, path, message });
   };
+  for (const message of mainFlowInvariantErrors(state, content))
+    addIssue("MAIN_FLOW_INVALID", ["mainFlow"], message);
+  for (const message of configurationInvariantErrors(state, content))
+    addIssue("CONFIGURATION_FACT_INVALID", ["configurationFacts"], message);
 
   const stateAttributeIds = Object.keys(state.attributes);
   const contentAttributeIds = Object.keys(content.attributes);

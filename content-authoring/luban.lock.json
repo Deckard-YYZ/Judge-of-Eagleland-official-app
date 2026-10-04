@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/focus-creative-games/luban.git",
+  "version": "5.1.0",
+  "commit": "df34215d2e22035073d1af83d44e3ac0744dc3b3",
+  "project": "src/Luban/Luban.csproj",
+  "dll": "src/Luban/bin/Release/net8.0/Luban.dll"
+}

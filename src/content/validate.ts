@@ -7,8 +7,12 @@ import {
   type LocalizedContentCatalog,
 } from "./schema";
 import { collectCaseGraphIssues } from "./validateCaseGraph";
+import { validateConfiguration } from "./validateConfiguration";
+import { validateFlow, validateFlowLocalization } from "./validateFlow";
+import { validateMainFlow, validateMainFlowLocalization } from "./validateMainFlow";
 
 export type ContentValidationIssueCode =
+  | "CONFIGURATION_INVALID"
   | "CONTENT_SCHEMA_INVALID"
   | "CASE_KEY_ID_MISMATCH"
   | "CHOICE_ID_DUPLICATE"
@@ -669,6 +673,11 @@ export const validateGameContentCatalog = (
   };
 
   checkInitialReferences(content, addIssue);
+  validateConfiguration(content, addIssue, (condition, path, id) =>
+    checkConditionReferences(condition, path, id, content, addIssue),
+  );
+  validateFlow(content, addIssue);
+  validateMainFlow(content, addIssue);
   checkCaseReferences(content, addIssue);
   checkProgressionReferences(content, addIssue);
   checkEndingReferences(content, addIssue);
@@ -793,6 +802,24 @@ export const validateLocalizedContentCatalog = (
   const addIssue: IssueCollector = (code, objectId, path, message) => {
     issues.push({ code, source, objectId, path: [...path], message });
   };
+
+  validateFlowLocalization(gameContent, localized, addIssue);
+  validateMainFlowLocalization(gameContent, localized, addIssue);
+
+  checkExactLocalizationIds(
+    Object.keys(gameContent.configuration?.instructions ?? {}),
+    localized.instructions ?? {},
+    ["instructions"],
+    "instructions",
+    addIssue,
+  );
+  if (gameContent.manifest.contentSchemaVersion < 5 && localized.instructions !== undefined)
+    addIssue(
+      "CONFIGURATION_INVALID",
+      "instructions",
+      ["instructions"],
+      "Instruction copy requires content schema v5.",
+    );
 
   // Localizations inherit the rules package version; even orphan entries cannot add v4 fields.
   if (gameContent.manifest.contentSchemaVersion < 4) {

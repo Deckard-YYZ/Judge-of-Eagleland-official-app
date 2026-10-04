@@ -39,9 +39,12 @@ describe("bundled content repository", () => {
       );
     }
     expect(reader).toHaveBeenCalledWith(DEFAULT_BUNDLED_CONTENT_REF);
-    expect(DEFAULT_BUNDLED_CONTENT_REF.version).toBe("1.2.0");
+    expect(DEFAULT_BUNDLED_CONTENT_REF).toEqual({
+      packageId: "minimal-test-package",
+      version: "1.2.0",
+    });
     expect((await repository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF)).stories).toHaveProperty(
-      "inspection_after_case_001",
+      "tutorial_voice_order",
     );
   });
 
@@ -62,10 +65,11 @@ describe("bundled content repository", () => {
   });
 
   it("rejects an installed version mismatch, missing asset, or missing locale before returning game content", async () => {
-    const files = await installedFiles();
+    const ref = { packageId: "minimal-test-package", version: "1.2.0" };
+    const files = await installedFiles(ref);
     await expect(
       new BundledSplitContentRepository(async () => files).loadGameContent({
-        ...DEFAULT_BUNDLED_CONTENT_REF,
+        ...ref,
         version: "2.0.0",
       }),
     ).rejects.toMatchObject({ code: "INVALID_CONTENT" });
@@ -73,13 +77,13 @@ describe("bundled content repository", () => {
       new BundledSplitContentRepository(async () => ({
         ...files,
         fileInventory: [],
-      })).loadGameContent(DEFAULT_BUNDLED_CONTENT_REF),
+      })).loadGameContent(ref),
     ).rejects.toMatchObject({ code: "INVALID_CONTENT" });
     await expect(
       new BundledSplitContentRepository(async () => ({
         ...files,
         sources: files.sources.filter((entry) => entry.source !== "locales/en-US.json"),
-      })).loadGameContent(DEFAULT_BUNDLED_CONTENT_REF),
+      })).loadGameContent(ref),
     ).rejects.toMatchObject({ code: "INVALID_CONTENT" });
   });
 

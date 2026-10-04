@@ -10,12 +10,16 @@ import { CaseWorkspace } from "./case";
 import { I18nProvider, useI18n } from "./i18n";
 import { FeedbackLayer } from "./presentation/feedback";
 import { StoryOverlay } from "./presentation/story";
+import { ChatOverlay } from "./presentation/chat/ChatOverlay";
+import { NewsPanel } from "./presentation/NewsPanel";
 import { ProfilePage } from "./profile/ProfilePage";
 import { AppShell } from "./shell";
 import { WorkspaceStudy } from "./workspace-study/WorkspaceStudy";
 import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme";
 
 export interface AppProps {
+  /** Experimental presentation is enabled only by the development composition root. */
+  mainFlowPreview?: boolean;
   /** Composition-root hook; UI has no native-window dependency. */
   onThemeApplied?(mode: UiThemeMode): void;
   profileEntry: ProfileEntry;
@@ -27,6 +31,7 @@ export interface AppProps {
 }
 
 interface AuthenticatedWorkspaceProps {
+  mainFlowPreview: boolean;
   profile: Readonly<LocalProfileSummary>;
   session: GameSessionView;
   themeMode: UiThemeMode;
@@ -40,6 +45,7 @@ interface AuthenticatedWorkspaceProps {
 function AuthenticatedWorkspace({
   profile,
   session,
+  mainFlowPreview,
   themeMode,
   caseOpenDelayMs,
   decisionRevealDelayMs,
@@ -85,7 +91,13 @@ function AuthenticatedWorkspace({
         onThemeChange={onThemeChange}
         onSelectCase={session.selectCase}
         onExit={onExit}
+        conversations={
+          mainFlowPreview && !recovering ? (
+            <ChatOverlay session={session} snapshot={snapshot} />
+          ) : null
+        }
       >
+        {mainFlowPreview && <NewsPanel session={session} snapshot={snapshot} />}
         <CaseWorkspace
           key={presentationHistory.scopeId}
           snapshot={snapshot}
@@ -104,6 +116,7 @@ function AuthenticatedWorkspace({
           sessionView={session}
           snapshot={snapshot}
           endingOpen={endingOpen}
+          onExitTutorial={onExit}
           onCloseEnding={() => {
             // Closing the final presentation is local navigation only. The ended
             // GameState stays authoritative and all case commands remain blocked.
@@ -120,6 +133,7 @@ function AuthenticatedWorkspace({
 /** App owns only the authenticated UI reference; exiting never writes GameState. */
 function LocalizedApp({
   profileEntry,
+  mainFlowPreview = false,
   storageMode = "memory-preview",
   onThemeApplied,
   caseOpenDelayMs,
@@ -198,6 +212,7 @@ function LocalizedApp({
 
   return (
     <AuthenticatedWorkspace
+      mainFlowPreview={mainFlowPreview}
       profile={active.profile}
       session={active.session}
       themeMode={themeMode}

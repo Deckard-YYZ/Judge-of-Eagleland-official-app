@@ -6,7 +6,7 @@ const createSave = (): SaveEnvelope => ({
   saveId: "save-1",
   profileId: "profile-1",
   revision: 0,
-  saveSchemaVersion: 3,
+  saveSchemaVersion: 5,
   contentRef: {
     packageId: "minimal-test-package",
     version: "1.0.0",

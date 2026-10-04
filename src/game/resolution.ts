@@ -1,4 +1,5 @@
 import { applyGameEffects } from "./effects";
+import { applyConfigurationEvent } from "./configuration";
 import type { GameContentCatalog } from "../content/schema";
 import type { TransitionContext } from "./commands";
 import type { AttributeChangeSnapshot, GameState } from "./model";
@@ -154,7 +155,21 @@ export const resolveFinalChoice = (
     pendingStoryIds: [...postUnlockState.pendingStoryIds, ...storyResult.value],
   };
 
-  const endingResult = selectEnding(postStoryState, content);
+  const choiceEventResult = applyConfigurationEvent(postStoryState, content, {
+    type: "choiceCompleted",
+    caseId: input.caseId,
+    nodeId: input.nodeId,
+    choiceId: input.choiceId,
+  });
+  if (!choiceEventResult.ok) return progressionFailure(choiceEventResult.issues);
+  const resolvedEventResult = applyConfigurationEvent(choiceEventResult.value, content, {
+    type: "caseResolved",
+    caseId: input.caseId,
+    resolutionId,
+  });
+  if (!resolvedEventResult.ok) return progressionFailure(resolvedEventResult.issues);
+  const postConfigurationState = resolvedEventResult.value;
+  const endingResult = selectEnding(postConfigurationState, content);
   if (!endingResult.ok) {
     return progressionFailure(endingResult.issues);
   }
@@ -165,10 +180,10 @@ export const resolveFinalChoice = (
     changes,
     nextState: ending
       ? {
-          ...postStoryState,
+          ...postConfigurationState,
           phase: { type: "ending", endingId: ending.endingId },
-          pendingStoryIds: [...postStoryState.pendingStoryIds, ending.storyId],
+          pendingStoryIds: [...postConfigurationState.pendingStoryIds, ending.storyId],
         }
-      : postStoryState,
+      : postConfigurationState,
   };
 };

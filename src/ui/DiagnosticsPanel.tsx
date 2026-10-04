@@ -6,9 +6,11 @@ import type { DiagnosticViewerService } from "../shared/diagnosticViewer";
 export function DiagnosticsPanel({
   service,
   onClose,
+  mainFlowPreview,
 }: {
   service: DiagnosticViewerService;
   onClose(): void;
+  mainFlowPreview?: { active: boolean; toggle(): void };
 }) {
   const t = useDocumentTranslator();
   const [snapshot, setSnapshot] = useState<Record<string, unknown>>({});
@@ -74,6 +76,14 @@ export function DiagnosticsPanel({
         {t("diagnostics.close")}
       </button>
       <p>{t("diagnostics.notice")}</p>
+      {mainFlowPreview && (
+        <>
+          <p>{t("diagnostics.mainFlowNotice")}</p>
+          <button type="button" onClick={mainFlowPreview.toggle}>
+            {t(mainFlowPreview.active ? "diagnostics.mainFlowExit" : "diagnostics.mainFlowPreview")}
+          </button>
+        </>
+      )}
       <button
         type="button"
         onClick={async () => {

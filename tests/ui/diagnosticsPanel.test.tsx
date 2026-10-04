@@ -31,3 +31,32 @@ it("filters operation evidence and exposes export failure without invoking game 
   fireEvent.click(screen.getByText("导出报告"));
   await waitFor(() => expect(screen.getByRole("status").textContent).toContain("导出未确认"));
 });
+
+it("exposes the optional debug entry and exit only when supplied by the development shell", async () => {
+  const service = {
+    snapshot: vi.fn(async () => ({})),
+    exportReport: vi.fn(async () => "report"),
+    setDetailed: vi.fn(async () => undefined),
+  };
+  const toggle = vi.fn();
+  const { rerender } = render(<DiagnosticsPanel service={service} onClose={() => undefined} />);
+  expect(screen.queryByRole("button", { name: /主流程验证/ })).toBeNull();
+  rerender(
+    <DiagnosticsPanel
+      service={service}
+      onClose={() => undefined}
+      mainFlowPreview={{ active: false, toggle }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: /主流程验证/ }));
+  expect(toggle).toHaveBeenCalledOnce();
+  rerender(
+    <DiagnosticsPanel
+      service={service}
+      onClose={() => undefined}
+      mainFlowPreview={{ active: true, toggle }}
+    />,
+  );
+  expect(screen.getByRole("button", { name: "退出主流程验证" })).toBeTruthy();
+  await waitFor(() => expect(service.snapshot).toHaveBeenCalled());
+});

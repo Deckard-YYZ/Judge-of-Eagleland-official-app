@@ -1,0 +1,80 @@
+{
+  "manifest": {
+    "packageId": "configuration-skeleton",
+    "version": "0.1.0",
+    "contentSchemaVersion": 4,
+    "defaultLocale": "zh-CN",
+    "supportedLocales": [
+      "zh-CN"
+    ]
+  },
+  "unlockRules": [],
+  "storyRules": [],
+  "stories": {},
+  "endings": {},
+  "assets": {},
+  "initial": {
+    "storyIds": [],
+    "flags": {
+      "declined": false
+    },
+    "caseIds": [
+      "sample_case"
+    ]
+  },
+  "attributes": {
+    "restraint": {
+      "initial": 50,
+      "min": 0,
+      "max": 100
+    }
+  },
+  "cases": {
+    "sample_case": {
+      "id": "sample_case",
+      "order": 1,
+      "startNodeId": "opening",
+      "characters": [],
+      "nodes": {
+        "opening": {
+          "choices": [
+            {
+              "id": "approve",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "approved"
+              }
+            },
+            {
+              "id": "decline",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "declined"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "effects": {
+            "attributeDeltas": {
+              "restraint": 5
+            },
+            "setFlags": {}
+          }
+        },
+        "declined": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {
+              "declined": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

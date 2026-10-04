@@ -266,7 +266,7 @@ export class SqliteSaveRepository implements SaveRepository {
 
     // Validate the current row before writing. This protects a corrupt save or
     // an unsupported future schema from being silently overwritten. Valid v1/v2
-    // rows are upgraded to v3 by the actual commit below.
+    // rows are upgraded to v5 by the actual commit below.
     const currentRows = await this.database.select<SaveRow>(
       `SELECT save_id, profile_id, revision, save_schema_version,
               content_package_id, content_version, state_json, created_at, updated_at
@@ -284,7 +284,7 @@ export class SqliteSaveRepository implements SaveRepository {
         `Save "${saveId}" does not belong to profile "${profileId}".`,
       );
     }
-    if (![1, 2, 3].includes(current.save_schema_version)) {
+    if (![1, 2, 3, 4, 5].includes(current.save_schema_version)) {
       throw new SaveRepositoryError(
         "INVALID_SAVE",
         `Save "${saveId}" uses unsupported schema version ${current.save_schema_version}.`,
@@ -310,12 +310,12 @@ export class SqliteSaveRepository implements SaveRepository {
       `UPDATE saves
           SET state_json = $1,
               revision = revision + 1,
-              save_schema_version = 3,
+              save_schema_version = 5,
               updated_at = $2
         WHERE save_id = $3
           AND profile_id = $4
           AND revision = $5
-          AND save_schema_version IN (1, 2, 3)`,
+          AND save_schema_version IN (1, 2, 3, 4, 5)`,
       [stateJson, updatedAt, saveId, profileId, expectedRevision],
     );
 
@@ -350,7 +350,7 @@ export class SqliteSaveRepository implements SaveRepository {
         `Save "${saveId}" does not belong to profile "${profileId}".`,
       );
     }
-    if (![1, 2, 3].includes(identity.save_schema_version)) {
+    if (![1, 2, 3, 4, 5].includes(identity.save_schema_version)) {
       throw new SaveRepositoryError(
         "INVALID_SAVE",
         `Save "${saveId}" uses unsupported schema version ${identity.save_schema_version}.`,

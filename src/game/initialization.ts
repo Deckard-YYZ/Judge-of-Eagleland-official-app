@@ -1,5 +1,6 @@
 import type { GameContentCatalog } from "../content/schema";
 import type { GameState } from "./model";
+import { initializeMainFlow } from "./mainFlow";
 import { checkGameStateInvariants, type GameStateInvariantIssue } from "./invariants";
 
 export type InitialGameStateIssueCode =
@@ -94,8 +95,10 @@ export const createInitialGameState = (
     pendingStoryIds: [...content.initial.storyIds],
     completedStoryIds: [],
     storyCheckpoint: null,
+    ...(content.configuration ? { configurationFacts: [] } : {}),
   };
 
+  initializeMainFlow(state, content);
   const invariantResult = checkGameStateInvariants(state, content);
   return invariantResult.ok ? { ok: true, state } : invariantResult;
 };

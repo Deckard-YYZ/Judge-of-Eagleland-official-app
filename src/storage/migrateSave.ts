@@ -7,6 +7,7 @@ import {
   PendingCaseProgressSchema,
   RunPhaseSchema,
   SaveEnvelopeSchema,
+  refineStoryQueues,
   type SaveEnvelope,
 } from "../game/model";
 
@@ -71,6 +72,31 @@ const V2SaveEnvelopeSchema = LegacySaveEnvelopeSchema.extend({
   state: LegacyGameStateSchema.extend({ cases: z.record(IdSchema, CaseProgressSchema) }),
 });
 
+const V3SaveEnvelopeSchema = LegacySaveEnvelopeSchema.extend({
+  saveSchemaVersion: z.literal(3),
+  state: z
+    .strictObject({
+      phase: GameStateSchema.shape.phase,
+      attributes: GameStateSchema.shape.attributes,
+      flags: GameStateSchema.shape.flags,
+      cases: GameStateSchema.shape.cases,
+      storyCheckpoint: GameStateSchema.shape.storyCheckpoint,
+      pendingStoryIds: GameStateSchema.shape.pendingStoryIds,
+      completedStoryIds: GameStateSchema.shape.completedStoryIds,
+    })
+    .superRefine(refineStoryQueues),
+});
+
+const V4SaveEnvelopeSchema = V3SaveEnvelopeSchema.extend({
+  saveSchemaVersion: z.literal(4),
+  state: z
+    .strictObject({
+      ...V3SaveEnvelopeSchema.shape.state.shape,
+      configurationFacts: GameStateSchema.shape.configurationFacts,
+    })
+    .superRefine(refineStoryQueues),
+});
+
 export class SaveMigrationError extends Error {
   readonly code = "SAVE_MIGRATION_FAILED";
   readonly path: readonly (string | number)[];
@@ -85,31 +111,39 @@ export class SaveMigrationError extends Error {
 }
 
 /**
- * Reads persisted v1/v2/v3 data and always returns the strict public v3 shape. Legacy
+ * Reads persisted v1–v4 data and always returns the strict public v5 shape. Legacy
  * localized strings are discarded; saved IDs, deltas, timestamps and order survive.
  */
 export function migrateStoredSaveEnvelope(value: unknown): SaveEnvelope {
   const current = SaveEnvelopeSchema.safeParse(value);
   if (current.success) return current.data;
 
+  const v4 = V4SaveEnvelopeSchema.safeParse(value);
+  if (v4.success) return SaveEnvelopeSchema.parse({ ...v4.data, saveSchemaVersion: 5 });
+
+  const v3 = V3SaveEnvelopeSchema.safeParse(value);
+  if (v3.success) return SaveEnvelopeSchema.parse({ ...v3.data, saveSchemaVersion: 5 });
+
   const v2 = V2SaveEnvelopeSchema.safeParse(value);
   if (v2.success) {
     try {
       return SaveEnvelopeSchema.parse({
         ...v2.data,
-        saveSchemaVersion: 3,
+        saveSchemaVersion: 5,
         state: { ...v2.data.state, storyCheckpoint: null },
       });
     } catch (error) {
-      throw new SaveMigrationError("Migrated v2 save violates the v3 contract.", [], error);
+      throw new SaveMigrationError("Migrated v2 save violates the v5 contract.", [], error);
     }
   }
   const legacy = LegacySaveEnvelopeSchema.safeParse(value);
   if (!legacy.success) {
-    throw new SaveMigrationError("Stored save is not a valid v1, v2, or v3 envelope.", [], {
+    throw new SaveMigrationError("Stored save is not a valid v1–v5 envelope.", [], {
       v1: legacy.error,
       v2: v2.error,
-      v3: current.error,
+      v3: v3.error,
+      v4: v4.error,
+      v5: current.error,
     });
   }
 
@@ -152,12 +186,12 @@ export function migrateStoredSaveEnvelope(value: unknown): SaveEnvelope {
   try {
     return SaveEnvelopeSchema.parse({
       ...legacy.data,
-      saveSchemaVersion: 3,
+      saveSchemaVersion: 5,
       state: GameStateSchema.parse({ ...legacy.data.state, cases, storyCheckpoint: null }),
     });
   } catch (error) {
     throw new SaveMigrationError(
-      "The migrated v1 save does not satisfy the v3 contract.",
+      "The migrated v1 save does not satisfy the v5 contract.",
       [],
       error,
     );

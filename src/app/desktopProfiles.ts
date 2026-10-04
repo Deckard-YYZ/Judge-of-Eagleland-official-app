@@ -22,7 +22,7 @@ import { normalizeProfileLoginName, type ProfileRecord } from "../storage/profil
 import type { SaveRepository } from "../storage/saveRepository";
 import type { StorageRepositories } from "../storage";
 import { transition as gameTransition } from "../game/transition";
-import { configureInitialTutorial } from "./tutorialPolicy";
+import { configureInitialTutorial, withAccountTutorial } from "./tutorialPolicy";
 
 /** Profile-scoped setting used to select a save when a profile has more than one. */
 export const CURRENT_SAVE_ID_SETTING_KEY = "currentSaveId";
@@ -141,7 +141,7 @@ const createInitialSave = (
     saveId,
     profileId,
     revision: 0,
-    saveSchemaVersion: 3,
+    saveSchemaVersion: 5,
     contentRef: {
       packageId: content.manifest.packageId,
       version: content.manifest.version,
@@ -167,7 +167,6 @@ export async function createDesktopProfileEntry(
   // Bootstrap must fail visibly if installed content is missing or invalid.
   const loadedContent =
     options.content ?? (await contentRepository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF));
-  const content = configureInitialTutorial(loadedContent, options.tutorialEnabled ?? true);
   const transition = options.transition ?? gameTransition;
   const makeProfileId = options.createProfileId ?? (() => defaultProfileId());
   const makeSaveId = options.createSaveId ?? defaultSaveIdForProfile;
@@ -336,7 +335,16 @@ export async function createDesktopProfileEntry(
     }
 
     const now = clock();
-    const save = createInitialSave(profile.profileId, saveId, content, now);
+    const tutorialCompleted = await repositories.profiles.getTutorialCompleted(profile.profileId);
+    const initialContent = configureInitialTutorial(
+      loadedContent,
+      !tutorialCompleted && (options.tutorialEnabled ?? true),
+    );
+    const save = withAccountTutorial(
+      createInitialSave(profile.profileId, saveId, initialContent, now),
+      initialContent,
+      !tutorialCompleted && (options.tutorialEnabled ?? true),
+    );
     try {
       await repositories.saves.create(save);
     } catch (error) {
@@ -416,6 +424,27 @@ export async function createDesktopProfileEntry(
     const loaded = await session.load(saveId, profile.profileId);
     if (!loaded.ok) {
       return failure(loaded.message);
+    }
+
+    try {
+      const tutorialId = session.getSnapshot().content?.mainFlow?.tutorialStoryId;
+      if (tutorialId) {
+        const completed = await repositories.profiles.getTutorialCompleted(profile.profileId);
+        if (completed && session.getSnapshot().state!.pendingStoryIds.includes(tutorialId)) {
+          const dismissed = await session.dispatch({
+            type: "dismissTutorial",
+            storyId: tutorialId,
+          });
+          if (!dismissed.ok) return failure(dismissed.message);
+        }
+        // Do not consume the first opportunity until both rules and display copy loaded.
+        await sessionView.setLocale(loadedContent.manifest.defaultLocale);
+        if (!sessionView.getSnapshot().content)
+          return failure("Tutorial content could not be loaded.");
+        if (!completed) await repositories.profiles.markTutorialCompleted(profile.profileId);
+      }
+    } catch (error) {
+      return failure(describeError(error, "The account tutorial status could not be saved."));
     }
 
     profilesAwaitingSave.delete(profile.profileId);

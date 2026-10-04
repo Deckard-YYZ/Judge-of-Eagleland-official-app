@@ -77,6 +77,12 @@ const applyInitialMigration = (database: DatabaseSync): void => {
   database.exec("BEGIN");
   try {
     database.exec(migrationSql);
+    database.exec(
+      readFileSync(
+        new URL("../../../src-tauri/migrations/002_profile_tutorials.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     database.exec("COMMIT");
   } catch (error) {
     try {

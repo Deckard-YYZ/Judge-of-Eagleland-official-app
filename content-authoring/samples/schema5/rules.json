@@ -1,0 +1,19 @@
+{
+  "stories": {
+    "judgment_notice": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "information",
+          "type": "text"
+        },
+        {
+          "id": "required_action",
+          "type": "actionInput"
+        }
+      ]
+    }
+  },
+  "endings": {},
+  "assets": {}
+}

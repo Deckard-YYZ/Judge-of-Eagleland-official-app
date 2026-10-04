@@ -24,6 +24,12 @@ export interface ContentChoiceView {
 export interface ContentNodeView {
   readonly prompt: string;
   readonly choices: readonly Readonly<ContentChoiceView>[];
+  readonly instruction?: Readonly<{
+    id: string;
+    choiceId: string;
+    delayMs: number;
+    blocks: readonly Readonly<TextBlock>[];
+  }>;
 }
 
 export interface ContentCaseView {
@@ -109,6 +115,25 @@ export interface ContentStoryView {
 
 /** Read-only presentation projection. React cannot observe rule targets or resolution effects. */
 export interface GameContentView {
+  readonly mainFlow?: Readonly<{
+    tutorialStoryId?: string;
+    chats: Readonly<
+      Record<
+        string,
+        Readonly<{
+          title: string;
+          characterName: string;
+          nodes: Readonly<
+            Record<
+              string,
+              Readonly<{ blocks: readonly TextBlock[]; replies: Readonly<Record<string, string>> }>
+            >
+          >;
+        }>
+      >
+    >;
+    news: Readonly<Record<string, Readonly<{ title: string; blocks: readonly TextBlock[] }>>>;
+  }>;
   readonly locale: ContentLocale;
   readonly attributes: Readonly<Record<string, Readonly<ContentAttributeView>>>;
   readonly cases: Readonly<Record<string, Readonly<ContentCaseView>>>;
@@ -139,13 +164,28 @@ export function createGameContentView(
           summary: copy.summary,
           body: copy.body,
           nodes: Object.fromEntries(
-            Object.entries(definition.nodes).map(([nodeId, node]) => [
-              nodeId,
-              {
-                prompt: copy.nodes[nodeId].prompt,
-                choices: node.choices.map(({ id }) => ({ id, ...copy.choices[id] })),
-              },
-            ]),
+            Object.entries(definition.nodes).map(([nodeId, node]) => {
+              const instruction = Object.entries(game.configuration?.instructions ?? {}).find(
+                ([, value]) => value.caseId === caseId && value.nodeId === nodeId,
+              );
+              return [
+                nodeId,
+                {
+                  prompt: copy.nodes[nodeId].prompt,
+                  choices: node.choices.map(({ id }) => ({ id, ...copy.choices[id] })),
+                  ...(instruction
+                    ? {
+                        instruction: {
+                          id: instruction[0],
+                          choiceId: instruction[1].choiceId,
+                          delayMs: instruction[1].delayMs,
+                          blocks: localized.instructions![instruction[0]].blocks,
+                        },
+                      }
+                    : {}),
+                },
+              ];
+            }),
           ),
           resolutions: copy.resolutions,
         },
@@ -203,6 +243,31 @@ export function createGameContentView(
     }),
   );
   return Object.freeze({
+    ...(game.mainFlow
+      ? {
+          mainFlow: {
+            ...(game.mainFlow.tutorialStoryId
+              ? { tutorialStoryId: game.mainFlow.tutorialStoryId }
+              : {}),
+            chats: Object.fromEntries(
+              Object.entries(game.mainFlow.chats).map(([chatId, definition]) => {
+                const characterCase = Object.values(game.cases).find((entry) =>
+                  entry.characters.some((character) => character.id === definition.characterId),
+                )!;
+                return [
+                  chatId,
+                  {
+                    ...localized.mainFlow!.chats[chatId],
+                    characterName:
+                      localized.cases[characterCase.id].characters[definition.characterId].name,
+                  },
+                ];
+              }),
+            ),
+            news: localized.mainFlow!.news,
+          },
+        }
+      : {}),
     locale: localized.locale,
     attributes,
     cases,

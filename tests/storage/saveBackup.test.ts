@@ -8,7 +8,7 @@ const fixture = (): SaveEnvelope => ({
   saveId: "source",
   profileId: "profile-a",
   revision: 3,
-  saveSchemaVersion: 3,
+  saveSchemaVersion: 5,
   contentRef: { packageId: "storage-fixture", version: "1.0.0" },
   createdAt: "2026-09-15T10:00:00.000Z",
   updatedAt: "2026-09-15T11:00:00.000Z",

@@ -25,12 +25,20 @@ pub fn run() {
         serde_json::json!({"source":"host", "event":"host.starting", "level":"info"}),
         "host",
     );
-    let migrations = vec![Migration {
-        version: 1,
-        description: "create_initial_storage_tables",
-        sql: include_str!("../migrations/001_initial.sql"),
-        kind: MigrationKind::Up,
-    }];
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create_initial_storage_tables",
+            sql: include_str!("../migrations/001_initial.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "track_account_tutorial_completion",
+            sql: include_str!("../migrations/002_profile_tutorials.sql"),
+            kind: MigrationKind::Up,
+        },
+    ];
 
     let panic_diagnostics = diagnostics.clone();
     let previous_hook = std::panic::take_hook();

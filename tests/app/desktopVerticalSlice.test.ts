@@ -43,11 +43,17 @@ function newDatabase() {
 }
 
 async function boot(database: NodeSqliteTestDatabase) {
+  const contentRepository = new BundledSplitContentRepository(readInstalledPackage);
   const app = await bootstrapApplication({
     detectRuntime: () => "desktop",
     storageOptions: { loadDatabase: async () => database },
     desktopProfileOptions: {
-      contentRepository: new BundledSplitContentRepository(readInstalledPackage),
+      contentRepository,
+      // Keep the legacy binding regression independent from the new-game default.
+      content: await contentRepository.loadGameContent({
+        packageId: "minimal-test-package",
+        version: "1.2.0",
+      }),
       tutorialEnabled: true,
     },
   });

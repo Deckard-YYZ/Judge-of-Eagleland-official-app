@@ -16,6 +16,7 @@ export interface StoryOverlayProps {
   endingOpen: boolean;
   settings?: React.ReactNode;
   onCloseEnding(): void;
+  onExitTutorial?(): void;
 }
 
 let nextSessionViewKey = 1;
@@ -129,6 +130,7 @@ export function StoryOverlay({
   endingOpen,
   onCloseEnding,
   settings,
+  onExitTutorial,
 }: StoryOverlayProps) {
   const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
@@ -219,12 +221,36 @@ export function StoryOverlay({
     const identity = `${sessionKey}:${saveIdentity}:${contentRef?.packageId}:${contentRef?.version}:story:${currentStoryId}`;
 
     return (
-      <ModalFrame settings={settings} identity={identity}>
+      <ModalFrame
+        settings={
+          <>
+            {settings ?? <LocaleSwitch />}
+            {content.mainFlow?.tutorialStoryId === currentStoryId && (
+              <button
+                type="button"
+                className="story-button"
+                disabled={snapshot.status !== "ready" || submitting}
+                onClick={() => {
+                  void sessionView
+                    .dispatch({ type: "dismissTutorial", storyId: currentStoryId })
+                    .then((result) => {
+                      if (result.ok) onExitTutorial?.();
+                    });
+                }}
+              >
+                {t("tutorial.exit")}
+              </button>
+            )}
+          </>
+        }
+        identity={identity}
+      >
         {story ? (
           <StoryPlayer
             key={identity}
             storyId={currentStoryId}
             story={story}
+            tutorial={content.mainFlow?.tutorialStoryId === currentStoryId}
             sessionView={sessionView}
             attributes={content.attributes}
             narrationReady={

@@ -19,6 +19,8 @@ export interface ProfileRepository {
   get(profileId: string): Promise<ProfileRecord | null>;
   findByLoginName(loginName: string): Promise<ProfileRecord | null>;
   create(profile: ProfileRecord): Promise<void>;
+  getTutorialCompleted(profileId: string): Promise<boolean>;
+  markTutorialCompleted(profileId: string): Promise<void>;
 }
 
 export type ProfileRepositoryErrorCode =
@@ -116,6 +118,23 @@ const rowToProfile = (row: ProfileRow): ProfileRecord => {
  */
 export class SqliteProfileRepository implements ProfileRepository {
   constructor(private readonly database: SqlDatabase) {}
+
+  async getTutorialCompleted(profileId: string): Promise<boolean> {
+    const rows = await this.database.select<{ completed: number }>(
+      "SELECT completed FROM profile_tutorials WHERE profile_id = $1",
+      [validateProfileId(profileId)],
+    );
+    if (rows.length !== 1) throw new Error("The profile tutorial record is missing.");
+    return rows[0].completed === 1;
+  }
+
+  async markTutorialCompleted(profileId: string): Promise<void> {
+    const result = await this.database.execute(
+      "UPDATE profile_tutorials SET completed = 1 WHERE profile_id = $1",
+      [validateProfileId(profileId)],
+    );
+    if (result.rowsAffected !== 1) throw new Error("The profile tutorial record is missing.");
+  }
 
   async list(): Promise<readonly ProfileRecord[]> {
     const rows = await this.database.select<ProfileRow>(

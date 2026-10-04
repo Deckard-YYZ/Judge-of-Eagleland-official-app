@@ -58,7 +58,7 @@ describe("SQLite storage initialization", () => {
 
     await expect(initializeDatabase({ loadDatabase: async () => database })).rejects.toMatchObject({
       code: "DATABASE_INITIALIZATION_FAILED",
-      message: 'Storage migration 1 is incomplete: table "settings" is missing.',
+      message: 'Storage migration 2 is incomplete: table "settings" is missing.',
     });
     expect(closed).toBe(true);
   });

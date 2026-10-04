@@ -1,0 +1,53 @@
+name: Content authoring
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      LUBAN_ROOT: ${{ github.workspace }}/artifacts/luban-tool
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet-authoring
+        with:
+          dotnet-version: "8.0.x"
+      - name: Read pinned tool commit
+        id: tool
+        shell: pwsh
+        run: |
+          $toolLock = Get-Content -LiteralPath content-authoring/luban.lock.json -Raw | ConvertFrom-Json
+          if ($toolLock.commit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid Luban commit' }
+          "commit=$($toolLock.commit)" >> $env:GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        with:
+          repository: focus-creative-games/luban
+          ref: ${{ steps.tool.outputs.commit }}
+          path: artifacts/luban-tool
+      - run: npm ci
+      - name: Regenerate every registered package and compare committed bytes
+        run: npm run content:check-all
+      - name: Type and input contracts
+        run: |
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run voice:check
+      - name: Runtime and real authoring tests without competing SDK builds
+        run: npm test -- --maxWorkers=1
+      - run: npm run validate:content
+      - run: npm run check:boundaries
+      - run: npm run format:check
+      - run: npx prettier --check scripts/content/packages.json .github/workflows/content-authoring.yml

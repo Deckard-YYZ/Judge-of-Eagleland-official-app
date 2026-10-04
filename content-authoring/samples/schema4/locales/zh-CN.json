@@ -1,0 +1,76 @@
+{
+  "packageId": "configuration-skeleton",
+  "version": "0.1.0",
+  "locale": "zh-CN",
+  "manifest": {
+    "title": "配置骨架验证"
+  },
+  "attributes": {
+    "restraint": {
+      "label": "克制"
+    }
+  },
+  "cases": {
+    "sample_case": {
+      "title": "样本案件",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "仅用于验证配置生成。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "请选择本案判决。"
+        }
+      ],
+      "nodes": {
+        "opening": {
+          "prompt": "如何判决？"
+        }
+      },
+      "choices": {
+        "approve": {
+          "text": "通过"
+        },
+        "decline": {
+          "text": "驳回"
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "通过"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "克制增加。"
+            }
+          ]
+        },
+        "declined": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "驳回"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "记录驳回标记。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {},
+  "endings": {}
+}
