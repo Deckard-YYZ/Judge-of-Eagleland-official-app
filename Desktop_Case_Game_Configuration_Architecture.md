@@ -2,9 +2,9 @@
 
 更新日期：2026-10-05。
 
-2026-10-05 最终验收：默认切换后普通回归 617 项通过；五项真实 Luban 集成独立全部通过，合计 622 项唯一测试执行通过。双 TypeScript、voice、边界、格式和前端构建通过，普通默认入口及两条三案浏览器路径已实际验证。TTS 资源缺失仍限制完整桌面验证；具体证据与范围见 [实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
+2026-10-05 普通入口恢复前的历史验收：当时默认切换后普通回归 617 项通过；五项真实 Luban 集成独立全部通过，合计 622 项唯一测试执行通过。双 TypeScript、voice、边界、格式和前端构建通过，当时的普通默认入口及两条三案浏览器路径已实际验证。622 项不是本轮恢复入口后的重跑数量。TTS 资源缺失仍限制完整桌面验证；最新入口验证与具体证据见 [实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
 
-状态：Luban 作者模型、schema 6 主流程、Core/Session/存档、UI/账号入口与短流程默认迁移四阶段已实现。默认 mainflow-short@0.1.0；旧 schema 5 查询和旧存档精确绑定保留。实际验收及资源限制见 [配置系统实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
+最新状态：Luban 作者模型、schema 6 主流程与 Core/Session/存档底层已交付，正式 UI 接入暂缓。普通浏览器恢复原内存 Demo，桌面新存档恢复 minimal-test-package@1.2.0，自动教程关闭。mainflow-short@0.1.0 仅通过 DEV 诊断面板的“主流程验证”或 `?mainFlowPreview=1` 进入独立内存预览，浏览器与桌面开发环境均不读写 SQLite，刷新或退出清空；聊天/新闻为 debug 实验呈现。旧 schema 5 查询和旧存档精确绑定保留。实际验收及资源限制见 [配置系统实施记录](Desktop_Case_Game_Configuration_Implementation.md)。
 
 本文确定配置制作、生成、运行时消费和版本管理的边界。产品行为以 [产品需求与核心流程](Desktop_Case_Game_Product_Requirements.md) 为依据；本文不新增玩家规则。业务规则尚未确定，不妨碍先完成可校验、可扩展的配置基础设施。
 

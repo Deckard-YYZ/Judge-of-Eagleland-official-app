@@ -11,7 +11,7 @@ import { I18nProvider, useI18n } from "./i18n";
 import { FeedbackLayer } from "./presentation/feedback";
 import { StoryOverlay } from "./presentation/story";
 import { ChatOverlay } from "./presentation/chat/ChatOverlay";
-import { NewsPanel } from "./presentation/NewsPanel";
+import { getPresentedNewsId, NewsPanel } from "./presentation/NewsPanel";
 import { ProfilePage } from "./profile/ProfilePage";
 import { AppShell } from "./shell";
 import { WorkspaceStudy } from "./workspace-study/WorkspaceStudy";
@@ -65,11 +65,13 @@ function AuthenticatedWorkspace({
     !(dismissedEnding?.session === session && dismissedEnding.endingId === endingId);
   // Recovery takes precedence over modal stories so its action remains focusable.
   const recovering = snapshot.status === "needsReload" || snapshot.status === "error";
-  const overlayActive =
+  const storyActive =
     !recovering &&
     Boolean(
       snapshot.state?.pendingStoryIds[0] || snapshot.state?.phase.type === "ending" || endingOpen,
     );
+  const newsActive = mainFlowPreview && getPresentedNewsId(snapshot) !== null;
+  const overlayActive = storyActive || newsActive;
   const previousOverlayActive = useRef(overlayActive);
 
   useEffect(() => {
@@ -91,13 +93,7 @@ function AuthenticatedWorkspace({
         onThemeChange={onThemeChange}
         onSelectCase={session.selectCase}
         onExit={onExit}
-        conversations={
-          mainFlowPreview && !recovering ? (
-            <ChatOverlay session={session} snapshot={snapshot} />
-          ) : null
-        }
       >
-        {mainFlowPreview && <NewsPanel session={session} snapshot={snapshot} />}
         <CaseWorkspace
           key={presentationHistory.scopeId}
           snapshot={snapshot}
@@ -109,6 +105,21 @@ function AuthenticatedWorkspace({
           presentationHistory={presentationHistory}
         />
       </AppShell>
+      {mainFlowPreview && !recovering && (
+        <ChatOverlay
+          key={`chat:${presentationHistory.scopeId}`}
+          session={session}
+          snapshot={snapshot}
+          obscured={overlayActive}
+        />
+      )}
+      {mainFlowPreview && (
+        <NewsPanel
+          key={`news:${presentationHistory.scopeId}`}
+          session={session}
+          snapshot={snapshot}
+        />
+      )}
       <FeedbackLayer sessionView={session} />
       {!recovering && (
         <StoryOverlay

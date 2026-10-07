@@ -1,8 +1,8 @@
 # 内容配置作者工具
 
-2026-10-05 最终验收：默认切换后普通回归 617 项通过；五项真实 Luban 集成独立全部通过，合计 622 项唯一测试执行通过。双 TypeScript、voice、边界、格式和前端构建通过，普通默认入口及两条三案浏览器路径已实际验证。TTS 资源缺失仍限制完整桌面验证；具体证据与范围见 [实施记录](../Desktop_Case_Game_Configuration_Implementation.md)。
+2026-10-05 普通入口恢复前的历史验收：当时默认切换后普通回归 617 项通过；五项真实 Luban 集成独立全部通过，合计 622 项唯一测试执行通过。双 TypeScript、voice、边界、格式和前端构建通过，当时的普通默认入口及两条三案浏览器路径已实际验证。622 项不是本轮恢复入口后的重跑数量。TTS 资源缺失仍限制完整桌面验证；最新入口验证与具体证据见 [实施记录](../Desktop_Case_Game_Configuration_Implementation.md)。
 
-作者输入经过 `Luban → 生成的 TypeScript 作者模型 → 明确组装 → 严格物理包加载器`，生成 `game.json`、双语 `locales/*.json` 和声明的 `media/**` 原始文件。每表中间 JSON、生成代码与来源映射只保留在 `artifacts/content-authoring/run-*`。默认新游戏使用 `mainflow-short/0.1.0`（schema 6）。
+作者输入经过 `Luban → 生成的 TypeScript 作者模型 → 明确组装 → 严格物理包加载器`，生成 `game.json`、双语 `locales/*.json` 和声明的 `media/**` 原始文件。每表中间 JSON、生成代码与来源映射只保留在 `artifacts/content-authoring/run-*`。最新普通入口恢复原浏览器内存 Demo，桌面新存档使用 `minimal-test-package@1.2.0`，自动教程关闭。`mainflow-short/0.1.0`（schema 6）仅通过 DEV 诊断面板“主流程验证”或 `?mainFlowPreview=1` 进入独立内存预览，浏览器与桌面开发环境均不读写 SQLite，刷新或退出清空；聊天/新闻为 debug 实验呈现，正式 UI 接入暂缓。
 
 产品规则以 [产品需求与核心流程](../Desktop_Case_Game_Product_Requirements.md) 为准，目标契约见 [配置系统架构](../Desktop_Case_Game_Configuration_Architecture.md)。schema 6 作者链与主控/聊天运行时已完成接入；schema 4/5 作者包保留兼容用途。本文保留现有工具命令和旧实验字段的操作说明，不把已有字段作为新内容制作规范；实际差距、分阶段接入及验收见 [实施记录](../Desktop_Case_Game_Configuration_Implementation.md)。
 
@@ -10,14 +10,14 @@
 | ------------------------ | ------------------------------ | ------------------------------------------------------------------------- |
 | `samples/schema4`        | `configuration-skeleton/0.1.0` | 六张 CSV、案件与状态效果，独立旧作者模型                                  |
 | `samples/schema5`        | `configuration-pilot/0.1.0`    | XLSX 两轮案件、指示、判决 hook、资格池与确定性派发                        |
-| `samples/mainflow-short` | `mainflow-short/0.1.0`         | schema 6 主控、独立聊天、三案、新闻动作与教程；当前新存档默认             |
+| `samples/mainflow-short` | `mainflow-short/0.1.0`         | schema 6 主控、独立聊天、三案、新闻动作与教程；DEV 独立内存主流程预览     |
 | `samples/full`           | `configuration-complete/0.1.0` | 旧实验：XLSX 人物与媒体、分支阶段、聊天局部图、外部案件事件和直接流程后果 |
 
 ## 新产品模型与当前作者链的界线
 
 新目标中，案件与聊天平行运行：案件是常态核心，聊天是非常态支线。主控剧情图读取案件判决、聊天最终结果及已明确状态条件，决定节点推进、开放池、派发特定案件或启动聊天。聊天只负责被动出现、内部交互推进局部树、被动结束并发布最终结果/终止节点；主控不读取进行中的聊天节点。普通场景一段聊天，特殊多段须由策划显式配置；玩家可搁置聊天判案，没有主动打开、收起或关闭操作。
 
-无交互阈值按有效推进案件的选项选择数量配置，回复当前聊天重置其计数；达到阈值时被动结束并发布配置结果，由主控判断后续流程。案件事件不直接选择聊天局部分支，现实时间与离线时间不推进计数。主控、聊天局部状态、计数和已发布结果须保存并在重登时恢复。这些能力已由 schema 6 作者表、正式转换、保存和 UI 接入，字段见本文“Schema 6 主流程短篇”。
+无交互阈值按有效推进案件的选项选择数量配置，回复当前聊天重置其计数；达到阈值时被动结束并发布配置结果，由主控判断后续流程。案件事件不直接选择聊天局部分支，现实时间与离线时间不推进计数。主控、聊天局部状态、计数和已发布结果须保存并在重登时恢复。这些能力已由 schema 6 作者表、正式转换、保存和 debug 实验 UI 接入，正式 UI 适配暂缓；字段见本文“Schema 6 主流程短篇”。
 
 现有 `externalBranches`、`chatLastNode` 及聊天/event 直接返回 `unlockCases/unlockChats/enterStage` 是旧实验能力。它们的生成与查询回归保留，不能把任意历史或进行中的聊天节点冒充已结束事件的最终结果，也不能用案件事件隐藏推进聊天来制作新目标内容。已结束事件的终止节点可以作为结果标识。旧 schema 5 池派发只接受 `CaseEvent`；schema 6 使用独立 mainFlow 意图与条件消费主控和聊天最终结果。
 
@@ -114,7 +114,7 @@ npm run dev
 
 开发浏览器打开 `http://localhost:1420/?configurationPilot=1`：演示档案员登录→登记复核两轮→选项后约 1.5 秒常显指示/hover→允许不服从→判决通知→挥手错误仍须敬礼→后续听证→无重复通知。它开发时动态加载 pilot，使用真实 Core/Session/View/App；内存预览刷新重置，生产构建不包含小样依赖。
 
-full 保持 schema 5 的配置生成、严格验证和旧纯查询语义。主控/聊天 UI、保存推进、账号教程和新闻动作由 schema 6 的 mainflow-short 实现并设为新存档默认。结局演出后返回登录及结局重登仍在本次范围外。
+full 保持 schema 5 的配置生成、严格验证和旧纯查询语义。主控/聊天实验 UI、保存推进、账号教程和新闻动作由 schema 6 的 mainflow-short 实现，当前仅通过 DEV 独立内存主流程预览体验；普通入口恢复旧 Demo/minimal-test-package@1.2.0，自动教程关闭，正式 UI 适配暂缓。结局演出后返回登录及结局重登仍在本次范围外。
 
 ## Schema 6 主流程短篇
 

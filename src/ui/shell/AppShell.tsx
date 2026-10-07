@@ -17,7 +17,6 @@ export interface AppShellProps {
   onSelectCase(caseId: CaseId): void;
   onExit(): void;
   children: ReactNode;
-  conversations?: ReactNode;
 }
 
 const sessionStatusKeys = {
@@ -38,7 +37,6 @@ export function AppShell({
   onSelectCase,
   onExit,
   children,
-  conversations,
 }: AppShellProps) {
   const { t } = useI18n();
   const ioLocked = snapshot.status === "loading" || snapshot.status === "saving";
@@ -119,7 +117,6 @@ export function AppShell({
           ) : null}
           {children}
         </main>
-        {conversations}
       </div>
     </div>
   );

@@ -40,7 +40,7 @@
 
 schema 6 样本不混用旧 unlockRules/dispatchRules 与主控派发（为空）；配置器对此作校验，避免引入两套派发优先级。旧 case action hooks 和 instructions 可并存并复用。
 
-本地化新增 `mainFlow: { chats, news }`：`chats[chatId] = { title, nodes: { [nodeId]: { blocks: TextBlock[], replies: { [replyId]: string } } } }`；terminal 也有 blocks，但结束即被动关闭，不增加一个必须点击关闭的屏幕。`news[newsId] = { title, blocks: TextBlock[] }`。人物沿用案件中的 case.characters 定义及既有人物文案引用，按 characterId 聚合查找。每种声明语言完整校验消息、回复、新闻；规则对象无直接显示文案。
+本地化新增 `mainFlow: { chats, news }`：`chats[chatId] = { title, nodes: { [nodeId]: { blocks: TextBlock[], replies: { [replyId]: string } } } }`；terminal 也有 blocks。2026-10-05 表现层确认：业务结束立即提交结果，UI 将终止消息保留 3–5 秒后被动关闭，不增加必须点击关闭的屏幕。`news[newsId] = { title, blocks: TextBlock[] }`。人物沿用案件中的 case.characters 定义及既有人物文案引用，按 characterId 聚合查找。每种声明语言完整校验消息、回复、新闻；规则对象无直接显示文案。
 
 ## 存档、结果与执行次序
 
@@ -100,7 +100,7 @@ schema 6 样本不混用旧 unlockRules/dispatchRules 与主控派发（为空�
 
 聊天 Overlay 是工作区内非 modal 层，不加入阻塞案件的 `modalActive` 条件；无打开、折叠、关闭或输入文本入口。活动多个实例全部可用，各自滚动和回复。save pending 复用全局提交禁用行为，保存失败仍显示原节点。语言切换不改存档、计数或指示框计时。真正强制 ActionInput 仍按现有阻塞交互规则处理，不用聊天 Overlay 绕过。
 
-新闻在 publishNews 后可阅读。明确的“阅读完成”按钮提交 readNews；成功保存 readNewsIds 并把 actionStoryId 排入既有 story 队列后，才出现 ActionInput。只是打开新闻不触发动作；无 actionStoryId 则只记录阅读。重登已读新闻不重复入队，未完成动作沿 storyCheckpoint 恢复。发布新闻与完成阅读是两个不同事实。
+新闻在 publishNews 后可阅读。2026-10-05 表现层确认：新闻为最高层大型 Overlay，关闭按钮、框外点击（以及键盘 Escape）统一提交 readNews，替代此前独立的“阅读完成”按钮；成功保存 readNewsIds 并把 actionStoryId 排入既有 story 队列后才关闭并出现 ActionInput。只是打开新闻不触发动作；无 actionStoryId 则只记录阅读。重登已读新闻不重复入队，未完成动作沿 storyCheckpoint 恢复。发布新闻与完成阅读是两个不同事实。UI 按发布顺序展示首条未读新闻；已有教程或强制动作时暂缓下一条，保持 readNews 的 STORY_BLOCKING 约束。
 
 既有 story 队列按 storyId 唯一消费，本次不引入 story 实例框架。因此 schema 6 校验每个 news.actionStoryId 必须为该新闻独占，禁止与其他新闻、initial.storyIds、storyRules、case action hooks、tutorialStoryId 或 ending.storyId 共用，冲突给来源诊断。tutorialStoryId 同样必须独占，不可与 initial、storyRules、case action hooks、新闻或 ending 共用，以免教程完成吞掉正式动作。样本 N 使用专用 action story。不可通过队列去重静默吞掉第二次业务动作。
 
