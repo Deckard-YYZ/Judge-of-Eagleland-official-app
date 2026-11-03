@@ -1,3 +1,7 @@
+import type { AttributeVariant, AttributeMarker } from "../ui/shell/attributeVariant";
+import type { ChatVariant } from "../ui/presentation/chat/chatVariant";
+import type { NewsVariant } from "../ui/presentation/newsVariant";
+import type { InstructionVariant } from "../ui/case/instructionVariant";
 import { getDiagnostics } from "../shared/diagnostics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createDemoProfileEntry } from "./demoProfiles";
@@ -8,7 +12,7 @@ import {
   type DatabaseInitializationOptions,
   type StorageRepositories,
 } from "../storage";
-import type { ProfileEntry } from "../application/profileEntry";
+import type { ProfileEntry, ProfileEntryResult } from "../application/profileEntry";
 import { syncWindowTheme } from "../platform/windowAppearance";
 import { detectRuntime, type RuntimeInfo } from "../platform/runtime";
 
@@ -28,7 +32,15 @@ export interface BrowserBootstrapResult {
   readonly profileEntry: ProfileEntry;
 }
 
-export type ApplicationBootstrapResult = DesktopBootstrapResult | BrowserBootstrapResult;
+export type ApplicationBootstrapResult = (DesktopBootstrapResult | BrowserBootstrapResult) & {
+  readonly initialSession?: Extract<ProfileEntryResult, { ok: true }>;
+  readonly newsVariant?: NewsVariant;
+  attributeVariant?: AttributeVariant;
+  attributeMarker?: AttributeMarker;
+  chatVariant?: ChatVariant;
+  readonly instructionVariant?: InstructionVariant;
+  readonly mainFlowOverlays?: boolean;
+};
 
 export interface BootstrapDependencies {
   /** Runtime injection keeps browser tests independent from the Tauri bridge. */
@@ -243,6 +255,13 @@ export function BootstrapApp({
   return (
     <App
       mainFlowPreview={mainFlowPreview}
+      mainFlowOverlays={view.result.mainFlowOverlays}
+      initialSession={view.result.initialSession}
+      newsVariant={view.result.newsVariant}
+      attributeVariant={view.result.attributeVariant}
+      attributeMarker={view.result.attributeMarker}
+      chatVariant={view.result.chatVariant}
+      instructionVariant={view.result.instructionVariant}
       onThemeApplied={syncWindowTheme}
       profileEntry={view.result.profileEntry}
       storageMode={view.result.storageMode}

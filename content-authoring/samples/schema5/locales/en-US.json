@@ -1,16 +1,19 @@
 {
   "packageId": "configuration-pilot",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "locale": "en-US",
   "manifest": {
     "title": "Configuration pilot"
   },
   "attributes": {
     "authority": {
-      "label": "Verdict record"
+      "label": "One"
     },
     "input_errors": {
-      "label": "Action errors"
+      "label": "Two"
+    },
+    "axis_three": {
+      "label": "Three"
     }
   },
   "cases": {

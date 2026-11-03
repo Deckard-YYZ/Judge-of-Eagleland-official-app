@@ -361,6 +361,11 @@
   overflow-wrap: anywhere;
 }
 
+.decision-option__button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: -2px;
+}
+
 .decision-option__mark {
   display: grid;
   width: 1.7rem;
@@ -562,12 +567,20 @@
 }
 
 .decision-option--instructed {
-  outline: 2px solid var(--ui-emphasis);
-  outline-offset: 3px;
+  padding: var(--instruction-inset);
+  border: 2px solid var(--ui-emphasis);
+}
+
+.decision-options-revealed {
+  --instruction-inset: 0.75rem;
+}
+
+.decision-options-revealed > .decision-panel__attribution {
+  padding-right: calc(var(--instruction-inset) + 2px);
 }
 
 .decision-instruction {
-  padding: 0.7rem 1rem;
+  padding: 0.7rem 0;
   border-top: 1px solid var(--ui-emphasis);
   background: var(--ui-surface-raised);
   color: var(--ui-ink);
@@ -576,6 +589,23 @@
 
 .decision-instruction .case-text-block {
   margin: 0;
+}
+
+.decision-instruction__content {
+  display: grid;
+  align-items: center;
+  min-height: 3.5rem;
+}
+
+.decision-instruction__loading {
+  margin: 0;
+  text-align: center;
+  font-family: var(--ui-font-control);
+}
+
+.decision-instruction__attribution-slot {
+  display: flow-root;
+  min-height: 2.2rem;
 }
 
 @keyframes case-interaction-enter {
@@ -733,4 +763,102 @@
   color: var(--ui-muted);
   font-family: var(--ui-font-control);
   font-size: 0.75rem;
+}
+
+.decision-panel[data-instruction-variant="bracket"] .decision-option--instructed {
+  border-width: 2px 1px;
+  border-color: var(--ui-emphasis) var(--ui-line);
+}
+
+.decision-panel[data-instruction-variant="bracket"] .decision-instruction {
+  background: transparent;
+  border-top: 1px solid var(--ui-line);
+}
+
+.decision-panel[data-instruction-variant="bracket"] .decision-option__button:hover:not(:disabled),
+.decision-panel[data-instruction-variant="bracket"] .decision-option__button:focus-visible {
+  background: transparent;
+}
+
+.decision-instruction__label {
+  margin: 0 0 0.65rem;
+  font-family: var(--ui-font-control);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+}
+
+.decision-panel[data-instruction-variant="advice"] .decision-instruction {
+  padding: 1rem calc(var(--instruction-inset) + 2px);
+  margin-bottom: 1rem;
+  border-top: 2px solid var(--ui-emphasis);
+  border-bottom: 1px solid var(--ui-line);
+  background: transparent;
+}
+
+.decision-panel[data-instruction-variant="advice"] .decision-option__button:hover:not(:disabled),
+.decision-panel[data-instruction-variant="advice"] .decision-option__button:focus-visible {
+  background: transparent;
+}
+
+.decision-instruction__target {
+  margin: 0 0 0.6rem;
+  padding: 0;
+  border: 0;
+  font-family: var(--ui-font-document);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.decision-option__recommendation {
+  display: inline-block;
+  margin-inline-start: 0.9rem;
+  color: var(--ui-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.decision-panel[data-instruction-variant="memo"] .decision-option--instructed {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 1fr);
+  align-items: start;
+  column-gap: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.decision-panel[data-instruction-variant="memo"] .decision-instruction {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem calc(var(--instruction-inset) + 2px) 0 0;
+  border-top: 2px solid var(--ui-emphasis);
+  background: transparent;
+}
+
+.decision-panel[data-instruction-variant="memo"] .decision-option__button:hover:not(:disabled),
+.decision-panel[data-instruction-variant="memo"] .decision-option__button:focus-visible {
+  background: transparent;
+}
+
+@media (max-width: 64rem) {
+  .decision-panel[data-instruction-variant="memo"] .decision-option--instructed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .decision-panel[data-instruction-variant="memo"] .decision-instruction {
+    margin-left: 1rem;
+  }
+}
+
+.instruction-typing {
+  display: grid;
+}
+.instruction-typing__visual,
+.instruction-typing__semantic {
+  grid-area: 1 / 1;
+}
+.instruction-typing__semantic {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
 }

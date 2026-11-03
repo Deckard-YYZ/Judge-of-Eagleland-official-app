@@ -11,6 +11,11 @@ const installedJson = import.meta.glob<string>(
   { query: "?raw", import: "default" },
 );
 
+const installedInventory = import.meta.glob(
+  ["../../content/minimal-test-package/**/*", "../../content/mainflow-short/**/*"],
+  { query: "?url", import: "default" },
+);
+
 /** Browser preview uses the same installed content and production rules as desktop. */
 export async function createBundledBrowserProfileEntry(
   ref: ContentRef = DEFAULT_BUNDLED_CONTENT_REF,
@@ -25,7 +30,9 @@ export async function createBundledBrowserProfileEntry(
           text: await load(),
         })),
       ),
-      fileInventory: files.map(([path]) => path.slice(prefix.length)),
+      fileInventory: Object.keys(installedInventory)
+        .filter((path) => path.startsWith(prefix))
+        .map((path) => path.slice(prefix.length)),
     };
   });
   const gameContent = await repository.loadGameContent(ref);

@@ -53,6 +53,52 @@ async function beginVoice() {
 }
 
 describe("voice action rounds with a real session", () => {
+  it("submits the action button once, waits for save, and discards the cancelled voice result", async () => {
+    const { view, saves } = await setup();
+    const { service, attempts } = voiceFixture();
+    render(ui(view, service));
+    await firstInput();
+    await beginVoice();
+    const gate = deferred();
+    const commit = saves.commit.bind(saves);
+    const commitSpy = vi.spyOn(saves, "commit").mockImplementation(async (input) => {
+      await gate.promise;
+      return commit(input);
+    });
+    const before = view.getSnapshot().envelope;
+    const button = screen.getByRole("button", { name: "敬礼" });
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(attempts[0].request.signal.aborted).toBe(true);
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(commitSpy).toHaveBeenCalledTimes(1);
+    expect(view.getSnapshot().envelope).toBe(before);
+    expect(screen.queryByText("巡视员检查了案件记录，准备离开。")).toBeNull();
+    await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
+    expect(commitSpy).toHaveBeenCalledTimes(1);
+    await act(async () => gate.resolve());
+    await screen.findByText("巡视员检查了案件记录，准备离开。");
+  });
+
+  it("keeps the action button retryable after a failed save and localizes its exact action", async () => {
+    const { view, saves } = await setup();
+    render(ui(view));
+    await firstInput();
+    vi.spyOn(saves, "commit").mockRejectedValueOnce(
+      new SaveRepositoryError("INVALID_INPUT", "rejected"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "敬礼" }));
+    await screen.findByText("存档输入无效。");
+    expect((screen.getByRole("button", { name: "敬礼" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Salute" }));
+    await screen.findByText("The inspector checks the case record and prepares to leave.");
+  });
+
   it("keeps a text fallback when no voice service is installed", async () => {
     const { view } = await setup();
     render(ui(view));
@@ -118,7 +164,7 @@ describe("voice action rounds with a real session", () => {
     });
     expect(attempts).toHaveLength(2);
     await act(async () => attempts[1].resolve({ type: "known", actionId: "wave" }));
-    await screen.findByText("权威 -2");
+    await screen.findByText("二 -2");
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(view.getSnapshot().envelope!.revision).toBe(revision + 1);
   });
@@ -205,7 +251,7 @@ describe("voice action rounds with a real session", () => {
     await act(async () => attempts[0].resolve({ type: "known", actionId: "wave" }));
     fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
     await act(async () => gate.resolve());
-    await screen.findByText("Authority -2");
+    await screen.findByText("Two -2");
     expect(screen.getByText(/That action does not meet/)).toBeTruthy();
   });
 });
@@ -325,7 +371,7 @@ describe("text action story UI with a real session", () => {
 
     submit("挥手");
     await screen.findByText(/动作不符合要求/);
-    expect(screen.getByText("权威 -2")).toBeTruthy();
+    expect(screen.getByText("二 -2")).toBeTruthy();
     const recognized = diagnosticEvents.filter(
       (event) => event.event === "input.recognized" && event.data?.recognition === "known",
     )[0];
@@ -336,7 +382,7 @@ describe("text action story UI with a real session", () => {
     expect(document.activeElement).toBe(screen.getByRole("textbox"));
 
     fireEvent.click(screen.getByRole("button", { name: "切换为英语" }));
-    await screen.findByText("Authority -2");
+    await screen.findByText("Two -2");
     expect(screen.getByText(/That action does not meet/)).toBeTruthy();
     submit("salute");
     await screen.findByText("The inspector checks the case record and prepares to leave.");
@@ -351,7 +397,7 @@ describe("text action story UI with a real session", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "继续" }));
     submit("挥手");
-    await screen.findByText("权威 -1");
+    await screen.findByText("二 -1");
     mounted.unmount();
     await view.reload();
     mounted = render(ui(view));

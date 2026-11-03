@@ -5,14 +5,14 @@
   },
   {
     "source": "content-authoring/samples/schema5",
-    "output": "content/configuration-pilot/0.1.0"
+    "output": "content/configuration-pilot/0.1.3"
   },
   {
     "source": "content-authoring/samples/full",
     "output": "content/configuration-complete/0.1.0"
   },
   {
-    "output": "content/mainflow-short/0.1.0",
+    "output": "content/mainflow-short/0.1.3",
     "source": "content-authoring/samples/mainflow-short"
   }
 ]

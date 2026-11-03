@@ -123,7 +123,11 @@ describe("schema5 configuration with the real Core and Session", () => {
     expect(session.getSnapshot().state).toEqual(beforeInput);
     expect(await submit("final_choice_notice", "wave")).toMatchObject({ ok: true });
     expect(session.getSnapshot().state?.phase).toEqual(beforeInput.phase);
-    expect(session.getSnapshot().state?.attributes).toEqual({ authority: 1, input_errors: 1 });
+    expect(session.getSnapshot().state?.attributes).toEqual({
+      authority: 1,
+      input_errors: 1,
+      axis_three: 50,
+    });
     await unchangedOnRejected({ type: "completeStory", storyId: "final_choice_notice" });
     expect(await submit("final_choice_notice", "salute")).toMatchObject({ ok: true });
     expect(await submit("judgment_notice", "salute")).toMatchObject({ ok: true });

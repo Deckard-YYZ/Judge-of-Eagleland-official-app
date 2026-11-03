@@ -1,0 +1,404 @@
+{
+  "packageId": "mainflow-short",
+  "version": "0.1.1",
+  "locale": "en-US",
+  "manifest": {
+    "title": "Main-flow short story"
+  },
+  "attributes": {
+    "authority": {
+      "label": "Verdict record"
+    }
+  },
+  "cases": {
+    "case-a": {
+      "title": "A: Intake review",
+      "characters": {
+        "clerk": {
+          "name": "Clerk",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "Delivers records and messages."
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The case has three review rounds."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Check the record, review the evidence, then issue a judgment."
+        }
+      ],
+      "nodes": {
+        "case-a-1": {
+          "prompt": "Check the intake record."
+        },
+        "case-a-2": {
+          "prompt": "Confirm additional evidence."
+        },
+        "case-a-3": {
+          "prompt": "Issue the final judgment."
+        }
+      },
+      "choices": {
+        "case-a-choose-1": {
+          "text": "Record checked",
+          "annotation": {
+            "title": "Intake note",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "The record is complete and ready for review."
+              }
+            ]
+          }
+        },
+        "case-a-choose-2": {
+          "text": "Evidence reviewed"
+        },
+        "case-a-choose-3": {
+          "text": "Close the case"
+        }
+      },
+      "resolutions": {
+        "case-a-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "The case is closed."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The judgment has been recorded."
+            }
+          ]
+        }
+      }
+    },
+    "case-b": {
+      "title": "B: Further hearing",
+      "characters": {
+        "clerk": {
+          "name": "Clerk",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "Delivers records and messages."
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The case has three review rounds."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Check the record, review the evidence, then issue a judgment."
+        }
+      ],
+      "nodes": {
+        "case-b-1": {
+          "prompt": "Check the intake record."
+        },
+        "case-b-2": {
+          "prompt": "Confirm additional evidence."
+        },
+        "case-b-3": {
+          "prompt": "Issue the final judgment."
+        }
+      },
+      "choices": {
+        "case-b-choose-1": {
+          "text": "Record checked"
+        },
+        "case-b-choose-2": {
+          "text": "Evidence reviewed"
+        },
+        "case-b-choose-3": {
+          "text": "Close the case"
+        }
+      },
+      "resolutions": {
+        "case-b-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "The case is closed."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The judgment has been recorded."
+            }
+          ]
+        }
+      }
+    },
+    "case-c": {
+      "title": "C: Archive review",
+      "characters": {
+        "clerk": {
+          "name": "Clerk",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "Delivers records and messages."
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "The case has three review rounds."
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Check the record, review the evidence, then issue a judgment."
+        }
+      ],
+      "nodes": {
+        "case-c-1": {
+          "prompt": "Check the intake record."
+        },
+        "case-c-2": {
+          "prompt": "Confirm additional evidence."
+        },
+        "case-c-3": {
+          "prompt": "Issue the final judgment."
+        }
+      },
+      "choices": {
+        "case-c-choose-1": {
+          "text": "Record checked"
+        },
+        "case-c-choose-2": {
+          "text": "Evidence reviewed"
+        },
+        "case-c-choose-3": {
+          "text": "Close the case"
+        }
+      },
+      "resolutions": {
+        "case-c-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "The case is closed."
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "The judgment has been recorded."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "news-ack": {
+      "title": "Acknowledge bulletin",
+      "steps": {
+        "ack": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Salute to acknowledge the bulletin."
+            }
+          ]
+        }
+      }
+    },
+    "tutorial": {
+      "title": "First-day tutorial",
+      "steps": {
+        "welcome": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "You may leave this tutorial at any time. Chats do not block casework."
+            }
+          ]
+        },
+        "practice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Try waving, or leave the tutorial."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {},
+  "instructions": {
+    "first-instruction": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Review the intake record first. The judgment remains yours."
+        }
+      ]
+    }
+  },
+  "mainFlow": {
+    "chats": {
+      "chat-a": {
+        "title": "Clerk message A",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "I need to confirm a detail in the record."
+              }
+            ],
+            "replies": {
+              "ack": "Please explain"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "The evidence is verified. Please acknowledge."
+              }
+            ],
+            "replies": {
+              "finish": "Received, thank you"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Confirmed."
+              }
+            ],
+            "replies": {}
+          }
+        }
+      },
+      "chat-b": {
+        "title": "Clerk message B",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "I need to confirm a detail in the record."
+              }
+            ],
+            "replies": {
+              "ack": "Please explain"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "The evidence is verified. Please acknowledge."
+              }
+            ],
+            "replies": {
+              "finish": "Received, thank you"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Confirmed."
+              }
+            ],
+            "replies": {}
+          }
+        }
+      },
+      "chat-c": {
+        "title": "Clerk message C",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "I need to confirm a detail in the record."
+              }
+            ],
+            "replies": {
+              "ack": "Please explain"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "The evidence is verified. Please acknowledge."
+              }
+            ],
+            "replies": {
+              "finish": "Received, thank you"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Confirmed."
+              }
+            ],
+            "replies": {}
+          }
+        }
+      }
+    },
+    "news": {
+      "news-n": {
+        "title": "Work bulletin",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "After reading, salute to acknowledge."
+          }
+        ]
+      },
+      "news-normal": {
+        "title": "Message confirmed",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "The clerk received your reply. The further hearing is available."
+          }
+        ]
+      },
+      "news-ignored": {
+        "title": "Message left unanswered",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "The clerk ended this contact. The further hearing is available."
+          }
+        ]
+      }
+    }
+  }
+}

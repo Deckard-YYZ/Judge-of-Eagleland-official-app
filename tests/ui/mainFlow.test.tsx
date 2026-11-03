@@ -1,6 +1,12 @@
+import { NarrationProvider } from "../../src/ui/narration/NarrationProvider";
+import type {
+  NarrationService,
+  NarrationRequest,
+  NarrationOutcome,
+} from "../../src/shared/narration";
 // @vitest-environment jsdom
 import { StrictMode, useSyncExternalStore } from "react";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createGameSessionView, type GameSessionView } from "../../src/application/gameSessionView";
 import { ChatOverlay } from "../../src/ui/presentation/chat/ChatOverlay";
@@ -77,12 +83,14 @@ function Workspace({ view, news = false }: { view: GameSessionView; news?: boole
       </AppShell>
       <ChatOverlay session={view} snapshot={snapshot} obscured={modal} />
       {news && <NewsPanel session={view} snapshot={snapshot} />}
-      <StoryOverlay
-        sessionView={view}
-        snapshot={snapshot}
-        endingOpen={false}
-        onCloseEnding={() => {}}
-      />
+      {(!news || getPresentedNewsId(snapshot) === null) && (
+        <StoryOverlay
+          sessionView={view}
+          snapshot={snapshot}
+          endingOpen={false}
+          onCloseEnding={() => {}}
+        />
+      )}
     </TestI18nProvider>
   );
 }
@@ -277,10 +285,12 @@ describe("news top layer", () => {
     fireEvent.click(within(dialog).getByText("Read the news"));
     expect(session.getSnapshot().state!.pendingStoryIds).toEqual([]);
     expect(session.getSnapshot().state!.mainFlow!.readNewsIds).toEqual([]);
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "关闭新闻" })));
+    await act(async () =>
+      fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]),
+    );
     expect(session.getSnapshot().state!.mainFlow!.readNewsIds).toEqual(["notice"]);
-    expect(screen.queryByRole("dialog", { name: "News" })).toBeNull();
-    const action = screen.getByRole("dialog");
+    expect(screen.getByRole("dialog", { name: "News" })).toBe(dialog);
+    const action = dialog;
     expect(within(action).queryByRole("button", { name: /退出教程/ })).toBeNull();
     expect(document.querySelector(".app-shell")!.hasAttribute("inert")).toBe(true);
     expect(document.querySelector("details")).toBeNull();
@@ -319,7 +329,9 @@ describe("news top layer", () => {
     vi.spyOn(saves, "commit").mockRejectedValueOnce(
       new SaveRepositoryError("INVALID_SAVE", "injected"),
     );
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "关闭新闻" })));
+    await act(async () =>
+      fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]),
+    );
     expect(screen.getByRole("alert").textContent).not.toBe("");
     expect(session.getSnapshot().state!.mainFlow!.readNewsIds).toEqual([]);
     expect(session.getSnapshot().state!.pendingStoryIds).toEqual([]);
@@ -343,7 +355,9 @@ describe("news top layer", () => {
       };
     const { view } = await setup(undefined, true, fixture);
     expect(screen.queryByRole("dialog", { name: "Second bulletin" })).toBeNull();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "关闭新闻" })));
+    await act(async () =>
+      fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]),
+    );
     expect(screen.queryByRole("dialog", { name: "Second bulletin" })).toBeNull();
     const storyId = view.getSnapshot().state!.pendingStoryIds[0];
     const step = view
@@ -395,4 +409,196 @@ describe("news top layer", () => {
     expect(document.querySelector(".news-overlay")).toBeNull();
     expect(errors).not.toHaveBeenCalled();
   });
+});
+
+it.each(["pending", "active"] as const)(
+  "does not reveal or age %s case instructions behind news in the real App",
+  async (status) => {
+    vi.useFakeTimers();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 10,
+      bottom: 110,
+      left: 10,
+      right: 510,
+      width: 500,
+      height: 100,
+      x: 10,
+      y: 10,
+      toJSON: () => ({}),
+    });
+    const result = await mainFlowSession();
+    const view = createGameSessionView(result.session, result.content);
+    await view.setLocale("zh-CN");
+    if (status === "active") await view.dispatch({ type: "startCase", caseId: "intake" });
+    view.selectCase("intake");
+    const profile = { profileId: "main-profile", displayName: "Judge" };
+    const snapshot: ProfileEntrySnapshot = { status: "ready", profiles: [profile], error: null };
+    const entered = async () => ({ ok: true as const, profile, session: view });
+    const entry: ProfileEntry = {
+      getSnapshot: () => snapshot,
+      subscribe: () => () => {},
+      enter: entered,
+      register: entered,
+    };
+    render(
+      <StrictMode>
+        <App profileEntry={entry} mainFlowPreview />
+      </StrictMode>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "选择档案员 Judge" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "登录" })));
+    expect(screen.getByRole("dialog", { name: "News" })).toBeTruthy();
+    await tick(0);
+    expect(document.querySelector(".decision-reveal")).toBeTruthy();
+    await tick(5000);
+    await tick(0);
+    expect(document.querySelector('.decision-reveal[data-reveal-phase="ready"]')).toBeNull();
+    expect(document.querySelector(".decision-instruction")).toBeNull();
+    expect(view.getSnapshot().state!.cases.intake.status).toBe(status);
+    await act(async () =>
+      fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]),
+    );
+    const storyId = view.getSnapshot().state!.pendingStoryIds[0];
+    const step = view
+      .getSnapshot()
+      .content!.stories[storyId].steps.find((step) => step.type === "actionInput")!;
+    await act(async () => {
+      await view.dispatch({
+        type: "submitStoryInput",
+        storyId,
+        stepId: step.id,
+        actionId: "salute",
+      });
+      await view.dispatch({ type: "completeStory", storyId });
+    });
+    await tick(0);
+    await tick(749);
+    expect(document.querySelector('.decision-reveal[data-reveal-phase="ready"]')).toBeNull();
+    await tick(1);
+    expect(document.querySelector('.decision-reveal[data-reveal-phase="ready"]')).toBeTruthy();
+    const delay = view.getSnapshot().content!.cases.intake.nodes.assessment.instruction!.delayMs;
+    await tick(delay - 1);
+    const instruction = document.querySelector(".decision-instruction")!;
+    expect(instruction.getAttribute("aria-busy")).toBe("true");
+    expect(instruction.querySelector(".case-text-block")).toBeNull();
+    await tick(1);
+    expect(instruction.getAttribute("aria-busy")).toBe("false");
+    expect(instruction.querySelector(".case-text-block")).toBeTruthy();
+  },
+);
+
+it("keeps a news action inside the same dialog, ignores dismissal, and restores a saved multi-step checkpoint", async () => {
+  const fixture = mainFlowFixture();
+  fixture.game.stories.judgment_notice.steps.push({ id: "after", type: "text" });
+  for (const copy of Object.values(fixture.localizations))
+    copy.stories.judgment_notice.steps.after = {
+      blocks: [{ type: "paragraph", text: "Saved action acknowledgement" }],
+    };
+  const saves = new InMemorySaveRepository([mainFlowSave(fixture.game)]);
+  const { session, view, rendered } = await setup(saves, true, fixture);
+  const dialog = screen.getByRole("dialog", { name: "News" });
+  const commit = vi.spyOn(saves, "commit");
+  await act(async () =>
+    fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]),
+  );
+  expect(screen.getByRole("dialog", { name: "News" })).toBe(dialog);
+  expect(document.querySelector(".story-overlay")).toBeNull();
+  expect(document.querySelector(".story-player__header")).toBeNull();
+  const calls = commit.mock.calls.length;
+  fireEvent(dialog, new Event("cancel", { cancelable: true }));
+  fireEvent.click(dialog);
+  expect(commit.mock.calls.length).toBe(calls);
+  expect(screen.queryByRole("button", { name: "关闭新闻" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "继续" }));
+  fireEvent.change(screen.getByLabelText("输入动作"), { target: { value: "敬礼" } });
+  commit.mockRejectedValueOnce(new SaveRepositoryError("INVALID_SAVE", "injected"));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "确认动作" })));
+  expect(screen.getByRole("alert")).toBeTruthy();
+  expect(session.getSnapshot().state!.pendingStoryIds).toEqual(["judgment_notice"]);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "确认动作" })));
+  expect(screen.getByText("Saved action acknowledgement")).toBeTruthy();
+  expect(view.getSnapshot().state!.storyCheckpoint?.resumeStepId).toBe("after");
+  rendered.unmount();
+  const restored = await setup(saves, true, fixture);
+  expect(screen.getByRole("dialog", { name: "News" })).toBeTruthy();
+  expect(screen.getByText("Saved action acknowledgement")).toBeTruthy();
+  expect(screen.queryByLabelText("输入动作")).toBeNull();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "完成剧情" })));
+  expect(restored.session.getSnapshot().state!.pendingStoryIds).toEqual([]);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("does not mount the inline action until readNews persistence succeeds", async () => {
+  const saves = new InMemorySaveRepository([mainFlowSave()]);
+  const { session } = await setup(saves, true);
+  const commit = saves.commit.bind(saves);
+  let release!: () => void;
+  vi.spyOn(saves, "commit").mockImplementationOnce(async (...args) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return commit(...args);
+  });
+  const dialog = screen.getByRole("dialog", { name: "News" });
+  fireEvent.click(screen.getAllByRole("button", { name: "确认阅读并继续" })[0]);
+  expect(dialog.querySelector(".story-player--news")).toBeNull();
+  expect(session.getSnapshot().state!.pendingStoryIds).toEqual([]);
+  await act(async () => release());
+  expect(screen.getByRole("dialog", { name: "News" })).toBe(dialog);
+  expect(dialog.querySelector(".story-player--news")).toBeTruthy();
+});
+
+it("keeps inline action narration alive while a wrong action is saved on the same step", async () => {
+  const fixture = mainFlowFixture();
+  const step = fixture.game.stories.judgment_notice.steps.find(
+    (step) => step.type === "actionInput",
+  )!;
+  if (step.type !== "actionInput") throw new Error("Expected action input");
+  step.narration = { voiceId: "system", textSource: "blocks" };
+  const saves = new InMemorySaveRepository([mainFlowSave(fixture.game)]);
+  const result = await mainFlowSession(saves, fixture);
+  const view = createGameSessionView(result.session, result.content);
+  await view.setLocale("zh-CN");
+  await view.dispatch({ type: "readNews", newsId: "notice" });
+  const requests: NarrationRequest[] = [];
+  const service: NarrationService = {
+    available: true,
+    stop: vi.fn(async () => {}),
+    speak: vi.fn((request) => {
+      requests.push(request);
+      return new Promise<NarrationOutcome>(() => {});
+    }),
+  };
+  render(
+    <NarrationProvider service={service}>
+      <Workspace view={view} news />
+    </NarrationProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "继续" }));
+  await waitFor(() => expect(requests).toHaveLength(1));
+  const commit = saves.commit.bind(saves);
+  let release!: () => void;
+  vi.spyOn(saves, "commit").mockImplementationOnce(async (...args) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return commit(...args);
+  });
+  let pending!: ReturnType<typeof view.dispatch>;
+  act(() => {
+    pending = view.dispatch({
+      type: "submitStoryInput",
+      storyId: "judgment_notice",
+      stepId: step.id,
+      actionId: "wave",
+    });
+  });
+  expect(view.getSnapshot().status).toBe("saving");
+  expect(requests[0].signal.aborted).toBe(false);
+  await act(async () => {
+    release();
+    await pending;
+  });
+  expect(requests[0].signal.aborted).toBe(false);
+  await waitFor(() => expect(requests).toHaveLength(1));
 });

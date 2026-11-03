@@ -1,3 +1,5 @@
+import { useInstructionTyping } from "./useInstructionTyping";
+import type { InstructionVariant } from "./instructionVariant";
 import type { DecisionPresentationHistory, PresentationMode } from "./presentationPolicy";
 import { useCallback, useEffect, useMemo, useId, useRef, useState, type Ref } from "react";
 import type { GameSessionView } from "../../application/gameSessionView";
@@ -15,7 +17,9 @@ export interface DecisionPanelProps {
   node: Readonly<ContentNodeView>;
   dispatch: GameSessionView["dispatch"];
   disabled?: boolean;
+  obscured?: boolean;
   revealDelayMs?: number;
+  instructionVariant?: InstructionVariant;
   presentationMode?: PresentationMode;
   presentationHistory?: DecisionPresentationHistory;
   presentationIdentity?: string;
@@ -43,7 +47,9 @@ export function DecisionPanel({
   node,
   dispatch,
   disabled = false,
+  obscured = false,
   revealDelayMs = DECISION_REVEAL_DELAY_MS,
+  instructionVariant = "bracket",
   presentationMode = "normal",
   presentationHistory,
   presentationIdentity,
@@ -61,6 +67,7 @@ export function DecisionPanel({
   const revealGateRef = useRef<HTMLDivElement>(null);
   const [submittingChoiceId, setSubmittingChoiceId] = useState<ChoiceId | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
+  const instructionElapsedMs = useRef(0);
   const [instructionVisible, setInstructionVisible] = useState(false);
   const [choiceCommitted, setChoiceCommitted] = useState(false);
   const instructionId = node.instruction?.id;
@@ -76,7 +83,7 @@ export function DecisionPanel({
     identity: typeof revealScope;
     visible: boolean;
   } | null>(null);
-  const visible = presence?.identity === revealScope && presence.visible;
+  const visible = !obscured && presence?.identity === revealScope && presence.visible;
   const [preparation, setPreparation] = useState<{
     identity: typeof revealScope;
     complete: boolean;
@@ -99,15 +106,31 @@ export function DecisionPanel({
   useEffect(() => {
     if (
       revealPhase !== "ready" ||
+      !visible ||
+      instructionVisible ||
       instructionId === undefined ||
       instructionDelayMs === undefined ||
       choiceCommitted
     )
       return;
     // Scalar dependencies keep a language projection from restarting this round's timer.
-    const timer = window.setTimeout(() => setInstructionVisible(true), instructionDelayMs);
-    return () => window.clearTimeout(timer);
-  }, [revealPhase, instructionId, instructionDelayMs, choiceCommitted]);
+    const started = Date.now();
+    const timer = window.setTimeout(
+      () => setInstructionVisible(true),
+      Math.max(0, instructionDelayMs - instructionElapsedMs.current),
+    );
+    return () => {
+      window.clearTimeout(timer);
+      instructionElapsedMs.current += Date.now() - started;
+    };
+  }, [
+    revealPhase,
+    visible,
+    instructionVisible,
+    instructionId,
+    instructionDelayMs,
+    choiceCommitted,
+  ]);
 
   useEffect(() => {
     const gate = revealGateRef.current;
@@ -250,12 +273,71 @@ export function DecisionPanel({
     }
   }, [submittingChoiceId, commandError]);
 
+  const typing = useInstructionTyping(node.instruction?.blocks, instructionVisible, visible);
+  const instructionContent =
+    !obscured && !choiceCommitted && node.instruction ? (
+      <aside
+        id={instructionDomId}
+        className="decision-instruction"
+        role="note"
+        data-instruction-id={node.instruction.id}
+        aria-busy={!instructionVisible}
+      >
+        {instructionVariant !== undefined ? (
+          <p className="decision-instruction__label">
+            {t(
+              instructionVariant === "advice"
+                ? "decision.reviewAdvice"
+                : instructionVariant === "memo"
+                  ? "decision.reviewMemo"
+                  : "decision.reviewOpinion",
+            )}
+          </p>
+        ) : null}
+        {instructionVariant === "advice" ? (
+          <blockquote className="decision-instruction__target">
+            {node.choices.find((choice) => choice.id === node.instruction!.choiceId)!.text}
+          </blockquote>
+        ) : null}
+        <div className="decision-instruction__content">
+          {instructionVisible ? (
+            <div className="instruction-typing">
+              <div className="instruction-typing__visual" aria-hidden="true">
+                <TextBlockList blocks={typing.revealed} />
+              </div>
+              <div className="instruction-typing__semantic">
+                <TextBlockList blocks={node.instruction.blocks} />
+              </div>
+            </div>
+          ) : (
+            <p className="decision-instruction__loading" role="status">
+              {t("decision.instructionLoading")}
+            </p>
+          )}
+        </div>
+        <div className="decision-instruction__attribution-slot">
+          {typing.complete ? (
+            <p className="decision-panel__attribution">
+              <span>{t("decision.poweredBy")}</span>
+              <img
+                className="decision-panel__attribution-icon"
+                src={encryptAiIcon}
+                alt=""
+                aria-hidden="true"
+              />
+            </p>
+          ) : null}
+        </div>
+      </aside>
+    ) : null;
+
   return (
     <section
       className="decision-panel"
       aria-labelledby={panelId}
       data-case-id={caseId}
       data-node-id={nodeId}
+      data-instruction-variant={instructionVariant}
       data-submitting={submittingChoiceId !== null}
     >
       <p className="kicker">{t("decision.kicker")}</p>
@@ -266,6 +348,7 @@ export function DecisionPanel({
       <div className="decision-reveal" ref={revealGateRef} data-reveal-phase={revealPhase}>
         {revealPhase === "ready" ? (
           <div className="decision-options-revealed">
+            {instructionVariant === "advice" ? instructionContent : null}
             <fieldset
               className="decision-panel__choices"
               disabled={interactionLocked}
@@ -276,14 +359,12 @@ export function DecisionPanel({
                 const choiceDomId = `${panelId}-choice-${domToken(choice.id)}`;
                 const isAnnotationActive = activeAnnotation?.choiceId === choice.id;
                 const showInstruction =
-                  instructionVisible &&
-                  !choiceCommitted &&
-                  node.instruction?.choiceId === choice.id;
+                  !obscured && !choiceCommitted && node.instruction?.choiceId === choice.id;
 
                 return (
                   <div
                     key={choice.id}
-                    className={`decision-option${showInstruction ? " decision-option--instructed" : ""}`}
+                    className={`decision-option${showInstruction && instructionVariant !== "advice" ? " decision-option--instructed" : ""}`}
                     data-choice-container="true"
                     data-choice-id={choice.id}
                     onMouseEnter={() => {
@@ -333,7 +414,14 @@ export function DecisionPanel({
                         }
                       }}
                     >
-                      <span>{choice.text}</span>
+                      <span>
+                        {choice.text}
+                        {showInstruction && instructionVariant === "advice" ? (
+                          <span className="decision-option__recommendation">
+                            {t("decision.recommended")}
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="decision-option__mark" aria-hidden="true">
                         {t(
                           submittingChoiceId === choice.id
@@ -342,16 +430,7 @@ export function DecisionPanel({
                         )}
                       </span>
                     </button>
-                    {showInstruction && node.instruction ? (
-                      <aside
-                        id={instructionDomId}
-                        className="decision-instruction"
-                        role="note"
-                        data-instruction-id={node.instruction.id}
-                      >
-                        <TextBlockList blocks={node.instruction.blocks} />
-                      </aside>
-                    ) : null}
+                    {showInstruction && instructionVariant !== "advice" ? instructionContent : null}
                   </div>
                 );
               })}

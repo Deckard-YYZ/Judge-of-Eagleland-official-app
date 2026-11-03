@@ -1,13 +1,19 @@
 {
   "packageId": "mainflow-short",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "locale": "en-US",
   "manifest": {
     "title": "Main-flow short story"
   },
   "attributes": {
     "authority": {
-      "label": "Verdict record"
+      "label": "One"
+    },
+    "axis_two": {
+      "label": "Two"
+    },
+    "axis_three": {
+      "label": "Three"
     }
   },
   "cases": {

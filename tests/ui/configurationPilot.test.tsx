@@ -85,14 +85,23 @@ describe("configured instruction with real Session dispatch", () => {
     expect(screen.queryByRole("note")).toBeNull();
     await tick(1);
     expect(screen.getByRole("button", { name: /按指示确认登记/ })).toBeTruthy();
-    await tick(600);
+    expect(screen.getByRole("note").textContent).toContain("正在生成裁定指示 . . .");
+    expect(screen.getByRole("note").textContent).not.toContain("powered by EncryptAI");
+    expect(screen.getByRole("note").querySelector("img")).toBeNull();
+    expect(screen.getByRole("note").querySelector(".case-text-block")).toBeNull();
+    await tick(100);
     await act(async () => {
       await view.setLocale("en-US");
     });
-    await tick(899);
-    expect(screen.queryByRole("note")).toBeNull();
+    await tick(699);
+    expect(screen.getByRole("note").getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByRole("note").querySelector(".case-text-block")).toBeNull();
     await tick(1);
     expect(screen.getByRole("note").textContent).toContain("Instruction: confirm the intake.");
+    expect(screen.getByRole("note").querySelector("img")).toBeNull();
+    await tick(3000);
+    expect(screen.getByRole("note").textContent).toContain("powered by EncryptAI");
+    expect(screen.getByRole("note").querySelector("img")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Review the intake independently/ })).toBeTruthy();
   });
   it("allows disobedience, removes the completed round, and cancels a fast selection's late timer", async () => {
@@ -161,9 +170,10 @@ describe("configured instruction with real Session dispatch", () => {
     await tick(1);
     expect(screen.getByRole("button", { name: /确认登记有效/ })).toBeTruthy();
     await tick(999);
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByRole("note").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByText("第二轮指示")).toBeNull();
     await tick(1);
-    expect(screen.getByRole("note").textContent).toBe("第二轮指示");
+    expect(screen.getByRole("note").textContent).toContain("第二轮指示");
   });
 });
 
@@ -228,4 +238,38 @@ it("runs the physical package through App, two real decisions, information → m
   expect(committed?.state.cases.followup.status).toBe("resolved");
   expect(committed?.state.configurationFacts).toHaveLength(7);
   expect(committed?.state.completedStoryIds).toEqual(["judgment_notice"]);
+});
+
+it("pauses instruction time while the already revealed decision is obscured", async () => {
+  const { view } = await setup();
+  const node = view.getSnapshot().content!.cases.intake.nodes.assessment;
+  const props = { caseId: "intake", nodeId: "assessment", node, dispatch: view.dispatch };
+  const rendered = render(<DecisionPanel {...props} />, { wrapper: TestI18nProvider });
+  await tick(750);
+  const delay = node.instruction!.delayMs;
+  await tick(100);
+  rendered.rerender(<DecisionPanel {...props} obscured />);
+  await tick(5000);
+  expect(screen.queryByRole("note")).toBeNull();
+  rendered.rerender(<DecisionPanel {...props} />);
+  await tick(delay - 100 - 1);
+  expect(screen.getByRole("note").getAttribute("aria-busy")).toBe("true");
+  await tick(1);
+  expect(screen.getByRole("note").getAttribute("aria-busy")).toBe("false");
+});
+
+it("allows choosing another option during typing and cancels the outgoing instruction", async () => {
+  const { session, view } = await setup();
+  renderDecision(view);
+  await tick(750);
+  await tick(view.getSnapshot().content!.cases.intake.nodes.assessment.instruction!.delayMs);
+  await tick(80);
+  expect(
+    screen.getByRole("note").querySelector(".instruction-typing__visual")?.textContent,
+  ).not.toBe("");
+  expect(screen.getByRole("note").querySelector("img")).toBeNull();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /自行重新核对登记/ })));
+  expect(session.getSnapshot().state!.cases.intake).toMatchObject({ currentNodeId: "disposition" });
+  await tick(1500);
+  expect(screen.queryByRole("note")).toBeNull();
 });

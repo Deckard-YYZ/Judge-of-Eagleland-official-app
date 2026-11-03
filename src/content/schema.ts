@@ -390,7 +390,7 @@ export const GameConfigurationSchema = z.strictObject({
       caseId: IdSchema,
       nodeId: IdSchema,
       choiceId: IdSchema,
-      delayMs: IntegerSchema.min(1000).max(2000),
+      delayMs: IntegerSchema.min(300).max(2000),
     }),
   ),
   actionInputHooks: z.array(

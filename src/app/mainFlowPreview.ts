@@ -6,6 +6,6 @@ export function bootstrapMainFlowPreview() {
   return bootstrapApplication({
     detectRuntime: () => "browser",
     createDemoProfileEntry: () =>
-      createBundledBrowserProfileEntry({ packageId: "mainflow-short", version: "0.1.0" }),
+      createBundledBrowserProfileEntry({ packageId: "mainflow-short", version: "0.1.3" }),
   });
 }

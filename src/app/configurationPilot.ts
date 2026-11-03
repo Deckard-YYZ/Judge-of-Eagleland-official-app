@@ -1,6 +1,6 @@
-import game from "../../content/configuration-pilot/0.1.0/game.json";
-import zhCn from "../../content/configuration-pilot/0.1.0/locales/zh-CN.json";
-import enUs from "../../content/configuration-pilot/0.1.0/locales/en-US.json";
+import game from "../../content/configuration-pilot/0.1.3/game.json";
+import zhCn from "../../content/configuration-pilot/0.1.3/locales/zh-CN.json";
+import enUs from "../../content/configuration-pilot/0.1.3/locales/en-US.json";
 import { loadSplitContentPackage } from "../content/localizedPackageFormat";
 import { transition } from "../game/transition";
 import { createMemoryProfileEntry } from "./demoProfiles";
@@ -11,7 +11,7 @@ const loaded = loadSplitContentPackage(
     { source: "locales/zh-CN.json", text: JSON.stringify(zhCn) },
     { source: "locales/en-US.json", text: JSON.stringify(enUs) },
   ],
-  { expectedPackageId: "configuration-pilot", expectedVersion: "0.1.0" },
+  { expectedPackageId: "configuration-pilot", expectedVersion: "0.1.3" },
 );
 if (!loaded.ok) throw new Error(`CONFIGURATION_PILOT_INVALID: ${loaded.issues[0].message}`);
 export const CONFIGURATION_PILOT_GAME_CONTENT = loaded.gameContent;

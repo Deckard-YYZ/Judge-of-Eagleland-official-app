@@ -8,6 +8,7 @@ import type { GameSessionView } from "../../../application/gameSessionView";
 import { matchTextAction } from "../../../input/matchTextAction";
 import { translateSessionError, useI18n } from "../../i18n";
 import { StoryBlocks } from "./StoryBlocks";
+import { ActionChoiceButton } from "../ActionChoiceButton";
 import { getDiagnostics, type DiagnosticContext } from "../../../shared/diagnostics";
 import type { RecognizedAction } from "../../../shared/recognizedAction";
 import {
@@ -290,6 +291,18 @@ export function ActionInputPanel({
   return (
     <section className="action-input-panel">
       <StoryBlocks blocks={step.blocks} />
+      <ActionChoiceButton
+        text={t(`story.action.${step.targetActionId}`)}
+        disabled={busy || submitting}
+        onClick={() => {
+          if (busy || inFlight.current) return;
+          cancelVoice();
+          void acceptRecognized(
+            { type: "known", actionId: step.targetActionId },
+            { operationId: getDiagnostics().operationId() },
+          );
+        }}
+      />
       <div className="action-input-panel__modes" role="group" aria-label={t("voice.modeLabel")}>
         {(["text", "voice"] as const).map((entry) => (
           <button

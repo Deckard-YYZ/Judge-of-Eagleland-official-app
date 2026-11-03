@@ -1,0 +1,196 @@
+{
+  "packageId": "configuration-pilot",
+  "version": "0.1.1",
+  "locale": "zh-CN",
+  "manifest": {
+    "title": "配置验证小样"
+  },
+  "attributes": {
+    "authority": {
+      "label": "裁定记录"
+    },
+    "input_errors": {
+      "label": "动作错误次数"
+    }
+  },
+  "cases": {
+    "intake": {
+      "title": "登记复核",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "登记表与复核意见已归档。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "请阅读材料并逐轮选择。指示提供建议，最终决定由你作出。"
+        }
+      ],
+      "nodes": {
+        "assessment": {
+          "prompt": "先核对登记记录。"
+        },
+        "disposition": {
+          "prompt": "依据复核结果作出判决。"
+        }
+      },
+      "choices": {
+        "comply": {
+          "text": "按指示确认登记",
+          "annotation": {
+            "title": "复核依据",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "现有登记记录完整。"
+              }
+            ]
+          }
+        },
+        "review": {
+          "text": "自行重新核对登记"
+        },
+        "approve": {
+          "text": "确认登记有效"
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "判决：记录有效。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "本案已结算，相关信息随后送达。"
+            }
+          ]
+        }
+      }
+    },
+    "followup": {
+      "title": "后续听证",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "登记表与复核意见已归档。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "请阅读材料并逐轮选择。指示提供建议，最终决定由你作出。"
+        }
+      ],
+      "nodes": {
+        "followup_judgment": {
+          "prompt": "对派发的后续案件作出判决。"
+        }
+      },
+      "choices": {
+        "finish_followup": {
+          "text": "完成后续听证"
+        }
+      },
+      "resolutions": {
+        "followup_closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "判决：记录有效。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "本案已结算，相关信息随后送达。"
+            }
+          ]
+        }
+      }
+    },
+    "deferred": {
+      "title": "暂缓复核",
+      "characters": {},
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "登记表与复核意见已归档。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "请阅读材料并逐轮选择。指示提供建议，最终决定由你作出。"
+        }
+      ],
+      "nodes": {
+        "deferred_judgment": {
+          "prompt": "对暂缓案件作出判决。"
+        }
+      },
+      "choices": {
+        "finish_deferred": {
+          "text": "完成暂缓复核"
+        }
+      },
+      "resolutions": {
+        "deferred_closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "判决：记录有效。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "本案已结算，相关信息随后送达。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "judgment_notice": {
+      "title": "判决后通知",
+      "steps": {
+        "information": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "判决已归档。请确认收到通知，再执行敬礼动作。"
+            }
+          ]
+        },
+        "required_action": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请敬礼确认。错误动作会记录，仍须完成敬礼。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {},
+  "instructions": {
+    "assessment_instruction": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "指示：选择「按指示确认登记」。你仍可选择自行复核。"
+        }
+      ]
+    }
+  }
+}

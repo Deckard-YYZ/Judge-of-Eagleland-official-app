@@ -165,7 +165,7 @@ describe("session presentation policy", () => {
   it("immediate still waits for visibility and real work; reduced motion does not change normal time", () => {
     vi.stubGlobal(
       "matchMedia",
-      vi.fn(() => ({ matches: true })),
+      vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
     );
     const view = render(<DecisionPanel {...base} presentationMode="immediate" disabled />, {
       wrapper: TestI18nProvider,
@@ -319,3 +319,20 @@ it.each([200, 1200])(
     expect(history.has(identity)).toBe(true);
   },
 );
+
+it("keeps the original preparation deadline across news without marking hidden candidates", () => {
+  const history = createDecisionPresentationHistory();
+  const rendered = render(<DecisionPanel {...base} presentationHistory={history} />, {
+    wrapper: TestI18nProvider,
+  });
+  presence(true);
+  advance(200);
+  rendered.rerender(<DecisionPanel {...base} presentationHistory={history} obscured disabled />);
+  advance(1000);
+  expect(options()).toHaveLength(0);
+  expect(history.has(identity)).toBe(false);
+  rendered.rerender(<DecisionPanel {...base} presentationHistory={history} />);
+  advance(0);
+  expect(options()).toHaveLength(2);
+  expect(history.has(identity)).toBe(true);
+});

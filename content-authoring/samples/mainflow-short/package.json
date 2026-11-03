@@ -1,6 +1,6 @@
 {
   "packageId": "mainflow-short",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "contentSchemaVersion": 6,
   "defaultLocale": "zh-CN",
   "supportedLocales": [

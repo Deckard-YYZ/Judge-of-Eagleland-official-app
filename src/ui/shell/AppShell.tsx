@@ -1,3 +1,4 @@
+import type { AttributeVariant, AttributeMarker } from "./attributeVariant";
 import type { ReactNode } from "react";
 import type { GameSessionViewSnapshot } from "../../application/gameSessionView";
 import type { LocalProfileSummary } from "../../application/profileEntry";
@@ -12,6 +13,8 @@ export interface AppShellProps {
   profile: Readonly<LocalProfileSummary>;
   snapshot: GameSessionViewSnapshot;
   modalActive?: boolean;
+  attributeVariant?: AttributeVariant;
+  attributeMarker?: AttributeMarker;
   themeMode: UiThemeMode;
   onThemeChange(mode: UiThemeMode): void;
   onSelectCase(caseId: CaseId): void;
@@ -32,6 +35,8 @@ export function AppShell({
   profile,
   snapshot,
   modalActive = false,
+  attributeVariant,
+  attributeMarker,
   themeMode,
   onThemeChange,
   onSelectCase,
@@ -91,6 +96,8 @@ export function AppShell({
 
       <div className="app-shell__workspace">
         <Sidebar
+          attributeVariant={attributeVariant}
+          attributeMarker={attributeMarker}
           snapshot={snapshot}
           interactionLocked={interactionLocked}
           onSelectCase={onSelectCase}

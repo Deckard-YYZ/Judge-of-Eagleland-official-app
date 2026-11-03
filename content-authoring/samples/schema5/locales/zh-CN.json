@@ -1,16 +1,19 @@
 {
   "packageId": "configuration-pilot",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "locale": "zh-CN",
   "manifest": {
     "title": "配置验证小样"
   },
   "attributes": {
     "authority": {
-      "label": "裁定记录"
+      "label": "一"
     },
     "input_errors": {
-      "label": "动作错误次数"
+      "label": "二"
+    },
+    "axis_three": {
+      "label": "三"
     }
   },
   "cases": {

@@ -1,3 +1,4 @@
+import type { MessageKey } from "./i18n";
 import { useEffect, useState } from "react";
 import { useDocumentTranslator } from "./i18n/useDocumentTranslator";
 import type { DiagnosticViewerService } from "../shared/diagnosticViewer";
@@ -7,10 +8,20 @@ export function DiagnosticsPanel({
   service,
   onClose,
   mainFlowPreview,
+  modulePreview,
 }: {
   service: DiagnosticViewerService;
   onClose(): void;
   mainFlowPreview?: { active: boolean; toggle(): void };
+  modulePreview?: {
+    active: string | null;
+    entries: readonly {
+      id: string;
+      label: Extract<MessageKey, `diagnostics.${string}Preview`>;
+      open(): void;
+    }[];
+    exit(): void;
+  };
 }) {
   const t = useDocumentTranslator();
   const [snapshot, setSnapshot] = useState<Record<string, unknown>>({});
@@ -83,6 +94,23 @@ export function DiagnosticsPanel({
             {t(mainFlowPreview.active ? "diagnostics.mainFlowExit" : "diagnostics.mainFlowPreview")}
           </button>
         </>
+      )}
+      {modulePreview && (
+        <section aria-label={t("diagnostics.modulesTitle")}>
+          <h3>{t("diagnostics.modulesTitle")}</h3>
+          <p>{t("diagnostics.modulesNotice")}</p>
+          {modulePreview.entries.map((entry) => (
+            <button key={entry.id} type="button" onClick={entry.open}>
+              {t(entry.label)}
+              {modulePreview.active === entry.id ? ` · ${t("diagnostics.moduleRestartShort")}` : ""}
+            </button>
+          ))}
+          {modulePreview.active && (
+            <button type="button" onClick={modulePreview.exit}>
+              {t("diagnostics.moduleExit")}
+            </button>
+          )}
+        </section>
       )}
       <button
         type="button"

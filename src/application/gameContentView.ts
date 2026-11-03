@@ -132,7 +132,12 @@ export interface GameContentView {
         }>
       >
     >;
-    news: Readonly<Record<string, Readonly<{ title: string; blocks: readonly TextBlock[] }>>>;
+    news: Readonly<
+      Record<
+        string,
+        Readonly<{ title: string; blocks: readonly TextBlock[]; actionStoryId?: string }>
+      >
+    >;
   }>;
   readonly locale: ContentLocale;
   readonly attributes: Readonly<Record<string, Readonly<ContentAttributeView>>>;
@@ -264,7 +269,15 @@ export function createGameContentView(
                 ];
               }),
             ),
-            news: localized.mainFlow!.news,
+            news: Object.fromEntries(
+              Object.entries(game.mainFlow.news).map(([id, definition]) => [
+                id,
+                {
+                  ...localized.mainFlow!.news[id],
+                  ...(definition.actionStoryId ? { actionStoryId: definition.actionStoryId } : {}),
+                },
+              ]),
+            ),
           },
         }
       : {}),

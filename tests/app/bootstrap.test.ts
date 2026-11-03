@@ -21,7 +21,7 @@ describe("application bootstrap", () => {
     if (!entered.ok) throw new Error(entered.error.message);
     expect(entered.session.getSnapshot().envelope!.contentRef).toEqual({
       packageId: "minimal-test-package",
-      version: "1.2.0",
+      version: "1.3.0",
     });
     expect(entered.session.getSnapshot().state!.pendingStoryIds).not.toContain(
       "tutorial_voice_order",

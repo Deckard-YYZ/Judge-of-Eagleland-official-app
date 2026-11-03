@@ -1,6 +1,6 @@
 {
   "packageId": "configuration-pilot",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "contentSchemaVersion": 5,
   "defaultLocale": "zh-CN",
   "supportedLocales": [

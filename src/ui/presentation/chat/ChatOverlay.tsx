@@ -1,3 +1,5 @@
+import type { ChatVariant } from "./chatVariant";
+import { ActionChoiceButton } from "../ActionChoiceButton";
 import {
   useCallback,
   useEffect,
@@ -38,6 +40,7 @@ function ChatWindow({
   chat,
   busy,
   obscured,
+  variant,
   onReply,
   onExpire,
   onRaise,
@@ -48,6 +51,7 @@ function ChatWindow({
   chat: ChatContent;
   busy: boolean;
   obscured: boolean;
+  variant?: ChatVariant;
   onReply(
     instanceId: string,
     nodeId: string,
@@ -150,12 +154,43 @@ function ChatWindow({
     }
   };
   const current = chat.nodes[progress.currentNodeId];
+  const replyControls = !ending && (
+    <div className="chat-event__replies" aria-label={t("chat.replies")}>
+      {variant && variant !== "hybrid" && (
+        <p className="chat-event__command-label">
+          {t(variant === "terminal" ? "chat.presetCommands" : "chat.borrowedActions")}
+        </p>
+      )}
+      {Object.entries(current.replies).map(([replyId, text], index) =>
+        variant ? (
+          <ActionChoiceButton
+            key={replyId}
+            text={text}
+            disabled={busy || obscured}
+            onClick={() => void reply(replyId)}
+          />
+        ) : (
+          <button
+            className="chat-event__reply"
+            type="button"
+            key={replyId}
+            disabled={busy || obscured}
+            onClick={() => void reply(replyId)}
+          >
+            <span aria-hidden="true">[{index + 1}] </span>
+            {text}
+          </button>
+        ),
+      )}
+    </div>
+  );
   return (
     <section
       ref={frame}
       className={`chat-event${ending ? " chat-event--ended" : ""}${dragging ? " chat-event--dragging" : ""}`}
       aria-labelledby={`chat-${instanceId}`}
       data-instance={instanceId}
+      data-chat-variant={variant}
       style={{
         left: position?.x,
         top: position?.y,
@@ -176,63 +211,77 @@ function ChatWindow({
         onLostPointerCapture={endDrag}
         onKeyDown={moveWithKeyboard}
       >
-        <span id={`chat-${instanceId}`}>{chat.title}</span>
+        <span id={`chat-${instanceId}`}>
+          {variant === "hybrid"
+            ? t("chat.hybridTab")
+            : variant === "takeover"
+              ? t("chat.systemModule")
+              : variant === "fragments"
+                ? t("chat.signalFragment")
+                : chat.title}
+        </span>
       </button>
-      <div
-        ref={messages}
-        className="chat-event__messages"
-        role="log"
-        aria-live="polite"
-        aria-relevant="additions"
-        aria-label={chat.title}
-        tabIndex={0}
-      >
-        {progress.history.map((entry, index) => (
-          <div key={`${index}:${entry.nodeId}`}>
+      {variant === "takeover" && (
+        <header className="chat-event__system-header">
+          <span className="chat-event__agency-seal" aria-hidden="true">
+            {t("brand.seal")}
+          </span>
+          <div>
+            <p>{t("brand.office")}</p>
+            <strong>{t("chat.foreignSignal")}</strong>
+          </div>
+        </header>
+      )}
+      <div className="chat-event__body">
+        <div
+          ref={messages}
+          className="chat-event__messages"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label={chat.title}
+          tabIndex={0}
+        >
+          {(variant === "takeover" || variant === "fragments") && (
+            <p className="chat-event__source">
+              <span>{t("chat.senderField")}</span>
+              <strong>{chat.characterName}</strong>
+            </p>
+          )}
+          {progress.history.map((entry, index) => (
+            <div key={`${index}:${entry.nodeId}`}>
+              <p className="chat-event__line">
+                <span>{t("chat.other")} </span>
+                {chat.nodes[entry.nodeId].blocks.map((block) => block.text).join("\n")}
+              </p>
+              <p className="chat-event__line chat-event__sent">
+                <span>{t("chat.you")} </span>
+                {chat.nodes[entry.nodeId].replies[entry.replyId]}
+              </p>
+            </div>
+          ))}
+          {ending?.terminalNodeId ? (
             <p className="chat-event__line">
               <span>{t("chat.other")} </span>
-              {chat.nodes[entry.nodeId].blocks.map((block) => block.text).join("\n")}
+              {chat.nodes[ending.terminalNodeId].blocks.map((block) => block.text).join("\n")}
             </p>
+          ) : (
             <p className="chat-event__line">
-              <span>{t("chat.you")} </span>
-              {chat.nodes[entry.nodeId].replies[entry.replyId]}
+              <span>{t("chat.other")} </span>
+              {current.blocks.map((block) => block.text).join("\n")}
             </p>
-          </div>
-        ))}
-        {ending?.terminalNodeId ? (
-          <p className="chat-event__line">
-            <span>{t("chat.other")} </span>
-            {chat.nodes[ending.terminalNodeId].blocks.map((block) => block.text).join("\n")}
-          </p>
-        ) : (
-          <p className="chat-event__line">
-            <span>{t("chat.other")} </span>
-            {current.blocks.map((block) => block.text).join("\n")}
-          </p>
-        )}
-        {ending && <p className="chat-event__line">{t("chat.ended")}</p>}
-        {!ending && (
-          <div className="chat-event__replies" aria-label={t("chat.replies")}>
-            {Object.entries(current.replies).map(([replyId, text], index) => (
-              <button
-                className="chat-event__reply"
-                type="button"
-                key={replyId}
-                disabled={busy || obscured}
-                onClick={() => void reply(replyId)}
-              >
-                <span aria-hidden="true">[{index + 1}] </span>
-                {text}
-              </button>
-            ))}
-          </div>
-        )}
-        {error && (
-          <p className="chat-event__line" role="alert">
-            {translateSessionError(t, error)}
-          </p>
-        )}
+          )}
+          {ending && <p className="chat-event__line">{t("chat.ended")}</p>}
+          {variant !== "fragments" && variant !== "hybrid" && replyControls}
+          {error && (
+            <p className="chat-event__line" role="alert">
+              {translateSessionError(t, error)}
+            </p>
+          )}
+        </div>
+        {variant === "hybrid" && replyControls}
       </div>
+      {variant === "fragments" && replyControls}
     </section>
   );
 }
@@ -243,12 +292,14 @@ function Conversations({
   flow,
   content,
   obscured,
+  variant,
 }: {
   session: GameSessionView;
   snapshot: GameSessionViewSnapshot;
   flow: MainFlow;
   content: NonNullable<GameContentView["mainFlow"]>;
   obscured: boolean;
+  variant?: ChatVariant;
 }) {
   const { t } = useI18n();
   const [visible, setVisible] = useState<Record<string, VisibleChat>>(() =>
@@ -319,6 +370,7 @@ function Conversations({
           chat={content.chats[item.progress.chatId]}
           busy={snapshot.status !== "ready"}
           obscured={obscured}
+          variant={variant}
           onReply={reply}
           onExpire={expire}
           onRaise={setFront}
@@ -334,10 +386,12 @@ export function ChatOverlay({
   session,
   snapshot,
   obscured = false,
+  variant = "hybrid",
 }: {
   session: GameSessionView;
   snapshot: GameSessionViewSnapshot;
   obscured?: boolean;
+  variant?: ChatVariant;
 }) {
   const flow = snapshot.state?.mainFlow;
   const content = snapshot.content?.mainFlow;
@@ -350,6 +404,7 @@ export function ChatOverlay({
       flow={flow}
       content={content}
       obscured={obscured}
+      variant={variant}
     />
   );
 }

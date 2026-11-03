@@ -11,7 +11,7 @@ it("uses independent memory profiles even when the host advertises Tauri", async
     if (!entered.ok) throw new Error(entered.error.message);
     expect(entered.session.getSnapshot().envelope!.contentRef).toEqual({
       packageId: "mainflow-short",
-      version: "0.1.0",
+      version: "0.1.3",
     });
     expect(entered.session.getSnapshot().state!.pendingStoryIds).toEqual(["tutorial"]);
     const second = await bootstrapMainFlowPreview();

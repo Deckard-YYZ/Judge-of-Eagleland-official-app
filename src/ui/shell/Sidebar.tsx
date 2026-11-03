@@ -1,3 +1,5 @@
+import type { AttributeVariant, AttributeMarker } from "./attributeVariant";
+import { AttributeTriangle } from "./AttributeTriangle";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import type { CaseId } from "../../content/schema";
 import type { GameSessionViewSnapshot } from "../../application/gameSessionView";
@@ -6,6 +8,8 @@ import { createSidebarModel } from "./sidebarModel";
 
 export interface SidebarProps {
   snapshot: GameSessionViewSnapshot;
+  attributeVariant?: AttributeVariant;
+  attributeMarker?: AttributeMarker;
   interactionLocked: boolean;
   onSelectCase(caseId: CaseId): void;
 }
@@ -57,7 +61,13 @@ function SidebarSection({ id, title, count, expanded, onToggle, children }: Side
   );
 }
 
-export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarProps) {
+export function Sidebar({
+  snapshot,
+  interactionLocked,
+  onSelectCase,
+  attributeVariant,
+  attributeMarker,
+}: SidebarProps) {
   const { formatNumber, t } = useI18n();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [attributesExpanded, setAttributesExpanded] = useState(true);
@@ -103,32 +113,27 @@ export function Sidebar({ snapshot, interactionLocked, onSelectCase }: SidebarPr
           expanded={attributesExpanded}
           onToggle={() => setAttributesExpanded((current) => !current)}
         >
+          {model.attributes.length === 3 && (
+            <AttributeTriangle
+              attributes={model.attributes}
+              variant={attributeVariant ?? "point"}
+              marker={attributeMarker}
+              demo={attributeVariant !== undefined}
+            />
+          )}
           {model.attributes.length > 0 ? (
-            <dl className="case-sidebar__attributes">
+            <dl className={model.attributes.length === 3 ? "sr-only" : "case-sidebar__attributes"}>
               {model.attributes.map((attribute) => (
                 <div className="case-sidebar__attribute" key={attribute.id}>
                   <dt>{attribute.label}</dt>
                   <dd>
                     <strong>{formatNumber(attribute.value)}</strong>
                   </dd>
-                  <dd className="case-sidebar__measurement">
-                    <span className="case-sidebar__scale" aria-hidden="true">
-                      <i
-                        style={{
-                          left: `${Math.max(0, Math.min(100, ((attribute.value - attribute.min) / (attribute.max - attribute.min || 1)) * 100))}%`,
-                        }}
-                      />
-                    </span>
-                    <span className="sr-only">
-                      {t("sidebar.attributeRange", {
-                        min: formatNumber(attribute.min),
-                        max: formatNumber(attribute.max),
-                      })}
-                    </span>
-                    <span className="case-sidebar__endpoints" aria-hidden="true">
-                      <span>{formatNumber(attribute.min)}</span>
-                      <span>{formatNumber(attribute.max)}</span>
-                    </span>
+                  <dd className="sr-only">
+                    {t("sidebar.attributeRange", {
+                      min: formatNumber(attribute.min),
+                      max: formatNumber(attribute.max),
+                    })}
                   </dd>
                 </div>
               ))}

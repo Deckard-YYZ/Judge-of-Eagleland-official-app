@@ -41,7 +41,7 @@ describe("bundled content repository", () => {
     expect(reader).toHaveBeenCalledWith(DEFAULT_BUNDLED_CONTENT_REF);
     expect(DEFAULT_BUNDLED_CONTENT_REF).toEqual({
       packageId: "minimal-test-package",
-      version: "1.2.0",
+      version: "1.3.0",
     });
     expect((await repository.loadGameContent(DEFAULT_BUNDLED_CONTENT_REF)).stories).toHaveProperty(
       "tutorial_voice_order",

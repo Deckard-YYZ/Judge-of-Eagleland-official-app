@@ -1,0 +1,404 @@
+{
+  "packageId": "mainflow-short",
+  "version": "0.1.2",
+  "locale": "zh-CN",
+  "manifest": {
+    "title": "主流程短篇"
+  },
+  "attributes": {
+    "authority": {
+      "label": "判决记录"
+    }
+  },
+  "cases": {
+    "case-a": {
+      "title": "A：登记复核",
+      "characters": {
+        "clerk": {
+          "name": "书记员",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "负责传递案卷与消息。"
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "案卷包含三轮审查。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "核对记录、审查材料，最后作出判决。"
+        }
+      ],
+      "nodes": {
+        "case-a-1": {
+          "prompt": "核对登记资料。"
+        },
+        "case-a-2": {
+          "prompt": "确认补充材料。"
+        },
+        "case-a-3": {
+          "prompt": "作出最终判决。"
+        }
+      },
+      "choices": {
+        "case-a-choose-1": {
+          "text": "资料核对完成",
+          "annotation": {
+            "title": "登记说明",
+            "body": [
+              {
+                "type": "paragraph",
+                "text": "资料已齐备，可继续审查。"
+              }
+            ]
+          }
+        },
+        "case-a-choose-2": {
+          "text": "材料审查完成"
+        },
+        "case-a-choose-3": {
+          "text": "确认结案"
+        }
+      },
+      "resolutions": {
+        "case-a-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "确认结案。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "判决已记录。"
+            }
+          ]
+        }
+      }
+    },
+    "case-b": {
+      "title": "B：补充听证",
+      "characters": {
+        "clerk": {
+          "name": "书记员",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "负责传递案卷与消息。"
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "案卷包含三轮审查。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "核对记录、审查材料，最后作出判决。"
+        }
+      ],
+      "nodes": {
+        "case-b-1": {
+          "prompt": "核对登记资料。"
+        },
+        "case-b-2": {
+          "prompt": "确认补充材料。"
+        },
+        "case-b-3": {
+          "prompt": "作出最终判决。"
+        }
+      },
+      "choices": {
+        "case-b-choose-1": {
+          "text": "资料核对完成"
+        },
+        "case-b-choose-2": {
+          "text": "材料审查完成"
+        },
+        "case-b-choose-3": {
+          "text": "确认结案"
+        }
+      },
+      "resolutions": {
+        "case-b-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "确认结案。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "判决已记录。"
+            }
+          ]
+        }
+      }
+    },
+    "case-c": {
+      "title": "C：归档审查",
+      "characters": {
+        "clerk": {
+          "name": "书记员",
+          "description": [
+            {
+              "type": "paragraph",
+              "text": "负责传递案卷与消息。"
+            }
+          ]
+        }
+      },
+      "summary": [
+        {
+          "type": "paragraph",
+          "text": "案卷包含三轮审查。"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "核对记录、审查材料，最后作出判决。"
+        }
+      ],
+      "nodes": {
+        "case-c-1": {
+          "prompt": "核对登记资料。"
+        },
+        "case-c-2": {
+          "prompt": "确认补充材料。"
+        },
+        "case-c-3": {
+          "prompt": "作出最终判决。"
+        }
+      },
+      "choices": {
+        "case-c-choose-1": {
+          "text": "资料核对完成"
+        },
+        "case-c-choose-2": {
+          "text": "材料审查完成"
+        },
+        "case-c-choose-3": {
+          "text": "确认结案"
+        }
+      },
+      "resolutions": {
+        "case-c-closed": {
+          "verdict": [
+            {
+              "type": "paragraph",
+              "text": "确认结案。"
+            }
+          ],
+          "result": [
+            {
+              "type": "paragraph",
+              "text": "判决已记录。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stories": {
+    "news-ack": {
+      "title": "公告确认",
+      "steps": {
+        "ack": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "请敬礼确认已读公告。"
+            }
+          ]
+        }
+      }
+    },
+    "tutorial": {
+      "title": "入职教程",
+      "steps": {
+        "welcome": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "你可以随时退出教程。聊天不会阻挡案件处理。"
+            }
+          ]
+        },
+        "practice": {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "试着挥手，或选择退出教程。"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "endings": {},
+  "instructions": {
+    "first-instruction": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "建议先核对登记资料，你仍可自主判决。"
+        }
+      ]
+    }
+  },
+  "mainFlow": {
+    "chats": {
+      "chat-a": {
+        "title": "书记员消息 A",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "有一项案卷细节需要与你确认。"
+              }
+            ],
+            "replies": {
+              "ack": "请继续说明"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "材料已核实，请确认收到。"
+              }
+            ],
+            "replies": {
+              "finish": "已收到，谢谢"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "确认完成。"
+              }
+            ],
+            "replies": {}
+          }
+        }
+      },
+      "chat-b": {
+        "title": "书记员消息 B",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "有一项案卷细节需要与你确认。"
+              }
+            ],
+            "replies": {
+              "ack": "请继续说明"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "材料已核实，请确认收到。"
+              }
+            ],
+            "replies": {
+              "finish": "已收到，谢谢"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "确认完成。"
+              }
+            ],
+            "replies": {}
+          }
+        }
+      },
+      "chat-c": {
+        "title": "书记员消息 C",
+        "nodes": {
+          "hello": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "有一项案卷细节需要与你确认。"
+              }
+            ],
+            "replies": {
+              "ack": "请继续说明"
+            }
+          },
+          "detail": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "材料已核实，请确认收到。"
+              }
+            ],
+            "replies": {
+              "finish": "已收到，谢谢"
+            }
+          },
+          "closed": {
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "确认完成。"
+              }
+            ],
+            "replies": {}
+          }
+        }
+      }
+    },
+    "news": {
+      "news-n": {
+        "title": "工作公告",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "阅读完成后，请按要求敬礼确认。"
+          }
+        ]
+      },
+      "news-normal": {
+        "title": "消息已确认",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "书记员收到你的回复，补充听证已开放。"
+          }
+        ]
+      },
+      "news-ignored": {
+        "title": "消息已搁置",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "书记员结束了本次联络，补充听证已开放。"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ import "./story.css";
 export type StoryCompletionReason = "completed" | "skipped";
 
 export interface StoryPlayerProps {
+  presentation?: "news";
   storyId: StoryId;
   story: Readonly<ContentStoryView>;
   sessionView: GameSessionView;
@@ -34,6 +35,7 @@ const effectLabelKeys = {
  * so localization and feedback updates cannot rewind already displayed text.
  */
 export function StoryPlayer({
+  presentation,
   storyId,
   story,
   sessionView,
@@ -116,28 +118,30 @@ export function StoryPlayer({
 
   return (
     <article
-      className="story-player"
-      aria-labelledby="story-player-title"
+      className={`story-player${presentation === "news" ? " story-player--news" : ""}`}
+      aria-labelledby={presentation === "news" ? undefined : "story-player-title"}
       aria-busy={busy}
       data-story-id={storyId}
       data-step-type={step.type}
     >
-      <header className="story-player__header">
-        <div>
-          <p className="story-player__kicker">{t("story.kicker")}</p>
-          <h2 id="story-player-title">{story.title}</h2>
-        </div>
-        <span
-          className="story-player__progress"
-          aria-label={t("story.progressAria", {
-            current: formatNumber(stepIndex + 1),
-            total: formatNumber(story.steps.length),
-          })}
-        >
-          {formatNumber(stepIndex + 1, { minimumIntegerDigits: 2, useGrouping: false })} /{" "}
-          {formatNumber(story.steps.length, { minimumIntegerDigits: 2, useGrouping: false })}
-        </span>
-      </header>
+      {presentation !== "news" && (
+        <header className="story-player__header">
+          <div>
+            <p className="story-player__kicker">{t("story.kicker")}</p>
+            <h2 id="story-player-title">{story.title}</h2>
+          </div>
+          <span
+            className="story-player__progress"
+            aria-label={t("story.progressAria", {
+              current: formatNumber(stepIndex + 1),
+              total: formatNumber(story.steps.length),
+            })}
+          >
+            {formatNumber(stepIndex + 1, { minimumIntegerDigits: 2, useGrouping: false })} /{" "}
+            {formatNumber(story.steps.length, { minimumIntegerDigits: 2, useGrouping: false })}
+          </span>
+        </header>
+      )}
 
       <div className="story-player__stage" key={stepIndex}>
         {(step.type === "text" || step.type === "actionInput") && (

@@ -1,10 +1,18 @@
+import type { AttributeVariant, AttributeMarker } from "./shell/attributeVariant";
+import type { ChatVariant } from "./presentation/chat/chatVariant";
+import type { NewsVariant } from "./presentation/newsVariant";
+import type { InstructionVariant } from "./case/instructionVariant";
 import {
   createDecisionPresentationHistory,
   type PresentationMode,
 } from "./case/presentationPolicy";
 import { useEffect, useMemo, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSessionView } from "../application/gameSessionView";
-import type { LocalProfileSummary, ProfileEntry } from "../application/profileEntry";
+import type {
+  LocalProfileSummary,
+  ProfileEntry,
+  ProfileEntryResult,
+} from "../application/profileEntry";
 import { InterfaceSettings } from "./InterfaceSettings";
 import { CaseWorkspace } from "./case";
 import { I18nProvider, useI18n } from "./i18n";
@@ -20,6 +28,8 @@ import { applyThemeMode, readInitialThemeMode, type UiThemeMode } from "./theme"
 export interface AppProps {
   /** Experimental presentation is enabled only by the development composition root. */
   mainFlowPreview?: boolean;
+  mainFlowOverlays?: boolean;
+  initialSession?: Extract<ProfileEntryResult, { ok: true }>;
   /** Composition-root hook; UI has no native-window dependency. */
   onThemeApplied?(mode: UiThemeMode): void;
   profileEntry: ProfileEntry;
@@ -27,16 +37,26 @@ export interface AppProps {
   storageMode?: "sqlite" | "memory-preview";
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  newsVariant?: NewsVariant;
+  attributeVariant?: AttributeVariant;
+  attributeMarker?: AttributeMarker;
+  chatVariant?: ChatVariant;
+  instructionVariant?: InstructionVariant;
   presentationMode?: PresentationMode;
 }
 
 interface AuthenticatedWorkspaceProps {
-  mainFlowPreview: boolean;
+  mainFlowOverlays: boolean;
   profile: Readonly<LocalProfileSummary>;
   session: GameSessionView;
   themeMode: UiThemeMode;
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  newsVariant?: NewsVariant;
+  attributeVariant?: AttributeVariant;
+  attributeMarker?: AttributeMarker;
+  chatVariant?: ChatVariant;
+  instructionVariant?: InstructionVariant;
   presentationMode?: PresentationMode;
   onThemeChange(mode: UiThemeMode): void;
   onExit: () => void;
@@ -45,10 +65,15 @@ interface AuthenticatedWorkspaceProps {
 function AuthenticatedWorkspace({
   profile,
   session,
-  mainFlowPreview,
+  mainFlowOverlays,
   themeMode,
   caseOpenDelayMs,
   decisionRevealDelayMs,
+  newsVariant,
+  attributeVariant,
+  attributeMarker,
+  chatVariant,
+  instructionVariant,
   presentationMode,
   onThemeChange,
   onExit,
@@ -70,7 +95,7 @@ function AuthenticatedWorkspace({
     Boolean(
       snapshot.state?.pendingStoryIds[0] || snapshot.state?.phase.type === "ending" || endingOpen,
     );
-  const newsActive = mainFlowPreview && getPresentedNewsId(snapshot) !== null;
+  const newsActive = mainFlowOverlays && getPresentedNewsId(snapshot) !== null;
   const overlayActive = storyActive || newsActive;
   const previousOverlayActive = useRef(overlayActive);
 
@@ -86,6 +111,8 @@ function AuthenticatedWorkspace({
   return (
     <>
       <AppShell
+        attributeVariant={attributeVariant}
+        attributeMarker={attributeMarker}
         profile={profile}
         snapshot={snapshot}
         modalActive={overlayActive}
@@ -96,32 +123,36 @@ function AuthenticatedWorkspace({
       >
         <CaseWorkspace
           key={presentationHistory.scopeId}
+          obscured={overlayActive}
           snapshot={snapshot}
           dispatch={session.dispatch}
           reload={session.reload}
           caseOpenDelayMs={caseOpenDelayMs}
           decisionRevealDelayMs={decisionRevealDelayMs}
+          instructionVariant={instructionVariant}
           presentationMode={presentationMode}
           presentationHistory={presentationHistory}
         />
       </AppShell>
-      {mainFlowPreview && !recovering && (
+      {mainFlowOverlays && !recovering && (
         <ChatOverlay
+          variant={chatVariant}
           key={`chat:${presentationHistory.scopeId}`}
           session={session}
           snapshot={snapshot}
           obscured={overlayActive}
         />
       )}
-      {mainFlowPreview && (
+      {mainFlowOverlays && (
         <NewsPanel
+          variant={newsVariant}
           key={`news:${presentationHistory.scopeId}`}
           session={session}
           snapshot={snapshot}
         />
       )}
       <FeedbackLayer sessionView={session} />
-      {!recovering && (
+      {!recovering && !newsActive && (
         <StoryOverlay
           settings={<InterfaceSettings themeMode={themeMode} onThemeChange={onThemeChange} />}
           sessionView={session}
@@ -145,10 +176,17 @@ function AuthenticatedWorkspace({
 function LocalizedApp({
   profileEntry,
   mainFlowPreview = false,
+  mainFlowOverlays = mainFlowPreview,
+  initialSession,
   storageMode = "memory-preview",
   onThemeApplied,
   caseOpenDelayMs,
   decisionRevealDelayMs,
+  newsVariant,
+  attributeVariant,
+  attributeMarker,
+  chatVariant,
+  instructionVariant,
   presentationMode,
 }: AppProps) {
   const { locale } = useI18n();
@@ -158,7 +196,7 @@ function LocalizedApp({
   const [active, setActive] = useState<{
     profile: Readonly<LocalProfileSummary>;
     session: GameSessionView;
-  } | null>(null);
+  } | null>(initialSession ?? null);
 
   useEffect(() => {
     if (active) void active.session.setLocale(locale);
@@ -223,12 +261,17 @@ function LocalizedApp({
 
   return (
     <AuthenticatedWorkspace
-      mainFlowPreview={mainFlowPreview}
+      mainFlowOverlays={mainFlowOverlays}
       profile={active.profile}
       session={active.session}
       themeMode={themeMode}
       caseOpenDelayMs={caseOpenDelayMs}
       decisionRevealDelayMs={decisionRevealDelayMs}
+      newsVariant={newsVariant}
+      attributeVariant={attributeVariant}
+      attributeMarker={attributeMarker}
+      chatVariant={chatVariant}
+      instructionVariant={instructionVariant}
       presentationMode={presentationMode}
       onThemeChange={setThemeMode}
       onExit={() => setActive(null)}

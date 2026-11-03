@@ -4,9 +4,9 @@ import type { BuildOptions } from "../../scripts/content/build";
 
 const registry = [
   { source: "content-authoring/samples/schema4", output: "content/configuration-skeleton/0.1.0" },
-  { source: "content-authoring/samples/schema5", output: "content/configuration-pilot/0.1.0" },
+  { source: "content-authoring/samples/schema5", output: "content/configuration-pilot/0.1.3" },
   { source: "content-authoring/samples/full", output: "content/configuration-complete/0.1.0" },
-  { source: "content-authoring/samples/mainflow-short", output: "content/mainflow-short/0.1.0" },
+  { source: "content-authoring/samples/mainflow-short", output: "content/mainflow-short/0.1.3" },
 ];
 
 describe("complete authoring generation gate", () => {

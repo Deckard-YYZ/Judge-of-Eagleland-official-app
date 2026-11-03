@@ -1,3 +1,11 @@
+import {
+  readModulePreview,
+  readInstructionVariant,
+  readNewsVariant,
+  readAttributeVariant,
+  readAttributeMarker,
+  readChatVariant,
+} from "./app/debugPreviewRoutes";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BootstrapApp, bootstrapApplication, detectApplicationRuntime } from "./app/bootstrap";
@@ -16,16 +24,35 @@ if (!rootElement) {
   throw new Error("The application root element is missing.");
 }
 
-const themeLabEnabled = new URLSearchParams(window.location.search).get("themeLab") === "1";
+const modulePreview = readModulePreview(window.location.search, import.meta.env.DEV);
+const themeLabEnabled =
+  !modulePreview && new URLSearchParams(window.location.search).get("themeLab") === "1";
 let applicationBootstrap = bootstrapApplication;
 const mainFlowPreview =
-  import.meta.env.DEV && new URLSearchParams(window.location.search).get("mainFlowPreview") === "1";
+  !modulePreview &&
+  import.meta.env.DEV &&
+  new URLSearchParams(window.location.search).get("mainFlowPreview") === "1";
+if (modulePreview) {
+  const { bootstrapModulePreview } = await import("./app/modulePreview");
+  applicationBootstrap = async () => ({
+    ...(await bootstrapModulePreview(
+      modulePreview,
+      readChatVariant(window.location.search, import.meta.env.DEV),
+    )),
+    chatVariant: readChatVariant(window.location.search, import.meta.env.DEV),
+    attributeMarker: readAttributeMarker(window.location.search, import.meta.env.DEV),
+    attributeVariant: readAttributeVariant(window.location.search, import.meta.env.DEV),
+    newsVariant: readNewsVariant(window.location.search, import.meta.env.DEV),
+    instructionVariant: readInstructionVariant(window.location.search, import.meta.env.DEV),
+  });
+}
 if (mainFlowPreview) {
   const { bootstrapMainFlowPreview } = await import("./app/mainFlowPreview");
   applicationBootstrap = bootstrapMainFlowPreview;
 }
 if (
   import.meta.env.DEV &&
+  !modulePreview &&
   !mainFlowPreview &&
   detectApplicationRuntime() === "browser" &&
   new URLSearchParams(window.location.search).get("configurationPilot") === "1"

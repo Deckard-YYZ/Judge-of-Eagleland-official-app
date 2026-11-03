@@ -1,0 +1,60 @@
+.attribute-triangle {
+  margin: 0 0 1rem;
+  color: var(--ui-ink);
+}
+.attribute-triangle figcaption {
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.attribute-triangle svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  fill: currentColor;
+}
+.attribute-triangle text {
+  font: 14px var(--ui-font-control);
+}
+.attribute-triangle__outline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.attribute-triangle__point {
+  fill: currentColor;
+}
+.attribute-triangle__ticks {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.attribute-triangle__caption {
+  margin: 0.5rem 0 0.2rem;
+  font-size: 0.8rem;
+}
+.attribute-triangle__ratio {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.attribute-triangle__contour line {
+  stroke: var(--ui-rule);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.attribute-triangle__contour polygon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.attribute-triangle__region {
+  fill: none;
+  stroke: var(--ui-rule);
+  stroke-width: 1;
+}
+.attribute-triangle__filled {
+  stroke: currentColor;
+  stroke-width: 1;
+}

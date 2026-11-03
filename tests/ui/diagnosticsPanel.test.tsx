@@ -60,3 +60,43 @@ it("exposes the optional debug entry and exit only when supplied by the developm
   expect(screen.getByRole("button", { name: "退出主流程验证" })).toBeTruthy();
   await waitFor(() => expect(service.snapshot).toHaveBeenCalled());
 });
+
+it("offers module launch, restart and return only when development navigation is supplied", () => {
+  const service = {
+    snapshot: vi.fn(async () => ({})),
+    exportReport: vi.fn(async () => "report"),
+    setDetailed: vi.fn(async () => undefined),
+  };
+  const open = vi.fn();
+  const exit = vi.fn();
+  const { rerender } = render(<DiagnosticsPanel service={service} onClose={() => {}} />);
+  expect(screen.queryByRole("button", { name: "验证选项指示框" })).toBeNull();
+  rerender(
+    <DiagnosticsPanel
+      service={service}
+      onClose={() => {}}
+      modulePreview={{
+        active: null,
+        entries: [{ id: "instructions", label: "diagnostics.instructionsPreview", open }],
+        exit,
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "验证选项指示框" }));
+  expect(open).toHaveBeenCalledTimes(1);
+  rerender(
+    <DiagnosticsPanel
+      service={service}
+      onClose={() => {}}
+      modulePreview={{
+        active: "instructions",
+        entries: [{ id: "instructions", label: "diagnostics.instructionsPreview", open }],
+        exit,
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "验证选项指示框 · 重新验证" }));
+  fireEvent.click(screen.getByRole("button", { name: "返回普通入口" }));
+  expect(open).toHaveBeenCalledTimes(2);
+  expect(exit).toHaveBeenCalledTimes(1);
+});

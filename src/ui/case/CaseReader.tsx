@@ -1,3 +1,4 @@
+import type { InstructionVariant } from "./instructionVariant";
 import {
   decisionPresentationIdentity,
   type DecisionPresentationHistory,
@@ -14,18 +15,22 @@ import "./case.css";
 
 export interface CaseReaderProps {
   snapshot: GameSessionViewSnapshot;
+  obscured?: boolean;
   dispatch: GameSessionView["dispatch"];
   reload: GameSessionView["reload"];
   decisionRevealDelayMs?: number;
+  instructionVariant?: InstructionVariant;
   presentationMode?: PresentationMode;
   presentationHistory?: DecisionPresentationHistory;
 }
 
 export function CaseReader({
   snapshot,
+  obscured = false,
   dispatch,
   reload,
   decisionRevealDelayMs,
+  instructionVariant,
   presentationMode,
   presentationHistory,
 }: CaseReaderProps) {
@@ -55,6 +60,7 @@ export function CaseReader({
       : null;
   const previousPanelKey = useRef(panelKey);
   const caseCommandsAllowed =
+    !obscured &&
     snapshot.status === "ready" &&
     snapshot.state?.phase.type === "playing" &&
     snapshot.state.pendingStoryIds.length === 0;
@@ -202,7 +208,9 @@ export function CaseReader({
                 node={currentNode}
                 dispatch={dispatch}
                 disabled={interactionLocked}
+                obscured={obscured}
                 revealDelayMs={decisionRevealDelayMs}
+                instructionVariant={instructionVariant}
                 presentationMode={presentationMode}
                 presentationHistory={presentationHistory}
                 presentationIdentity={

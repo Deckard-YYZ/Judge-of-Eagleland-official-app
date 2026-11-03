@@ -1,3 +1,4 @@
+import type { InstructionVariant } from "./instructionVariant";
 import type { DecisionPresentationHistory, PresentationMode } from "./presentationPolicy";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameSessionView, GameSessionViewSnapshot } from "../../application/gameSessionView";
@@ -9,10 +10,12 @@ export const CASE_OPEN_DELAY_MS = 0;
 
 export interface CaseWorkspaceProps {
   snapshot: GameSessionViewSnapshot;
+  obscured?: boolean;
   dispatch: GameSessionView["dispatch"];
   reload: GameSessionView["reload"];
   caseOpenDelayMs?: number;
   decisionRevealDelayMs?: number;
+  instructionVariant?: InstructionVariant;
   presentationMode?: PresentationMode;
   presentationHistory?: DecisionPresentationHistory;
 }
@@ -20,10 +23,12 @@ export interface CaseWorkspaceProps {
 /** UI-only document handoff. Selection remains immediate; document presentation is deferred. */
 export function CaseWorkspace({
   snapshot,
+  obscured = false,
   dispatch,
   reload,
   caseOpenDelayMs = CASE_OPEN_DELAY_MS,
   decisionRevealDelayMs,
+  instructionVariant,
   presentationMode,
   presentationHistory,
 }: CaseWorkspaceProps) {
@@ -91,9 +96,11 @@ export function CaseWorkspace({
     <CaseReader
       key={JSON.stringify([contentIdentity, visibleCaseId])}
       snapshot={presentedSnapshot}
+      obscured={obscured}
       dispatch={dispatch}
       reload={reload}
       decisionRevealDelayMs={decisionRevealDelayMs}
+      instructionVariant={instructionVariant}
       presentationMode={presentationMode}
       presentationHistory={presentationHistory}
     />

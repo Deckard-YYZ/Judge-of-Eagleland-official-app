@@ -1,0 +1,260 @@
+{
+  "manifest": {
+    "packageId": "configuration-pilot",
+    "version": "0.1.2",
+    "contentSchemaVersion": 5,
+    "defaultLocale": "zh-CN",
+    "supportedLocales": [
+      "zh-CN",
+      "en-US"
+    ]
+  },
+  "unlockRules": [],
+  "storyRules": [],
+  "stories": {
+    "judgment_notice": {
+      "skippable": false,
+      "steps": [
+        {
+          "id": "information",
+          "type": "text"
+        },
+        {
+          "id": "required_action",
+          "type": "actionInput",
+          "targetActionId": "salute",
+          "wrongEffects": {
+            "attributeDeltas": {
+              "input_errors": 1
+            },
+            "setFlags": {
+              "action_mistake": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "endings": {},
+  "assets": {},
+  "initial": {
+    "storyIds": [],
+    "flags": {
+      "judged": false,
+      "action_mistake": false
+    },
+    "caseIds": [
+      "intake"
+    ]
+  },
+  "attributes": {
+    "authority": {
+      "initial": 0,
+      "min": 0,
+      "max": 10
+    },
+    "input_errors": {
+      "initial": 0,
+      "min": 0,
+      "max": 10
+    }
+  },
+  "cases": {
+    "intake": {
+      "id": "intake",
+      "order": 1,
+      "startNodeId": "assessment",
+      "characters": [],
+      "nodes": {
+        "assessment": {
+          "choices": [
+            {
+              "id": "comply",
+              "hasAnnotation": true,
+              "target": {
+                "type": "node",
+                "nodeId": "disposition"
+              }
+            },
+            {
+              "id": "review",
+              "hasAnnotation": false,
+              "target": {
+                "type": "node",
+                "nodeId": "disposition"
+              }
+            }
+          ]
+        },
+        "disposition": {
+          "choices": [
+            {
+              "id": "approve",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "approved"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "approved": {
+          "effects": {
+            "attributeDeltas": {
+              "authority": 1
+            },
+            "setFlags": {
+              "judged": true
+            }
+          }
+        }
+      }
+    },
+    "followup": {
+      "id": "followup",
+      "order": 2,
+      "startNodeId": "followup_judgment",
+      "characters": [],
+      "nodes": {
+        "followup_judgment": {
+          "choices": [
+            {
+              "id": "finish_followup",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "followup_closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "followup_closed": {
+          "effects": {
+            "attributeDeltas": {
+              "authority": 1
+            },
+            "setFlags": {}
+          }
+        }
+      }
+    },
+    "deferred": {
+      "id": "deferred",
+      "order": 3,
+      "startNodeId": "deferred_judgment",
+      "characters": [],
+      "nodes": {
+        "deferred_judgment": {
+          "choices": [
+            {
+              "id": "finish_deferred",
+              "hasAnnotation": false,
+              "target": {
+                "type": "resolution",
+                "resolutionId": "deferred_closed"
+              }
+            }
+          ]
+        }
+      },
+      "resolutions": {
+        "deferred_closed": {
+          "effects": {
+            "attributeDeltas": {},
+            "setFlags": {}
+          }
+        }
+      }
+    }
+  },
+  "configuration": {
+    "interactionOnly": {
+      "attributeIds": [
+        "input_errors"
+      ],
+      "flagIds": [
+        "action_mistake"
+      ]
+    },
+    "instructions": {
+      "assessment_instruction": {
+        "caseId": "intake",
+        "nodeId": "assessment",
+        "choiceId": "comply",
+        "delayMs": 800
+      }
+    },
+    "actionInputHooks": [
+      {
+        "id": "after_intake",
+        "event": {
+          "type": "caseResolved",
+          "caseId": "intake",
+          "resolutionId": "approved"
+        },
+        "storyId": "judgment_notice"
+      }
+    ],
+    "casePools": {
+      "review_pool": {
+        "members": [
+          {
+            "caseId": "deferred",
+            "when": {
+              "all": [
+                {
+                  "type": "attributeAtLeast",
+                  "attributeId": "authority",
+                  "value": 5
+                }
+              ]
+            }
+          },
+          {
+            "caseId": "followup",
+            "when": {
+              "all": [
+                {
+                  "type": "attributeAtLeast",
+                  "attributeId": "authority",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "dispatchRules": [
+      {
+        "id": "after_intake_dispatch",
+        "event": {
+          "type": "caseResolved",
+          "caseId": "intake",
+          "resolutionId": "approved"
+        },
+        "when": {
+          "all": [
+            {
+              "type": "caseResolved",
+              "caseId": "intake",
+              "resolutionId": "approved"
+            }
+          ]
+        },
+        "poolId": "review_pool",
+        "strategy": {
+          "type": "ordered",
+          "caseIds": [
+            "deferred",
+            "followup"
+          ]
+        }
+      }
+    ]
+  }
+}
