@@ -1,5 +1,9 @@
 # TTS / Content / Validator 线实施记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_TTS_Content_Validator_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../development/voice.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 更新日期：2026-09-18。状态：T0–T4 骨架与基本功能测试全部完成并经主审，真实设备/安装发布验收见后期 TODO。基线：`Desktop_Case_Game_Architecture_v1.0.md`、`Desktop_Case_Game_Architecture_Extension_ActionInput_TTS_v1.1.md`，重点第 21–25 节。用户给出的分层路径在仓库中实际为上述根目录文件。
 
 ## 目标与验收范围

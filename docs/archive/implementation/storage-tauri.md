@@ -1,5 +1,9 @@
 # Storage / Tauri 线实施记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Storage_Tauri_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../architecture/overview.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 基线：`Desktop_Case_Game_Architecture_v1.0.md`（原目录路径已展平）。
 日期：2026-09-15 开始，2026-09-16 收口。负责人：主代理审查；实现由 `efficient_worker` 分 slice 完成。
 **状态：** 已完成（代码与自动化验收通过；实际 Windows 安装包、音视频与重启人工验收仍属发布前 TODO）。

@@ -1,5 +1,9 @@
 # Log / Error Report 接入与实施记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Log_Error_Report_Integration.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../development/diagnostics.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 更新日期：2026-09-16。状态：L1 / L2 / L3 / L4 全部实现并经主代理审核通过。
 
 ## 目标与边界
@@ -211,7 +215,7 @@ host minidump 需使用对应归档中的 PDB 分析，前端堆栈需使用同 
 2026-09-16 已新增 sherpa-onnx 语音试验接入：同一个 operationId 贯穿录音轮次、KWS、input.recognized 和保存。
 白名单新增 modelId / sampleRate / sampleCount / inputMode；没有音频、转写或设备名称。
 语音取消/unknown/技术失败不等于保存失败，原生 IPC 超时也不意味着 SDK 已停止。
-具体参数、人工验收与扩词方式见 [语音实施文档](Desktop_Voice_Sherpa_Implementation.md)。
+具体参数、人工验收与扩词方式见 [语音实施文档](voice-sherpa.md)。
 
 1. 在拥有操作生命周期的边界生成 operationId；调用下游时显式传递 context。同一次重试生成新 ID，不能把两次提交混为一次。
 2. 使用稳定 event 名称与可判别 code；界面文案和翻译不能当聚合错误的唯一键。保留原 error/cause，不另抛只有字符串的新错误覆盖原因。

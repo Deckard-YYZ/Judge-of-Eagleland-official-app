@@ -1,5 +1,9 @@
 # 表现层适配交接
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Presentation_Handoff.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../ui/presentation.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 更新日期：2026-10-05。核对基线：`cb49371`（配置流水线与主流程交付）；此前布局与时序基线：`995fd4a`。
 
 本文交给后续负责界面适配的会话，说明最近几轮新增的能力、可复用接口、临时呈现和未完成业务。本文不决定新布局，不替代产品需求，也不要求立即切换普通入口。
@@ -52,13 +56,13 @@ StoryPlayer、ActionInput、结局基础视图、语音输入及 TTS 大部分�
 - 达到该事件配置的阈值后被动结束，产生对应结果；不是暂停、自动回复或等待手动重开。正常结束也被动关闭。
 - 退出登录保存聊天，重登恢复历史、当前回复状态和计数；主控只消费已经结束的结果。
 
-现有实现：[ChatOverlay](src/ui/presentation/chat/ChatOverlay.tsx) 使用脱离文档流的独立浮窗；[chat.css](src/ui/presentation/chat/chat.css) 按后续反馈收敛为黑底浅字的简陋 CMD 式终端：仅保留外框和拖动标题栏，等宽文本以发言者前缀连续排列，回复以 `[1] 回复文字` 形式点击；移除消息气泡、装饰竖线、分区和辅助标签。标题栏支持指针拖动和键盘方向键移动，位置受视口约束；多个窗口错位出现，可点选置前。消息独立滚动，新消息自动滚到底；窗口位置不写存档。
+现有实现：[ChatOverlay](../../../src/ui/presentation/chat/ChatOverlay.tsx) 使用脱离文档流的独立浮窗；[chat.css](../../../src/ui/presentation/chat/chat.css) 按后续反馈收敛为黑底浅字的简陋 CMD 式终端：仅保留外框和拖动标题栏，等宽文本以发言者前缀连续排列，回复以 `[1] 回复文字` 形式点击；移除消息气泡、装饰竖线、分区和辅助标签。标题栏支持指针拖动和键盘方向键移动，位置受视口约束；多个窗口错位出现，可点选置前。消息独立滚动，新消息自动滚到底；窗口位置不写存档。
 
 终止消息按用户确认的 3–5 秒取 4 秒可见时间后自动消失；被新闻或强制交互遮住时暂停计时。正常结束保留最后一次已提交回复并显示终止节点文字，无交互结束显示系统状态。结果已提交，退场不阻塞后续派发；重登旧结果不重播。保存失败保留原回复并显示错误。仍不增加关闭、最小化、自由文本输入或玩法倒计时。
 
 ### 3.2 新闻与按需 ActionInput
 
-现有 [NewsPanel](src/ui/presentation/NewsPanel.tsx) 使用原生 dialog 顶层呈现普通新闻页面，宽 86vw、高 84dvh，约占窗口面积 72%；窄窗保留边距并让正文独立滚动。原生顶层覆盖聊天、工作区和 DEV 诊断，背景不可交互。已删除 `<details>` 和已读列表。
+现有 [NewsPanel](../../../src/ui/presentation/NewsPanel.tsx) 使用原生 dialog 顶层呈现普通新闻页面，宽 86vw、高 84dvh，约占窗口面积 72%；窄窗保留边距并让正文独立滚动。原生顶层覆盖聊天、工作区和 DEV 诊断，背景不可交互。已删除 `<details>` 和已读列表。
 
 发布新闻、展示内容和完成阅读是不同的事实。关闭按钮、点击新闻框外区域或 Escape 提交 `readNews`，该次框外点击不执行背景操作；保存成功后才关闭，若配置了动作则进入既有 story/ActionInput 队列。失败保留新闻并显示错误；保存中禁用重复关闭。挂载、切语言不标记已读。按发布顺序逐条展示未读新闻；已有教程或强制动作完成后再出现下一条，避免与 readNews 的 STORY_BLOCKING 约束互相阻塞。已读新闻不重现，未完成动作按 checkpoint 恢复。
 
@@ -66,13 +70,13 @@ ActionInput 也可由案件开始、选项完成或案件结算的配置 hook �
 
 正式动作必须完成、不能跳过；它与聊天可搁置、教程可退出是三种不同规则。ActionInput 与整局结局无关。错误动作及其状态影响仍暂缓，旧小样的错误次数和处罚不能变成正式要求。
 
-复用 [StoryOverlay](src/ui/presentation/story/StoryOverlay.tsx)、[StoryPlayer](src/ui/presentation/story/StoryPlayer.tsx) 与 [ActionInputPanel](src/ui/presentation/story/ActionInputPanel.tsx) 的业务提交、恢复及输入协调。不要在新界面自行比对目标动作并提前推进。
+复用 [StoryOverlay](../../../src/ui/presentation/story/StoryOverlay.tsx)、[StoryPlayer](../../../src/ui/presentation/story/StoryPlayer.tsx) 与 [ActionInputPanel](../../../src/ui/presentation/story/ActionInputPanel.tsx) 的业务提交、恢复及输入协调。不要在新界面自行比对目标动作并提前推进。
 
 ### 3.3 选项指示框与 hover 内容
 
 两者同时保留，含义不同：hover 是选项展开内容；指示框不依赖 hover，包裹配置指定的选项并给出明确指示，玩家可以不服从。
 
-已实现 `ContentNodeView.instruction = { id, choiceId, delayMs, blocks }`。[DecisionPanel](src/ui/case/DecisionPanel.tsx) 在本轮选项真正呈现后开始独立计时，配置延迟为 1000–2000ms；成功完成当前轮选择后移除，后续轮按自身配置重新出现。切语言不重启计时，保存失败仍保留本轮状态。
+已实现 `ContentNodeView.instruction = { id, choiceId, delayMs, blocks }`。[DecisionPanel](../../../src/ui/case/DecisionPanel.tsx) 在本轮选项真正呈现后开始独立计时，配置延迟为 1000–2000ms；成功完成当前轮选择后移除，后续轮按自身配置重新出现。切语言不重启计时，保存失败仍保留本轮状态。
 
 当前样式是选项 outline 加说明块。后续应按既有排版调整框体与信息层级，保留已调好的案卷加载、滚动可见性门和选项出现节奏，不能把指示框延时错误地从开案时开始计算，也不能为等待提示而禁止选择。
 
@@ -96,11 +100,11 @@ ActionInput 也可由案件开始、选项完成或案件结算的配置 hook �
 
 已确认：单个案件只有判决和结算；整局结局可由特殊判决或状态条件触发，演出完成后返回登录。结局账号再次登录的流程，以及结局触发时尚未完成的聊天/动作如何处置，仍待决定。
 
-这轮短流程不配置结局。当前旧 [EndingView](src/ui/presentation/story/EndingView.tsx) 仍是通用标题与返回归档承载，视频步骤仍有占位实现；“结局完成后注销返回登录”尚未接线。因此不能把结局列为仅改 CSS 就能完成的适配项，也不能把已有返回归档行为作为产品定稿。
+这轮短流程不配置结局。当前旧 [EndingView](../../../src/ui/presentation/story/EndingView.tsx) 仍是通用标题与返回归档承载，视频步骤仍有占位实现；“结局完成后注销返回登录”尚未接线。因此不能把结局列为仅改 CSS 就能完成的适配项，也不能把已有返回归档行为作为产品定稿。
 
 ## 4. 接手界面的接口与边界
 
-主要入口是 [GameSessionView](src/application/gameSessionView.ts) 和 [GameContentView](src/application/gameContentView.ts)。前者提供 `getSnapshot / subscribe / subscribeFeedback / selectCase / setLocale / reload / dispatch`；后者提供已本地化的呈现内容，不暴露案件规则目标/效果及主流程条件/意图。动作步骤仍有 `targetActionId`，但不能据此在 UI 自行判定动作正确或推进业务。
+主要入口是 [GameSessionView](../../../src/application/gameSessionView.ts) 和 [GameContentView](../../../src/application/gameContentView.ts)。前者提供 `getSnapshot / subscribe / subscribeFeedback / selectCase / setLocale / reload / dispatch`；后者提供已本地化的呈现内容，不暴露案件规则目标/效果及主流程条件/意图。动作步骤仍有 `targetActionId`，但不能据此在 UI 自行判定动作正确或推进业务。
 
 | 用途                             | 从哪里读取或提交                                                                     |
 | -------------------------------- | ------------------------------------------------------------------------------------ |
@@ -115,7 +119,7 @@ ActionInput 也可由案件开始、选项完成或案件结算的配置 hook �
 
 状态与 content 在尚未加载时可能为空，旧内容也可能没有 `mainFlow`。保留现有加载、错误和恢复生命周期；不另造一套 UI 业务状态。保存 pending 时使用既有禁用规则，失败后保留已提交的节点与内容，不乐观删除聊天或提前展示动作。
 
-content schema 6 的 `mainFlow` 才是新主流程入口。schema 5 的 `configuration.flow`、`chatLastNode`、`externalBranches` 和 [configurationQueries](src/application/configurationQueries.ts) 中旧阶段/聊天查询是兼容实验，不应用于新聊天产品接线。不要由 React 调内部 `compute*`、写 GameState、重放 onEnter 或二次求解解锁条件。
+content schema 6 的 `mainFlow` 才是新主流程入口。schema 5 的 `configuration.flow`、`chatLastNode`、`externalBranches` 和 [configurationQueries](../../../src/application/configurationQueries.ts) 中旧阶段/聊天查询是兼容实验，不应用于新聊天产品接线。不要由 React 调内部 `compute*`、写 GameState、重放 onEnter 或二次求解解锁条件。
 
 双语文案继续走内容投影；不在组件中复制剧情文本。既有主题、语言切换、声音输入和 TTS 协调需要保留。存储模式与硬件能力相互独立：桌面里的内存预览仍可能具有原生语音能力；浏览器验证不能证明原生语音和 TTS 可用。当前聊天、新闻只复用文本块渲染，尚未接入朗读控件或语音输入；是否为它们增加朗读不是本次已确认的需求。
 
@@ -123,11 +127,11 @@ content schema 6 的 `mainFlow` 才是新主流程入口。schema 5 的 `configu
 
 按需阅读以下文件即可开始，不需要先通读引擎或生成代码：
 
-1. [src/main.tsx](src/main.tsx)、[bootstrap](src/app/bootstrap.tsx)、[mainFlowPreview](src/app/mainFlowPreview.ts)：普通入口、内容来源、教程开关与内存调试装配。
-2. [App](src/ui/App.tsx)、[AppShell](src/ui/shell/AppShell.tsx)：`mainFlowPreview` 呈现闸门；聊天和新闻在 AppShell 外独立挂载，旧 `conversations` 插槽已移除。聊天不加入阻塞案件的 modal 条件。
-3. [gameSessionView](src/application/gameSessionView.ts)、[gameContentView](src/application/gameContentView.ts)、[commands](src/game/commands.ts)：读取与提交的公共契约。
-4. [ChatOverlay](src/ui/presentation/chat/ChatOverlay.tsx)、[NewsPanel](src/ui/presentation/NewsPanel.tsx)：已完成本轮浮层适配，位置与退场计时是局部呈现状态，业务仍通过公共命令提交。
-5. [DecisionPanel](src/ui/case/DecisionPanel.tsx)、[StoryOverlay](src/ui/presentation/story/StoryOverlay.tsx)：指示时序、正式动作与教程退出的区别。
+1. [src/main.tsx](../../../src/main.tsx)、[bootstrap](../../../src/app/bootstrap.tsx)、[mainFlowPreview](../../../src/app/mainFlowPreview.ts)：普通入口、内容来源、教程开关与内存调试装配。
+2. [App](../../../src/ui/App.tsx)、[AppShell](../../../src/ui/shell/AppShell.tsx)：`mainFlowPreview` 呈现闸门；聊天和新闻在 AppShell 外独立挂载，旧 `conversations` 插槽已移除。聊天不加入阻塞案件的 modal 条件。
+3. [gameSessionView](../../../src/application/gameSessionView.ts)、[gameContentView](../../../src/application/gameContentView.ts)、[commands](../../../src/game/commands.ts)：读取与提交的公共契约。
+4. [ChatOverlay](../../../src/ui/presentation/chat/ChatOverlay.tsx)、[NewsPanel](../../../src/ui/presentation/NewsPanel.tsx)：已完成本轮浮层适配，位置与退场计时是局部呈现状态，业务仍通过公共命令提交。
+5. [DecisionPanel](../../../src/ui/case/DecisionPanel.tsx)、[StoryOverlay](../../../src/ui/presentation/story/StoryOverlay.tsx)：指示时序、正式动作与教程退出的区别。
 
 原视觉基线重点看 `src/ui/shell/shell.css`、`src/ui/case/CaseReader.tsx`、`src/ui/case/CaseWorkspace.tsx` 及现有主题样式；本轮浮层样式在 `chat.css` 与 `news.css`，不改变案件工作区排版。
 
@@ -141,7 +145,7 @@ content schema 6 的 `mainFlow` 才是新主流程入口。schema 5 的 `configu
 - `content-authoring/samples/mainflow-short/rules.json`：故事步骤及聊天局部图等结构化内容。
 - `content-authoring/samples/mainflow-short/locales/{zh-CN,en-US}.json`：长文、回复和新闻文案。
 
-运行包在 `content/mainflow-short/0.1.0/`；`content-authoring/generated/` 是生成模型。二者均不是手工编辑源。已有版本不能直接改成另一套内容；需要新增内容时按[作者说明](content-authoring/README.md)制作新版本，不为调布局临时篡改已绑定的内容包。
+运行包在 `content/mainflow-short/0.1.0/`；`content-authoring/generated/` 是生成模型。二者均不是手工编辑源。已有版本不能直接改成另一套内容；需要新增内容时按[作者说明](../../../content-authoring/README.md)制作新版本，不为调布局临时篡改已绑定的内容包。
 
 Luban 只用于制作与构建，UI 调样式不需要每次重新导表。本机已有工具 `Z:\bussiness\Github\非项目\luban`，按需通过 `LUBAN_ROOT` 指定，不把该绝对路径写入项目默认配置。
 
@@ -193,4 +197,4 @@ Luban 只用于制作与构建，UI 调样式不需要每次重新导表。本�
 
 > 请先阅读本文和产品需求文档，以 `995fd4a` 延续下来的普通界面为视觉基线，适配已交付的配置与主流程能力。优先使用 DEV「诊断 → 主流程验证」观察真实接口，不照搬测试卡片布局，不把样本数值当玩法，不自动切换普通入口。代码库细节继续交给多个 GPT-6.1 Sol medium worker 查阅，主代理只提取必要接口；需要实现与审核时沿用此前约定的 GPT-6 Astra medium / high 分工。保留现有语音相关工作区修改和 AGENTS.md，不整仓回滚，不做常规哈希检查。先形成可审阅的表现层方案，再按用户在新会话中的指示推进。
 
-资料优先级：[产品需求](Desktop_Case_Game_Product_Requirements.md)定义产品语义；[主流程规格](Desktop_Case_Game_MainFlow_Implementation_Spec.md)定义已交付接口；[配置架构](Desktop_Case_Game_Configuration_Architecture.md)与[作者说明](content-authoring/README.md)定义制作边界；[实施记录](Desktop_Case_Game_Configuration_Implementation.md)记录历史验证和最新恢复入口决定。历史记录中的默认迁移、旧聊天实验和错误动作样本不得覆盖最新决定。
+资料优先级：[产品需求](../../product/requirements.md)定义产品语义；[主流程规格](../../architecture/main-flow.md)定义已交付接口；[配置架构](../../architecture/configuration.md)与[作者说明](../../../content-authoring/README.md)定义制作边界；[实施记录](configuration.md)记录历史验证和最新恢复入口决定。历史记录中的默认迁移、旧聊天实验和错误动作样本不得覆盖最新决定。

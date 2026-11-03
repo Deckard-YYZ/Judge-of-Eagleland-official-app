@@ -1,6 +1,10 @@
 # Content / Validator 线实施记录
 
-> 2026-09-18 TTS 增量：content v4、旁白投影、平台/UI 联调与逐 slice 审核记录见 [TTS / Content / Validator 实施记录](Desktop_TTS_Content_Validator_Implementation.md)。下方保留此前各轮历史验收证据。
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Content_Validator_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../../content/README.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
+> 2026-09-18 TTS 增量：content v4、旁白投影、平台/UI 联调与逐 slice 审核记录见 [TTS / Content / Validator 实施记录](tts-content-validator.md)。下方保留此前各轮历史验收证据。
 
 **基线：** `Desktop_Case_Game_Architecture_v1.0.md`  
 **当前状态：** 既有 Schema v2 / production Repository / GameSession / SQLite 主链路已完成；本轮 ActionInput A1 事实模型与 A2 恢复 fixture 已审核，A3 文字 UI 实施中。历史 Windows 验收与本轮证据分节记录。  

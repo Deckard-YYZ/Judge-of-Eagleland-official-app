@@ -1,8 +1,13 @@
 # 桌面案件模拟游戏架构扩展
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Architecture_Extension_ActionInput_TTS_v1.1.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../development/voice.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+> 下文“TTS 尚未实施”是设计时状态；后续交付证据见 [TTS 实施记录](../implementation/tts-content-validator.md)。
+
 ## 多语言边界、内容输入交互点与固定声音旁白
 
-> 产品规则更新（2026-10-04）：ActionInput 的触发方式、完成要求及其与结局的关系，以 [产品需求与核心流程](Desktop_Case_Game_Product_Requirements.md) 为准。错误机制暂缓，可能不设置；本文中的连续剧情、错误处罚样本和历史默认约定不作为当前主流程开发前提。聊天事件独立于强制动作剧情队列，其目标契约见 [配置系统架构](Desktop_Case_Game_Configuration_Architecture.md)。
+> 产品规则更新（2026-10-04）：ActionInput 的触发方式、完成要求及其与结局的关系，以 [产品需求与核心流程](../../product/requirements.md) 为准。错误机制暂缓，可能不设置；本文中的连续剧情、错误处罚样本和历史默认约定不作为当前主流程开发前提。聊天事件独立于强制动作剧情队列，其目标契约见 [配置系统架构](../../architecture/configuration.md)。
 
 **文档版本：** 1.1  
 **更新日期：** 2026-09-18  

@@ -1,8 +1,12 @@
 # 配置系统实施与验证记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Configuration_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../architecture/configuration.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 更新日期：2026-10-05。
 
-本文记录 [配置系统架构](Desktop_Case_Game_Configuration_Architecture.md) 的实际实现、阶段检查与剩余边界。产品行为以 [产品需求与核心流程](Desktop_Case_Game_Product_Requirements.md) 为准。
+本文记录 [配置系统架构](../../architecture/configuration.md) 的实际实现、阶段检查与剩余边界。产品行为以 [产品需求与核心流程](../../product/requirements.md) 为准。
 
 最新交付决定：主流程底层已交付，正式 UI 接入暂缓。普通入口恢复原 Demo/minimal-test-package@1.2.0 与关闭自动教程；DEV 诊断面板提供“主流程验证（内存，刷新清空）”及退出按钮，复用显式 debug 入口，桌面开发也不读写 SQLite。聊天/新闻实验呈现仅在 debug 启用，保留原正式排版、旧 guide 与全部底层成果。本文前半部分保留旧工具与 schema 5 实施历史，其中旧默认及 572 项测试均是当轮记录；本次 schema 6 交付与验收见下文“主流程四阶段交付”。
 

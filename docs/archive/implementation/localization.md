@@ -1,5 +1,9 @@
 # 桌面案件模拟游戏：本地化实施记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Localization_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../architecture/overview.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 **关联文档：** `Desktop_Case_Game_Frontend_Implementation.md`  
 **实施原则：** 语言改变表现，不改变游戏事实。  
 **首版语言：** `zh-CN`、`en-US`  

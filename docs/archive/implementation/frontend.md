@@ -1,5 +1,9 @@
 # 桌面案件模拟游戏：纯前端实施记录
 
+> **历史归档** · 归档日期：2026-10-15；原文件：`Desktop_Case_Game_Frontend_Implementation.md`。
+> 正文中的状态、默认行为、路径、待办、分工和验收数量均属于原记录阶段；不作为当前实施指令或当前功能状态。可点击的本地链接已随目录迁移更新。
+> 现行说明见 [对应文档](../../ui/presentation.md)；当前入口、实施状态和待决事项见 [文档索引](../../README.md)。
+
 **基线文档：** `Desktop_Case_Game_Architecture_v1.0.md`  
 **实施范围：** 纯前端 UI 与内存演示会话；当前已接入正式 Game Core，仍不等待 SQLite 或 Tauri 存档。  
 **当前状态：** 已完成  
